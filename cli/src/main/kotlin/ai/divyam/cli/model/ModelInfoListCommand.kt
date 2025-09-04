@@ -1,0 +1,33 @@
+package ai.divyam.cli.model
+
+import ai.divyam.cli.base.BaseCommand
+import kotlinx.coroutines.runBlocking
+import picocli.CommandLine
+import picocli.CommandLine.Option
+
+@CommandLine.Command(name = "ls")
+class ModelInfoListCommand : BaseCommand() {
+    @Option(
+        names = ["-o", "--org-id"],
+        description = ["Required: Organization id to associate the model " +
+                "info with"],
+        required = true
+    )
+    private var orgId: Int = 0
+
+    @Option(
+        names = ["--sa-id", "--service-account-id"],
+        description = ["Optional: service account id to filter model " +
+                "info with"],
+    )
+    private var serviceAccountId: String? = null
+
+    override fun execute(): Int {
+        runBlocking {
+            val infos =
+                divyamClient.getModelInfos(orgId, serviceAccountId)
+            printObjs(infos)
+        }
+        return 0
+    }
+}
