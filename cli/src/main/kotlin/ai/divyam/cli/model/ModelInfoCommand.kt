@@ -9,6 +9,7 @@ import java.util.concurrent.Callable
 
 @CommandLine.Command(
     name = "model-info",
+    description = ["Manage model info."],
     subcommands = [ModelInfoListCommand::class, ModelInfoCreateCommand::class,
         ModelInfoUpdateCommand::class, ModelInfoGetCommand::class]
 )

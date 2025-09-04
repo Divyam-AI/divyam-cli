@@ -4,7 +4,7 @@ import ai.divyam.cli.base.BaseCommand
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 
-@CommandLine.Command(name = "ls")
+@CommandLine.Command(name = "ls", description = ["List users"])
 class UserListCommand : BaseCommand() {
     // TODO: List user's across all orgs? Need to fix this model.
     @CommandLine.Option(

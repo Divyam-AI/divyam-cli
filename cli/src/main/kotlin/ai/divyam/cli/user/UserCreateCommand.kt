@@ -7,7 +7,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "create")
+@CommandLine.Command(name = "create", description = ["Create a user"])
 class UserCreateCommand : BaseCommand(), HasSecurityPolicy {
     @Option(
         names = ["-o", "--org-id"],

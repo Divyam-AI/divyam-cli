@@ -479,6 +479,7 @@ data class EvalCreateRequest(
     val state: EvalState
 )
 
+// TODO: Only allow state change.
 @Reflectable
 data class EvalUpdateRequest(
     val name: String? = null,

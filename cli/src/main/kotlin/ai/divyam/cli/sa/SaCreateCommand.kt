@@ -9,7 +9,10 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "create")
+@CommandLine.Command(
+    name = "create",
+    description = ["Create a service account"]
+)
 class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
     @Option(
         names = ["-o", "--org-id"],

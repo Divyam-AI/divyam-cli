@@ -4,7 +4,7 @@ import ai.divyam.cli.base.BaseCommand
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 
-@CommandLine.Command(name = "ls")
+@CommandLine.Command(name = "ls", description = ["List service accounts"])
 class SaListCommand : BaseCommand() {
     @CommandLine.Option(
         names = ["-o", "--org-id"],

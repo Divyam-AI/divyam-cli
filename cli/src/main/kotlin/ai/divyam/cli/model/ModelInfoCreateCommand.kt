@@ -10,7 +10,7 @@ import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.io.File
 
-@CommandLine.Command(name = "create")
+@CommandLine.Command(name = "create", description = ["Create model info"])
 class ModelInfoCreateCommand : BaseCommand() {
     @Option(
         names = ["-o", "--org-id"],

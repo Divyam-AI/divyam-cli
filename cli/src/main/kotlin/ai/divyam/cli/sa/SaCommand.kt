@@ -6,6 +6,7 @@ import java.util.concurrent.Callable
 
 @CommandLine.Command(
     name = "sa",
+    description = ["Manage service accounts"],
     subcommands = [SaListCommand::class, SaGetCommand::class,
         SaCreateCommand::class,
         SaUpdateCommand::class]

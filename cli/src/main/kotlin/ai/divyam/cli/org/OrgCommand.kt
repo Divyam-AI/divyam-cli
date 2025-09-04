@@ -6,6 +6,7 @@ import java.util.concurrent.Callable
 
 @CommandLine.Command(
     name = "org",
+    description = ["Manage orgs"],
     subcommands = [OrgListCommand::class, OrgCreateCommand::class,
         OrgUpdateCommand::class, OrgGetCommand::class]
 )

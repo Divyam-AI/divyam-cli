@@ -5,7 +5,7 @@ import ai.divyam.client.ModelSelectorState
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 
-@CommandLine.Command(name = "ls")
+@CommandLine.Command(name = "ls", description = ["List selectors"])
 class ModelSelectorListCommand : BaseCommand() {
     @CommandLine.Option(
         names = ["-o", "--org-id"],

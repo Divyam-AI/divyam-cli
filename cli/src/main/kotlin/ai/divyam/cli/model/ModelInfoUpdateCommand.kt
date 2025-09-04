@@ -9,7 +9,7 @@ import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.io.File
 
-@CommandLine.Command(name = "update")
+@CommandLine.Command(name = "update", description = ["Update model info"])
 class ModelInfoUpdateCommand : BaseCommand() {
     // TODO: Consistent IDs types and scope of ids for all objects?
     @Option(

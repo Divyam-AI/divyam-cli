@@ -7,7 +7,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "create")
+@CommandLine.Command(name = "create", description = ["Create a selector"])
 class ModelSelectorCreateCommand : BaseCommand() {
     @Option(
         names = ["-o", "--org-id"],

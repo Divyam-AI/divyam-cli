@@ -8,7 +8,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "update")
+@CommandLine.Command(name = "update", description = ["Update an eval."])
 class EvalUpdateCommand : SaSpecificCommand() {
     @Option(
         names = ["-o", "--eval-id"],

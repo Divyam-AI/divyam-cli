@@ -138,9 +138,7 @@ tasks.register("generateGraalVMConfig") {
                     appendLine("    \"fields\": [")
                     fields.forEachIndexed { fieldIndex, field ->
                         appendLine("      {")
-                        appendLine("        \"name\": \"${field.name}\",")
-                        appendLine("        \"allowWrite\": true,")
-                        appendLine("        \"allowUnsafeAccess\": false")
+                        appendLine("        \"name\": \"${field.name}\"")
                         if (fieldIndex < fields.size - 1) {
                             appendLine("      },")
                         } else {

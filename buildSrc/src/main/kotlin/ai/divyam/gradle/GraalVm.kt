@@ -88,15 +88,20 @@ fun Project.configureGraalVMKotlin(
             }
 
             named("main") {
-                configurationFileDirectories.from(file("${
-                    layout.buildDirectory.get().asFile
-                        .absolutePath
-                }/native/generated"))
+                configurationFileDirectories.from(
+                    file(
+                        "${
+                            layout.buildDirectory.get().asFile
+                                .absolutePath
+                        }/native/generated"
+                    )
+                )
 
                 // Default Kotlin-optimized build args
                 val defaultBuildArgs = listOf(
                     "--no-fallback",
                     "--enable-preview",
+                    //"--static",
 
                     // Kotlin-specific configurations
                     "--initialize-at-build-time=kotlin",

@@ -1,10 +1,6 @@
 package ai.divyam.cli.chat
 
 import ai.divyam.cli.base.BaseCommand
-import ai.divyam.cli.eval.EvalCreateCommand
-import ai.divyam.cli.eval.EvalGetCommand
-import ai.divyam.cli.eval.EvalListCommand
-import ai.divyam.cli.eval.EvalUpdateCommand
 import ai.divyam.client.ChatMessage
 import ai.divyam.client.ChatRequest
 import ai.divyam.client.ChatRole
@@ -24,8 +20,8 @@ import java.util.concurrent.Callable
 
 @CommandLine.Command(
     name = "chat",
-    subcommands = [EvalListCommand::class, EvalCreateCommand::class,
-        EvalUpdateCommand::class, EvalGetCommand::class]
+    description = ["A simple command line chatbot to interact with divyam " +
+            "chat API"]
 )
 class ChatCommand : BaseCommand(), Callable<Int> {
     companion object {

@@ -5,7 +5,10 @@ import ai.divyam.client.EvalState
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 
-@CommandLine.Command(name = "ls")
+@CommandLine.Command(
+    name = "ls",
+    description = ["List evals for a service account."]
+)
 class EvalListCommand : SaSpecificCommand() {
     @CommandLine.Option(
         names = ["--states"],

@@ -4,7 +4,10 @@ import ai.divyam.cli.base.BaseCommand
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 
-@CommandLine.Command(name = "get")
+@CommandLine.Command(
+    name = "get",
+    description = ["Get a specific service account"]
+)
 class SaGetCommand : BaseCommand() {
     @CommandLine.Option(
         names = ["--id"],

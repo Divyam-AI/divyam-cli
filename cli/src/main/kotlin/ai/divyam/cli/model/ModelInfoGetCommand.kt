@@ -5,7 +5,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "get")
+@CommandLine.Command(name = "get", description = ["Get specific model info"])
 class ModelInfoGetCommand : BaseCommand() {
     // TODO: Consistent IDs types and scope of ids for all objects?
     @Option(

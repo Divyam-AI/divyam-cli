@@ -5,7 +5,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "get")
+@CommandLine.Command(name = "get", description = ["Get a specific eval"])
 class EvalGetCommand : SaSpecificCommand() {
     @Option(
         names = ["--id"],

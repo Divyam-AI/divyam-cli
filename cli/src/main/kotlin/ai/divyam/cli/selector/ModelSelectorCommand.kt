@@ -7,6 +7,7 @@ import java.util.concurrent.Callable
 // TODO: Get for selector.
 @CommandLine.Command(
     name = "selector",
+    description = ["Manage selectors"],
     subcommands = [ModelSelectorListCommand::class, ModelSelectorCreateCommand::class,
         ModelSelectorUpdateCommand::class]
 )

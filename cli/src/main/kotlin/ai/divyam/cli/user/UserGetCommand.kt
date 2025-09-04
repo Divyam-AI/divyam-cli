@@ -5,7 +5,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "get")
+@CommandLine.Command(name = "get", description = ["Get a specific user"])
 class UserGetCommand : BaseCommand() {
     // TODO: How will user be part of multiple orgs if email is globally unique?
     @Option(

@@ -6,6 +6,7 @@ import java.util.concurrent.Callable
 
 @CommandLine.Command(
     name = "user",
+    description = ["Manage users"],
     subcommands = [UserListCommand::class, UserCreateCommand::class,
         UserUpdateCommand::class, UserGetCommand::class]
 )

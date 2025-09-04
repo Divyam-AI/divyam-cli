@@ -5,7 +5,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "ls")
+@CommandLine.Command(name = "ls", description = ["List model info"])
 class ModelInfoListCommand : BaseCommand() {
     @Option(
         names = ["-o", "--org-id"],

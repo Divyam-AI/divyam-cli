@@ -8,7 +8,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "create")
+@CommandLine.Command(name = "create", description = ["Create evals"])
 class EvalCreateCommand : SaSpecificCommand() {
     @Option(
         names = ["--name"],

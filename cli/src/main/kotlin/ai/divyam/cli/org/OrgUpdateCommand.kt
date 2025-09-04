@@ -7,7 +7,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "update")
+@CommandLine.Command(name = "update", description = ["Update an org"])
 class OrgUpdateCommand : BaseCommand(), HasSecurityPolicy {
     @Option(
         names = ["--id"],

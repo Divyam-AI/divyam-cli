@@ -5,7 +5,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "get")
+@CommandLine.Command(name = "get", description = ["Get a specific org"])
 class OrgGetCommand : BaseCommand() {
     // TODO: id or name as search for all object types?
     @Option(

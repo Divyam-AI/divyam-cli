@@ -6,6 +6,7 @@ import java.util.concurrent.Callable
 
 @CommandLine.Command(
     name = "eval",
+    description = ["Manage evals"],
     subcommands = [EvalListCommand::class, EvalCreateCommand::class,
         EvalUpdateCommand::class, EvalGetCommand::class]
 )

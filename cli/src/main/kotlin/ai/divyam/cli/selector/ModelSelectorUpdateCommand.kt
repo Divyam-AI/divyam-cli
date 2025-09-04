@@ -7,7 +7,7 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
-@CommandLine.Command(name = "update")
+@CommandLine.Command(name = "update", description = ["Update a selector"])
 class ModelSelectorUpdateCommand : BaseCommand() {
     // TODO: Service account id not updatable?. Model info allows update.
     @Option(

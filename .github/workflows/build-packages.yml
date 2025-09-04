@@ -1,0 +1,65 @@
+name: Build Packages
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+
+  # Trigger on commits to main
+  push:
+    branches: [ main ]
+
+  # Trigger on pull requests
+  pull_request:
+
+jobs:
+  linux-packages:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, ubuntu-22.04-arm ]   # amd64 and arm64
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 24   # adjust if needed
+
+      - name: Grant execute permissions
+        run: chmod +x gradlew
+
+      - name: Build deb and rpm
+        run: ./gradlew clean deb rpm
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages-${{ matrix.os }}
+          path: |
+            build/distributions/*.deb
+            build/distributions/*.rpm
+
+  macos-app:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 24   # adjust if needed
+
+      - name: Grant execute permissions
+        run: chmod +x gradlew
+
+      - name: Build macOS app zip
+        run: ./gradlew clean macAppBundleZip
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: build/distributions/*-mac.zip

@@ -13,6 +13,7 @@ import kotlin.system.exitProcess
 
 @CommandLine.Command(
     name = "divyam",
+    description = ["Divyam CLI"],
     subcommands = [OrgCommand::class, SaCommand::class, EvalCommand::class,
         ModelSelectorCommand::class, ModelInfoCommand::class,
         UserCommand::class, ChatCommand::class]
