@@ -15,7 +15,7 @@ jobs:
   linux-packages:
     strategy:
       matrix:
-        os: [ ubuntu-latest, ubuntu-22.04-arm ]   # amd64 and arm64
+        os: [ ubuntu-latest ] # TODO: add ubuntu-22.04-arm once arm support is added.
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -41,8 +41,8 @@ jobs:
         with:
           name: linux-packages-${{ matrix.os }}
           path: |
-            build/distributions/*.deb
-            build/distributions/*.rpm
+            **/build/distributions/*.deb
+            **/build/distributions/*.rpm
 
   macos-app:
     runs-on: macos-latest
@@ -65,4 +65,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-app
-          path: build/distributions/*-mac.zip
+          path: |
+            **/build/distributions/*-mac.zip
