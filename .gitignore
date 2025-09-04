@@ -37,8 +37,6 @@ build/
 !gradle-wrapper.jar
 .apt_generated/
 out/
-gradlew
-gradlew.bat
 
 ## macOS ##
 .DS_Store
