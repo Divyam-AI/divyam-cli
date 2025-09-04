@@ -25,10 +25,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 24   # adjust if needed
-
-      - name: Show contents
-        run: ls
+          java-version: 24
 
       - name: Grant execute permissions
         run: chmod +x gradlew
@@ -36,13 +33,17 @@ jobs:
       - name: Build deb and rpm
         run: ./gradlew clean deb rpm
 
+      - name: Prepare Linux artifacts (flatten)
+        run: |
+          mkdir -p temp-artifacts
+          find build -type f -name "*.deb" -exec cp {} temp-artifacts/ \;
+          find build -type f -name "*.rpm" -exec cp {} temp-artifacts/ \;
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-packages-${{ matrix.os }}
-          path: |
-            **/build/distributions/*.deb
-            **/build/distributions/*.rpm
+          path: temp-artifacts/*
 
   macos-app:
     runs-on: macos-latest
@@ -53,7 +54,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 24   # adjust if needed
+          java-version: 24
 
       - name: Grant execute permissions
         run: chmod +x gradlew
@@ -61,9 +62,13 @@ jobs:
       - name: Build macOS app zip
         run: ./gradlew clean macAppBundleZip
 
+      - name: Prepare macOS artifact (flatten)
+        run: |
+          mkdir -p temp-artifacts
+          find build -type f -name "*-mac.zip" -exec cp {} temp-artifacts/ \;
+
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-app
-          path: |
-            **/build/distributions/*-mac.zip
+          path: temp-artifacts/*
