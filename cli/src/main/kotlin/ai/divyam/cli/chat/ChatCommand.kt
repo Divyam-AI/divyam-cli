@@ -20,8 +20,7 @@ import java.util.concurrent.Callable
 
 @CommandLine.Command(
     name = "chat",
-    description = ["A simple command line chatbot to interact with divyam " +
-            "chat API"]
+    description = ["Command line chatbot"]
 )
 class ChatCommand : BaseCommand(), Callable<Int> {
     companion object {
