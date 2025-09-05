@@ -1,11 +1,14 @@
 package ai.divyam.cli.chat
 
 import ai.divyam.cli.base.BaseCommand
+import ai.divyam.cli.base.OutputFormat
 import ai.divyam.client.ChatMessage
 import ai.divyam.client.ChatRequest
 import ai.divyam.client.ChatRole
+import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -47,7 +50,21 @@ class ChatCommand : BaseCommand(), Callable<Int> {
     )
     private var isMockModel: Boolean = false
 
-    val coroutineScope = CoroutineScope(Dispatchers.Default)
+    @Option(
+        names = ["--debug"],
+        description = ["Optional: Prints HTTP response details"],
+    )
+    private var debug: Boolean = false
+
+    private val coroutineScope = CoroutineScope(Dispatchers.Default)
+
+    private val objectMapper: ObjectMapper by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        if (outputFormat == OutputFormat.JSON) {
+            getJsonMapper()
+        } else {
+            getYamlMapper()
+        }
+    }
 
     override fun execute(): Int {
         // Coloured output support.
@@ -113,7 +130,8 @@ class ChatCommand : BaseCommand(), Callable<Int> {
 
             try {
                 runBlocking {
-                    val response = generateResponse(conversationHistory)
+                    val response =
+                        generateResponse(conversationHistory, loaderJob)
                     loaderJob.cancelAndJoin()
                     print("\r")
                     printDivyamResponse(response)
@@ -147,15 +165,34 @@ class ChatCommand : BaseCommand(), Callable<Int> {
         println(response)
     }
 
-    private suspend fun generateResponse(conversationHistory: List<ChatMessage>): String {
-        // TODO: Print headers under an option.
-        val response = divyamClient.chatCompletion(
-            chatRequest = ChatRequest(
-                model = model,
-                messages = conversationHistory
-            ), mockSelector
-            = isMockSelector, mockModel = isMockModel
+    private suspend fun generateResponse(
+        conversationHistory: List<ChatMessage>,
+        loaderJob: Job
+    ): String {
+        val chatRequest = ChatRequest(
+            model = model,
+            messages = conversationHistory
         )
-        return response.choices.first().message.content
+        if (!debug) {
+            val response = divyamClient.chatCompletion(
+                chatRequest = chatRequest, mockSelector
+                = isMockSelector, mockModel = isMockModel
+            )
+            return response.choices.first().message.content
+        } else {
+            val response = divyamClient.chatCompletionDebugMode(
+                chatRequest = chatRequest, mockSelector
+                = isMockSelector, mockModel = isMockModel
+            )
+
+            // FIXME: Kludge to stop loader before print.
+            loaderJob.cancelAndJoin()
+
+            print("\r")
+            print(ansi().fgGreen().a("Debug: ").reset())
+            println(objectMapper.writeValueAsString(response))
+
+            return response.chatResponse.choices.first().message.content
+        }
     }
 }

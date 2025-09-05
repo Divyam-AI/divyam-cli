@@ -546,6 +546,15 @@ data class ChatCompletionResponse(
 )
 
 @Reflectable
+data class ChatCompletionDebugResponse(
+    @get:JsonProperty("chat-response")
+    val chatResponse: ChatCompletionResponse,
+
+    @get:JsonProperty("response-headers")
+    val responseHeaders: Map<String, Any>,
+)
+
+@Reflectable
 data class Choice(
     @get:JsonProperty("finish_reason")
     val finishReason: String,
@@ -1102,6 +1111,52 @@ class DivyamClient(
 
             if (response.status.value == 200) {
                 return response.body()
+            }
+
+            // TODO: logging
+            // logger.info("Failed completions response: ${response.status}")
+            retries--
+            if (retries > 0) {
+                delay(1000) // wait before retrying
+            }
+        }
+
+        error(
+            "Error getting response: ${response!!.status} - ${
+                response.body<String>()
+            }"
+        )
+    }
+
+    suspend fun chatCompletionDebugMode(
+        chatRequest: ChatRequest, mockSelector:
+        Boolean = false, mockModel: Boolean = false
+    ): ChatCompletionDebugResponse {
+        val maxRetries = 3
+        var retries = maxRetries
+        var response: HttpResponse? = null
+
+        while (retries > 0) {
+            response = client.post("$endpoint/v1/chat/completions") {
+                headers.appendAll(headers())
+                parameter("mock_selector", mockSelector.toString())
+                parameter("mock_model", mockModel.toString())
+                contentType(ContentType.Application.Json)
+                setBody(chatRequest)
+            }
+
+            if (response.status.value == 200) {
+                val chatCompletionResponse: ChatCompletionResponse =
+                    response.body()
+                val headers = mutableMapOf<String, Any>()
+                response.headers.forEach { header, value ->
+                    headers[header] = value
+                }
+                val debugResponse = ChatCompletionDebugResponse(
+                    chatCompletionResponse,
+                    headers
+                )
+                return debugResponse
             }
 
             // TODO: logging

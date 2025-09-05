@@ -170,6 +170,7 @@ fun Project.configurePackaging(
             )
 
             // Make executable
+            @Suppress("DEPRECATION")
             exec {
                 commandLine(
                     "chmod",
@@ -312,7 +313,11 @@ fun Project.configurePackaging(
         group = "distribution"
         description = "Generate Homebrew formula for this project"
 
-        val formulaName = divyamPackageName // Capitalized class name
+        // Capitalized class name
+        val formulaName = divyamPackageName.split("-").joinToString("") { str ->
+            str.replaceFirstChar { if (it.isLowerCase()) it.titlecase(getDefault()) else it.toString() }
+        }
+
         val binaryName = divyamAppName
         val versionString = project.version.toString()
         val archiveFile = brewPackageDist.flatMap { it.archiveFile }

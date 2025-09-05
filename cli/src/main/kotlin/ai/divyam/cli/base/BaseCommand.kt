@@ -69,6 +69,7 @@ abstract class BaseCommand : Callable<Int> {
     )
     protected var outputFormat: OutputFormat = OutputFormat.TEXT
 
+    @Suppress("unused")
     @CommandLine.Option(
         names = ["--help"],
         usageHelp = true,
@@ -136,7 +137,7 @@ abstract class BaseCommand : Callable<Int> {
         println(writer.writeValueAsString(objs))
     }
 
-    private fun getYamlMapper(): YAMLMapper {
+    protected fun getYamlMapper(): YAMLMapper {
         val mapper = YAMLMapper()
         mapper.registerKotlinModule()
         // You can configure the Jackson ObjectMapper here
