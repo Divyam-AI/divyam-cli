@@ -15,7 +15,7 @@ jobs:
   linux-packages:
     strategy:
       matrix:
-        os: [ ubuntu-latest ] # TODO: add ubuntu-22.04-arm once arm support is added.
+        os: [ ubuntu-22.04 ] # TODO: add ubuntu-22.04-arm once arm support is added.
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -42,7 +42,7 @@ jobs:
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-packages-${{ matrix.os }}
+          name: linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }}
           path: temp-artifacts/*
 
   macos-app:
@@ -60,12 +60,13 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build macOS app zip
-        run: ./gradlew clean macAppBundleZip
+        run: ./gradlew clean generateBrewFormulaLocal
 
       - name: Prepare macOS artifact (flatten)
         run: |
           mkdir -p temp-artifacts
-          find . -type f -name "*-mac.zip" -exec cp {} temp-artifacts/ \;
+          find . -type f -name "*-mac*.tar.gz" -exec cp {} temp-artifacts/ \;
+          find . -type f -name "divya-cli-*.rb" -exec cp {} temp-artifacts/ \;
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
