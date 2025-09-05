@@ -66,7 +66,7 @@ jobs:
         run: |
           mkdir -p temp-artifacts
           find . -type f -name "*-mac*.tar.gz" -exec cp {} temp-artifacts/ \;
-          find . -type f -name "divya-cli-*.rb" -exec cp {} temp-artifacts/ \;
+          find . -type f -name "divyam-cli*.rb" -exec cp {} temp-artifacts/ \;
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
