@@ -1,0 +1,75 @@
+name: Build Packages
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+
+  # Trigger on commits to main
+  push:
+    branches: [ main ]
+
+  # Trigger on pull requests
+  pull_request:
+
+jobs:
+  linux-packages:
+    strategy:
+      matrix:
+        os: [ ubuntu-22.04 ] # TODO: add ubuntu-22.04-arm once arm support is added.
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 24
+
+      - name: Grant execute permissions
+        run: chmod +x gradlew
+
+      - name: Build deb and rpm
+        run: ./gradlew clean deb rpm
+
+      - name: Prepare Linux artifacts (flatten)
+        run: |
+          mkdir -p temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }}
+          find . -type f -name "*.deb" -exec cp {} temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }} \;
+          find . -type f -name "*.rpm" -exec cp {} temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }} \;
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }}
+          path: temp-artifacts/*
+
+  macos-app:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 24
+
+      - name: Grant execute permissions
+        run: chmod +x gradlew
+
+      - name: Build macOS app zip
+        run: ./gradlew clean generateBrewFormulaLocal
+
+      - name: Prepare macOS artifact (flatten)
+        run: |
+          mkdir -p temp-artifacts/macos-app
+          find . -type f -name "*-mac*.tar.gz" -exec cp {} temp-artifacts/macos-app/ \;
+          find . -type f -name "divyam-cli*.rb" -exec cp {} temp-artifacts/macos-app/ \;
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: temp-artifacts/*
