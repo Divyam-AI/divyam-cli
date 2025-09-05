@@ -1,6 +1,7 @@
 package ai.divyam.cli
 
 import ai.divyam.cli.chat.ChatCommand
+import ai.divyam.cli.debug.DebugCommand
 import ai.divyam.cli.eval.EvalCommand
 import ai.divyam.cli.model.ModelInfoCommand
 import ai.divyam.cli.org.OrgCommand
@@ -16,9 +17,10 @@ import kotlin.system.exitProcess
     description = ["Divyam CLI"],
     subcommands = [OrgCommand::class, SaCommand::class, EvalCommand::class,
         ModelSelectorCommand::class, ModelInfoCommand::class,
-        UserCommand::class, ChatCommand::class]
+        UserCommand::class, ChatCommand::class, DebugCommand::class]
 )
 class DivyamCliMain : Callable<Int> {
+    @Suppress("unused")
     @CommandLine.Option(
         names = ["--help"],
         usageHelp = true,

@@ -84,7 +84,7 @@ sudo dpkg -i divyam*.deb
 # Use the extracted directory. Change name to match the extracted directory
 cd linux-packages-amd64
 
-sudo rpm -ivn divyam*.rpm 
+sudo rpm -ivh divyam*.rpm 
 ```
 
 ## Usage
@@ -115,7 +115,7 @@ Commands:
 
 The cli is organized to work with commands and subcommands to manage various
 divyam entities, like users, service accounts, evals. It also provides a
-simple command based chat bot to interact with divyam.
+simple command based chatbot to interact with divyam.
 
 To get help form any command use the `--help` option.
 
@@ -215,3 +215,23 @@ For example
 divyam user ls -e https://api.preprod.divyam.ai -u admin@dashboard.divyam.ai -p -o 10 
 ```
 
+## Examples
+
+### List all users
+
+```shell
+divyam user ls -e https://api.divyam.ai -u admin@dashboard.divyam.ai -p "*******" -o 10 
+```
+
+### Debug chat completions with custom payload
+
+```shell
+cat my-payload | divyam debug chat -e http://localhost:8888 -t "service-account-api-token"
+
+```
+
+### Run chatbot with debug mode
+
+```shell
+divyam chat -e http://localhost:8888 -t "service-account-api-token" --model-name gpt-4.1-mini --debug
+```

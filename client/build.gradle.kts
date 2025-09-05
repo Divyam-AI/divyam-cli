@@ -1,5 +1,5 @@
-import ai.divyam.gradle.configureKotlin
 import ai.divyam.gradle.Versions
+import ai.divyam.gradle.configureKotlin
 
 plugins {
     java
@@ -23,7 +23,7 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
 
     // Ktor client
-    implementation("io.ktor:ktor-client-core:${Versions.ktorClient}")
+    api("io.ktor:ktor-client-core:${Versions.ktorClient}")
     implementation("io.ktor:ktor-client-cio:${Versions.ktorClient}")
     implementation("io.ktor:ktor-client-content-negotiation:${Versions.ktorClient}")
 

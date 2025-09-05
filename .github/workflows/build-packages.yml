@@ -35,9 +35,9 @@ jobs:
 
       - name: Prepare Linux artifacts (flatten)
         run: |
-          mkdir -p temp-artifacts
-          find . -type f -name "*.deb" -exec cp {} temp-artifacts/ \;
-          find . -type f -name "*.rpm" -exec cp {} temp-artifacts/ \;
+          mkdir -p temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }}
+          find . -type f -name "*.deb" -exec cp {} temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }} \;
+          find . -type f -name "*.rpm" -exec cp {} temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }} \;
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4

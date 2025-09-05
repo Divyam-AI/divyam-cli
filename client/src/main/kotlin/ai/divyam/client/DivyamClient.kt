@@ -19,6 +19,7 @@ import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
 import io.ktor.http.ContentType
+import io.ktor.http.Headers
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.headersOf
@@ -1148,13 +1149,9 @@ class DivyamClient(
             if (response.status.value == 200) {
                 val chatCompletionResponse: ChatCompletionResponse =
                     response.body()
-                val headers = mutableMapOf<String, Any>()
-                response.headers.forEach { header, value ->
-                    headers[header] = value
-                }
                 val debugResponse = ChatCompletionDebugResponse(
                     chatCompletionResponse,
-                    headers
+                    response.headers.asMap()
                 )
                 return debugResponse
             }
@@ -1173,4 +1170,44 @@ class DivyamClient(
             }"
         )
     }
+
+    suspend fun chatCompletionPayloadMode(
+        payload: Any, mockSelector:
+        Boolean = false, mockModel: Boolean = false
+    ): HttpResponse {
+        val maxRetries = 3
+        var retries = maxRetries
+        var response: HttpResponse? = null
+
+        while (retries > 0) {
+            response = client.post("$endpoint/v1/chat/completions") {
+                headers.appendAll(headers())
+                parameter("mock_selector", mockSelector.toString())
+                parameter("mock_model", mockModel.toString())
+                contentType(ContentType.Application.Json)
+                setBody(payload)
+            }
+
+            if (response.status.value == 200) {
+                return response
+            }
+
+            // TODO: logging
+            // logger.info("Failed completions response: ${response.status}")
+            retries--
+            if (retries > 0) {
+                delay(1000) // wait before retrying
+            }
+        }
+
+        return response!!
+    }
+}
+
+fun Headers.asMap(): MutableMap<String, Any> {
+    val headers = mutableMapOf<String, Any>()
+    forEach { header, value ->
+        headers[header] = value
+    }
+    return headers
 }

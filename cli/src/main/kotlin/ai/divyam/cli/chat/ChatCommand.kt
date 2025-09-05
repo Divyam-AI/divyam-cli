@@ -5,7 +5,6 @@ import ai.divyam.cli.base.OutputFormat
 import ai.divyam.client.ChatMessage
 import ai.divyam.client.ChatRequest
 import ai.divyam.client.ChatRole
-import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -57,14 +56,6 @@ class ChatCommand : BaseCommand(), Callable<Int> {
     private var debug: Boolean = false
 
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
-
-    private val objectMapper: ObjectMapper by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-        if (outputFormat == OutputFormat.JSON) {
-            getJsonMapper()
-        } else {
-            getYamlMapper()
-        }
-    }
 
     override fun execute(): Int {
         // Coloured output support.
@@ -153,7 +144,7 @@ class ChatCommand : BaseCommand(), Callable<Int> {
         }
 
         scanner.close()
-        return 0 // Return a successful exit code.
+        return 0
     }
 
     private fun promptUser() {
@@ -190,7 +181,11 @@ class ChatCommand : BaseCommand(), Callable<Int> {
 
             print("\r")
             print(ansi().fgGreen().a("Debug: ").reset())
-            println(objectMapper.writeValueAsString(response))
+            if (outputFormat != OutputFormat.JSON) {
+                printJson(response)
+            } else {
+                printYaml(response)
+            }
 
             return response.chatResponse.choices.first().message.content
         }

@@ -24,9 +24,9 @@ fun Project.configureGraalVmReflectionConfig() {
                 classes.add(clazz)
                 println("Found: ${clazz.simpleName}")
             }
-        } catch (e: ClassNotFoundException) {
+        } catch (_: ClassNotFoundException) {
             println("Class not found: $className")
-        } catch (e: NoClassDefFoundError) {
+        } catch (_: NoClassDefFoundError) {
             println("Missing dependency for: $className")
         } catch (e: Exception) {
             println("Error loading $className: ${e.message}")
@@ -141,15 +141,6 @@ fun Project.configureGraalVmReflectionConfig() {
         return classes
     }
 
-    // Helper functions
-    fun findDataClassesInPackage(
-        packageName: String,
-        classLoader: URLClassLoader
-    ): List<Class<*>> =
-        findClassesInPackage(packageName, classLoader) { clazz ->
-            clazz.kotlin.isData
-        }
-
     fun findReflectableClasses(
         packageName: String,
         classLoader: URLClassLoader
@@ -181,11 +172,22 @@ fun Project.configureGraalVmReflectionConfig() {
                     }
             val classLoader = URLClassLoader(classPathUrls.toTypedArray())
 
-            val discoveredClasses = listOf(
+            val discoveredClasses = mutableSetOf<Class<*>>()
+            val standardClasses = mutableListOf<Class<*>>()
+
+            listOf(
                 "kotlin.collections.EmptyList",
                 "kotlin.collections.EmptyMap",
                 "kotlin.collections.EmptySet"
-            ).map { Class.forName(it) }.toMutableSet()
+            ).map {
+                loadAndFilterClass(
+                    it, classLoader, { true },
+                    standardClasses
+                )
+            }
+
+
+            discoveredClasses.addAll(standardClasses)
 
             // Find all @Serializable classes (kotlinx.serialization)
             targetPackages.forEach { packageName ->
