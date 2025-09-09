@@ -71,5 +71,34 @@ jobs:
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-app
+          name: macos-apple-silicon
+          path: temp-artifacts/*
+
+  macos-amd64:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 24
+
+      - name: Grant execute permissions
+        run: chmod +x gradlew
+
+      - name: Build macOS app zip
+        run: ./gradlew clean generateBrewFormulaLocal
+
+      - name: Prepare macOS artifact (flatten)
+        run: |
+          mkdir -p temp-artifacts/macos-app
+          find . -type f -name "*-mac*.tar.gz" -exec cp {} temp-artifacts/macos-app/ \;
+          find . -type f -name "divyam-cli*.rb" -exec cp {} temp-artifacts/macos-app/ \;
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-amd64
           path: temp-artifacts/*
