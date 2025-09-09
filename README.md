@@ -19,7 +19,7 @@ building for macOS.
 
 **TBD:** Apple DMG packaging or homebrew repository.
 
-#### Apple Silicon (M1/M2/M3)
+#### Apple Silicon (M1/M2/M3/M4)
 
 Prerequisite
 
@@ -29,7 +29,42 @@ Select latest successful build
 from [Github actions](https://github.com/Divyam-AI/divyam-cli/actions).
 
 To the bottom of the page from the `Artifacts` section, download the
-`macos-app` zip file.
+`macos-apple-silicon` zip file.
+
+Extract the zip contents after download.
+
+```shell
+# Change appropriately to match the downloaded file.
+unzip macos-app.zip 
+unzip divyam-cli*.zip
+```
+
+Install as a local homebrew tap
+
+```shell
+# Use the extracted directory. Change name to match the extracted directory
+cd macos-app
+
+# Create a local tap directory
+mkdir -p $(brew --repository)/Library/Taps/local/homebrew-divyam/Formula
+
+cp divyam-cli.local.rb $(brew --repository)/Library/Taps/local/homebrew-divyam/Formula/divyam-cli.rb
+
+# Install from the tap
+brew install local/divyam/divyam-cli
+```
+
+#### Apple Intel (amd64)
+
+Prerequisite
+
+- [Homebrew](https://brew.sh/)
+
+Select latest successful build
+from [Github actions](https://github.com/Divyam-AI/divyam-cli/actions).
+
+To the bottom of the page from the `Artifacts` section, download the
+`macos-amd64` zip file.
 
 Extract the zip contents after download.
 
