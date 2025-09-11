@@ -151,13 +151,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: linux-packages-amd64
-          path: dist/amd64
+          path: cli/dist/amd64
 
       - name: Download arm64 binary
         uses: actions/download-artifact@v4
         with:
-          name: linux-packages-amd64
-          path: dist/arm64
+          name: linux-packages-arm64
+          path: cli/dist/arm64
 
       - name: Extract version from gradle.properties
         id: get_version
@@ -189,8 +189,8 @@ jobs:
       - name: Build and push multi-arch image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./cli
+          file: ./cli/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
