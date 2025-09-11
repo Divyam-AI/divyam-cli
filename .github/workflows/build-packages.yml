@@ -158,6 +158,9 @@ jobs:
         with:
           name: linux-packages-arm64
           path: cli/dist/arm64
+      - name: Debug
+        run: |
+          ls -R cli
 
       - name: Extract version from gradle.properties
         id: get_version
