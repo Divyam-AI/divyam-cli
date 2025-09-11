@@ -44,23 +44,22 @@ jobs:
           path: temp-artifacts/*
 
   linux-arm64:
-    runs-on: ubuntu-22.04
+    runs-on: github-actions-linux-arm64-runner
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Set up JDK
+        uses: actions/setup-java@v4
         with:
-          platforms: arm64
+          distribution: temurin
+          java-version: 24
 
-      - name: Build inside arm64 container
-        run: |
-          docker run --rm --platform=linux/arm64 \
-          -v $PWD:/workspace -w /workspace \
-          ghcr.io/graalvm/jdk-community:24 \
-          bash -c "chmod +x gradlew && ./gradlew clean deb rpm"
+      - name: Grant execute permissions
+        run: chmod +x gradlew
 
+      - name: Build deb and rpm
+        run: ./gradlew clean deb rpm
 
       - name: Prepare Linux artifacts (flatten)
         run: |
@@ -74,6 +73,7 @@ jobs:
         with:
           name: linux-packages-arm64
           path: temp-artifacts/*
+
 
   macos-arm64:
     runs-on: macos-latest
