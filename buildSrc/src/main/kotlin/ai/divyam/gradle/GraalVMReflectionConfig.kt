@@ -249,9 +249,7 @@ fun Project.configureGraalVmReflectionConfig() {
                         appendLine("    \"methods\": [")
                         methods.forEachIndexed { methodIndex, method ->
                             appendLine("      {")
-                            appendLine("        \"name\": \"${method.name}\",")
-                            appendLine("        \"allowWrite\": true,")
-                            appendLine("        \"allowUnsafeAccess\": false")
+                            appendLine("        \"name\": \"${method.name}\"")
                             if (methodIndex < methods.size - 1) {
                                 appendLine("      },")
                             } else {

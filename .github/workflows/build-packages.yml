@@ -12,11 +12,8 @@ on:
   pull_request:
 
 jobs:
-  linux-packages:
-    strategy:
-      matrix:
-        os: [ ubuntu-22.04 ] # TODO: add ubuntu-22.04-arm once arm support is added.
-    runs-on: ${{ matrix.os }}
+  linux-amd64:
+    runs-on: ${{ ubuntu-22.04 }}
 
     steps:
       - uses: actions/checkout@v4
@@ -35,14 +32,50 @@ jobs:
 
       - name: Prepare Linux artifacts (flatten)
         run: |
-          mkdir -p temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }}
-          find . -type f -name "*.deb" -exec cp {} temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }} \;
-          find . -type f -name "*.rpm" -exec cp {} temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }} \;
+          mkdir -p temp-artifacts/linux-packages-amd64
+          find . -type f -name "*.deb" -exec cp {} temp-artifacts/linux-packages-amd64 \;
+          find . -type f -name "*.rpm" -exec cp {} temp-artifacts/linux-packages-amd64 \;
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }}
+          name: linux-packages-amd64
+          path: temp-artifacts/*
+
+  linux-arm64:
+    runs-on: ${{ ubuntu-22.04 }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build inside arm64 container
+        run: |
+          docker run --rm --platform=linux/arm64 \
+          -v $PWD -w /workspace \
+          ghcr.io/graalvm/jdk-community:24 \
+          bash -c "
+          cd /workspace \
+          chmod +x gradlew \
+          ./gradlew clean deb rpm
+
+      - name: Prepare Linux artifacts (flatten)
+        run: |
+          mkdir -p temp-artifacts/linux-packages-arm64
+          find . -type f -name "*.deb" -exec cp {} temp-artifacts/linux-packages-arm64 \;
+          find . -type f -name "*.rpm" -exec cp {} temp-artifacts/linux-packages-arm64 \;
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages-arm64
           path: temp-artifacts/*
 
   macos-app:

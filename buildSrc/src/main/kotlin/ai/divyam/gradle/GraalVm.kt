@@ -3,6 +3,7 @@ package ai.divyam.gradle
 import org.graalvm.buildtools.gradle.dsl.GraalVMExtension
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.jvm.toolchain.JvmVendorSpec
@@ -101,7 +102,6 @@ fun Project.configureGraalVMKotlin(
                 val defaultBuildArgs = listOf(
                     "--no-fallback",
                     "--enable-preview",
-                    //"--static",
 
                     // Kotlin-specific configurations
                     "--initialize-at-build-time=kotlin",
@@ -130,7 +130,14 @@ fun Project.configureGraalVMKotlin(
                     "-O3" // Additional compiler optimizations
                 )
 
-                buildArgs.addAll(defaultBuildArgs + additionalBuildArgs)
+                val osSpecificArgs: List<String> =
+                    if (OperatingSystem.current().isLinux) {
+                        listOf("--static")
+                    } else {
+                        emptyList()
+                    }
+
+                buildArgs.addAll(defaultBuildArgs + additionalBuildArgs + osSpecificArgs)
                 imageName.set(binaryName)
                 verbose.set(true)
                 debug.set(project.hasProperty("debug"))

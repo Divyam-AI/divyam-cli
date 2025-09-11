@@ -6,7 +6,9 @@ tests.
 This is a native application that requires not dependencies currently available
 
 - Linux (debian and RHEL based) amd64
+- Linux (debian and RHEL based) arm64
 - macOS (Apple silicon M1/M2/M3)
+- macOS (Intel/amd64)
 
 ## Installation
 
@@ -95,20 +97,20 @@ Select latest successful build
 from [Github actions](https://github.com/Divyam-AI/divyam-cli/actions).
 
 To the bottom of the page from the `Artifacts` section, download the zip
-for your architecture. E.g. `linux-packages-amd64`.
+for your architecture. E.g. `linux-amd64`.
 
 Extract the zip contents after download.
 
 ```shell
 # Change appropriately to match the downloaded file.
-unzip linux-packages-amd64.zip 
+unzip linux-amd64.zip 
 ```
 
 #### Debian based distro
 
 ```shell
 # Use the extracted directory. Change name to match the extracted directory
-cd linux-packages-amd64
+cd linux-amd64
 
 sudo dpkg -i divyam*.deb 
 ```
@@ -117,7 +119,7 @@ sudo dpkg -i divyam*.deb
 
 ```shell
 # Use the extracted directory. Change name to match the extracted directory
-cd linux-packages-amd64
+cd linux-amd64
 
 sudo rpm -ivh divyam*.rpm 
 ```

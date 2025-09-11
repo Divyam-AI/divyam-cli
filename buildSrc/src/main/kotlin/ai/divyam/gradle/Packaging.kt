@@ -78,7 +78,7 @@ fun Project.configurePackaging(
         version = sanitizedVersion
         epoch = 0
         archStr =
-            archMap[System.getProperty("os.arch")]?.uppercase(getDefault())
+            archMap[System.getProperty("os.arch")]?.lowercase(getDefault())
                 ?: throw Exception("Unknown arch ${System.getProperty("os.arch")}")
 
         sourcePackage = "divyam-cli-src"
@@ -98,11 +98,19 @@ fun Project.configurePackaging(
 
     tasks.register("deb", Deb::class.java) {
         setupPackaging()
+        archiveFileName.set(
+            "${packageName}_${version}-${release}_${archStr}" +
+                    ".deb"
+        )
     }
 
     tasks.register("rpm", Rpm::class.java) {
         type = RpmType.BINARY
         setupPackaging()
+        archiveFileName.set(
+            "${packageName}-${version}-${release}.${archStr}" +
+                    ".rpm"
+        )
     }
 
     val projectBuildDir = layout.buildDirectory
