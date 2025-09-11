@@ -150,13 +150,13 @@ jobs:
       - name: Download amd64 binary
         uses: actions/download-artifact@v4
         with:
-          name: binary-amd64
+          name: linux-packages-amd64
           path: dist/amd64
 
       - name: Download arm64 binary
         uses: actions/download-artifact@v4
         with:
-          name: binary-arm64
+          name: linux-packages-amd64
           path: dist/arm64
 
       - name: Extract version from gradle.properties
