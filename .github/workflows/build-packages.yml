@@ -13,7 +13,7 @@ on:
 
 jobs:
   linux-amd64:
-    runs-on: ${{ ubuntu-22.04 }}
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +35,7 @@ jobs:
           mkdir -p temp-artifacts/linux-packages-amd64
           find . -type f -name "*.deb" -exec cp {} temp-artifacts/linux-packages-amd64 \;
           find . -type f -name "*.rpm" -exec cp {} temp-artifacts/linux-packages-amd64 \;
+          cp cli/build/native/nativeCompile/divyam temp-artifacts/
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -43,7 +44,7 @@ jobs:
           path: temp-artifacts/*
 
   linux-arm64:
-    runs-on: ${{ ubuntu-22.04 }}
+    runs-on: ubuntu-22.04
 
     steps:
       - uses: actions/checkout@v4
@@ -53,24 +54,20 @@ jobs:
         with:
           platforms: arm64
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build inside arm64 container
         run: |
           docker run --rm --platform=linux/arm64 \
-          -v $PWD -w /workspace \
+          -v $PWD:/workspace -w /workspace \
           ghcr.io/graalvm/jdk-community:24 \
-          bash -c "
-          cd /workspace \
-          chmod +x gradlew \
-          ./gradlew clean deb rpm
+          bash -c "chmod +x gradlew && ./gradlew clean deb rpm"
+
 
       - name: Prepare Linux artifacts (flatten)
         run: |
           mkdir -p temp-artifacts/linux-packages-arm64
           find . -type f -name "*.deb" -exec cp {} temp-artifacts/linux-packages-arm64 \;
           find . -type f -name "*.rpm" -exec cp {} temp-artifacts/linux-packages-arm64 \;
+          cp cli/build/native/nativeCompile/divyam temp-artifacts/
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -78,7 +75,7 @@ jobs:
           name: linux-packages-arm64
           path: temp-artifacts/*
 
-  macos-app:
+  macos-arm64:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -104,7 +101,7 @@ jobs:
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-apple-silicon
+          name: macos-arm64
           path: temp-artifacts/*
 
   macos-amd64:
@@ -135,3 +132,72 @@ jobs:
         with:
           name: macos-amd64
           path: temp-artifacts/*
+
+  docker-images:
+    runs-on: ubuntu-22.04
+    needs: [ linux-amd64, linux-arm64 ]  # wait for builds
+    permissions:
+      contents: read
+      id-token: write  # Required for OIDC authentication
+    env:
+      PROJECT_ID: prod-benchmarking
+      GAR_LOCATION: asia-south1
+      REPOSITORY: divyam-docker-dev-as1
+      IMAGE: divyam-cli
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download amd64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-amd64
+          path: dist/amd64
+
+      - name: Download arm64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: binary-arm64
+          path: dist/arm64
+
+      - name: Extract version from gradle.properties
+        id: get_version
+        run: |
+          VERSION=$(grep '^version=' cli/gradle.properties | cut -d'=' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/244819244005/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'github-actions-sa@prod-benchmarking.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker to use gcloud as credential helper
+        run: |
+          gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ steps.get_version.outputs.version }}
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:latest
+          build-args: |
+            AMD64_BINARY=dist/amd64/divyam
+            ARM64_BINARY=dist/arm64/divyam
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

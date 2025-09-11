@@ -31,7 +31,7 @@ Select latest successful build
 from [Github actions](https://github.com/Divyam-AI/divyam-cli/actions).
 
 To the bottom of the page from the `Artifacts` section, download the
-`macos-apple-silicon` zip file.
+`macos-arm64` zip file.
 
 Extract the zip contents after download.
 
