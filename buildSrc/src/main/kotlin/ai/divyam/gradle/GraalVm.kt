@@ -127,6 +127,8 @@ fun Project.configureGraalVMKotlin(
                     "--initialize-at-build-time=org.fusesource.jansi.internal" +
                             ".CLibrary",
                     "--initialize-at-build-time=org.fusesource.jansi.internal.OSInfo",
+
+                    "-H:+UnlockExperimentalVMOptions",
                     "-H:IncludeResources=org/fusesource/jansi/internal/native" +
                             "/.*",
 
