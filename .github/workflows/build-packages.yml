@@ -31,6 +31,9 @@ jobs:
           distribution: adopt
           java-version: 21
 
+      - name: JDK version
+        run: java --version
+
       - name: Grant execute permissions
         run: chmod +x gradlew
 
