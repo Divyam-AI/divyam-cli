@@ -58,6 +58,8 @@ class ChatCommand : BaseCommand(), Callable<Int> {
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
 
     override fun execute(): Int {
+        System.setProperty("jansi.force", "true")
+
         // Coloured output support.
         AnsiConsole.systemInstall()
 

@@ -216,6 +216,20 @@ fun Project.configureGraalVmReflectionConfig() {
                         "allDeclaredMethods": true,
                         "allPublicMethods": true
                       },
+                      {
+                        "name": "org.fusesource.jansi.AnsiConsole",
+                        "allDeclaredConstructors": true,
+                        "allPublicConstructors": true,
+                        "allDeclaredMethods": true,
+                        "allPublicMethods": true
+                      },
+                      {
+                        "name": "org.fusesource.jansi.internal.WindowsSupport",
+                        "allDeclaredConstructors": true,
+                        "allPublicConstructors": true,
+                        "allDeclaredMethods": true,
+                        "allPublicMethods": true
+                       },
                 """.trimIndent().replaceIndent("  ")
                 )
 
