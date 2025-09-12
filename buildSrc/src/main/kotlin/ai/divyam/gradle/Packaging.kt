@@ -139,9 +139,11 @@ fun Project.configurePackaging(
                         ".$pkgArch.pkg"
             )
 
-        pkgFile.parentFile.mkdirs()
+
 
         doLast {
+            pkgFile.parentFile.mkdirs()
+
             // Prepare staging folder with only the CLI binary
             val binary =
                 file("$projectBuildDir/native/nativeCompile/$divyamAppName")
