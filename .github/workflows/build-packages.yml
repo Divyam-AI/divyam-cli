@@ -39,10 +39,10 @@ jobs:
 
       - name: Prepare Linux artifacts
         run: |
-          mkdir -p temp-artifacts/
-          find . -type f -name "*.deb" -exec mv {} temp-artifacts/ \;
-          find . -type f -name "*.rpm" -exec mv {} temp-artifacts/ \;
-          cp cli/build/native/nativeCompile/divyam temp-artifacts/
+          mkdir -p temp-artifacts/linux-packages-${{ matrix.arch }}
+          find . -type f -name "*.deb" -exec mv {} temp-artifacts/linux-packages-${{ matrix.arch }} \;
+          find . -type f -name "*.rpm" -exec mv {} temp-artifacts/linux-packages-${{ matrix.arch }} \;
+          cp cli/build/native/nativeCompile/divyam temp-artifacts/linux-packages-${{ matrix.arch }}
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -76,8 +76,8 @@ jobs:
 
       - name: Prepare macOS artifact
         run: |
-          mkdir -p temp-artifacts/
-          find . -type f -name "divyam-cli*.pkg" -exec mv {} temp-artifacts/ \;
+          mkdir -p temp-artifacts/macos-packages-${{ matrix.arch }}
+          find . -type f -name "divyam-cli*.pkg" -exec mv {} temp-artifacts/macos-packages-${{ matrix.arch }} \;
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
