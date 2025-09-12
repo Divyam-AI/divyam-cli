@@ -10,18 +10,24 @@ fun Project.configureVersionInfo() {
     fun getGitCommitHashShort(): String {
         return try {
             val stdout = ByteArrayOutputStream()
-            providers.exec {
+            @Suppress("DEPRECATION")
+            exec {
                 commandLine("git", "rev-parse", "--short", "HEAD")
                 standardOutput = stdout
-            }.result.get()
+            }
             stdout.toString().trim()
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            println("Failed getting commit: ${e.message}")
             "unknown"
         }
     }
 
     // Simple version generation task
     tasks.register("generateVersionInfo") {
+        outputs.upToDateWhen {
+            return@upToDateWhen false
+        }
+
         val outputDir = file(
             "${
                 layout.buildDirectory.get()
