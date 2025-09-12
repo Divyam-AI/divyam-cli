@@ -10,11 +10,10 @@ fun Project.configureVersionInfo() {
     fun getGitCommitHashShort(): String {
         return try {
             val stdout = ByteArrayOutputStream()
-            @Suppress("DEPRECATION")
-            exec {
+            providers.exec {
                 commandLine("git", "rev-parse", "--short", "HEAD")
                 standardOutput = stdout
-            }
+            }.result.get()
             stdout.toString().trim()
         } catch (_: Exception) {
             "unknown"

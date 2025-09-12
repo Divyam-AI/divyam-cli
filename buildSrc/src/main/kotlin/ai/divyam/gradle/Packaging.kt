@@ -3,11 +3,10 @@ package ai.divyam.gradle
 import com.netflix.gradle.plugins.deb.Deb
 import com.netflix.gradle.plugins.packaging.SystemPackagingTask
 import com.netflix.gradle.plugins.rpm.Rpm
+import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
-import org.gradle.api.tasks.bundling.Zip
 import org.redline_rpm.header.Os
 import org.redline_rpm.header.RpmType
 import java.security.MessageDigest
@@ -57,7 +56,13 @@ fun Project.configurePackaging(
         "armv7l" to "armhf"
     ).withDefault { "all" }
 
+    val companyId = "ai.divyam"
     val divyamPackageName = "${divyamAppName}-cli"
+    divyamPackageName.split("-").joinToString("") {
+        it.replaceFirstChar { c ->
+            if (c.isLowerCase()) c.titlecase(getDefault()) else c.toString()
+        }
+    }
     val sanitizedVersion = project.version.toString().replace("-SNAPSHOT", "")
 
     fun SystemPackagingTask.setupPackaging() {
@@ -116,101 +121,57 @@ fun Project.configurePackaging(
     val projectBuildDir = layout.buildDirectory
         .get().asFile.absolutePath
 
-    tasks.register("macAppBundle", Copy::class.java) {
+    tasks.register("macPkg") {
+        group = "distribution"
+        description = "Creates a PKG installer for CLI tool without a custom UI"
         dependsOn("nativeCompile")
 
-        group = "distribution"
-        description = "Creates macOS app bundle structure"
-        dependsOn("installDist")
-
-        val bundleDir = file(
-            "$projectBuildDir/distributions/macos/${divyamPackageName}.app"
-        )
-
-        doFirst {
-            bundleDir.deleteRecursively()
-            bundleDir.mkdirs()
-
-            // Create app bundle structure
-            file("${bundleDir}/Contents/MacOS").mkdirs()
-            file("${bundleDir}/Contents/Resources").mkdirs()
+        // Determine the architecture to tag the package
+        val pkgArch = when (val arch = System.getProperty("os.arch")) {
+            "aarch64" -> "arm64"
+            "x86_64" -> "x86_64"
+            else -> throw GradleException("Unsupported architecture: $arch")
         }
 
-        // Copy application files
-        from(file("$projectBuildDir/native/nativeCompile/$divyamAppName"))
-        into("${bundleDir}/Contents/MacOS")
-
-        doLast {
-            // Create Info.plist
-            val infoPlist = file("${bundleDir}/Contents/Info.plist")
-
-            infoPlist.writeText(
-                """
-            |<?xml version="1.0" encoding="UTF-8"?>
-            |<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            |<plist version="1.0">
-            |<dict>
-            |    <key>CFBundleDevelopmentRegion</key>
-            |    <string>en</string>
-            |    <key>CFBundleExecutable</key>
-            |    <string>$divyamAppName</string>
-            |    <key>CFBundleIdentifier</key>
-            |    <string>ai.divyam.${
-                    divyamPackageName.lowercase()
-                }</string>
-            |    <key>CFBundleInfoDictionaryVersion</key>
-            |    <string>6.0</string>
-            |    <key>CFBundleName</key>
-            |    <string>$divyamPackageName</string>
-            |    <key>CFBundlePackageType</key>
-            |    <string>APPL</string>
-            |    <key>CFBundleShortVersionString</key>
-            |    <string>${project.version}</string>
-            |    <key>CFBundleVersion</key>
-            |    <string>${project.version}</string>
-            |    <key>LSMinimumSystemVersion</key>
-            |    <string>10.14</string>
-            |    <key>NSHighResolutionCapable</key>
-            |    <true/>
-            |</dict>
-            |</plist>
-        """.trimMargin()
+        val pkgFile =
+            file(
+                "$projectBuildDir/distributions/${divyamPackageName}-${sanitizedVersion}" +
+                        ".$pkgArch.pkg"
             )
 
-            // Make executable
-            @Suppress("DEPRECATION")
-            exec {
-                commandLine(
-                    "chmod",
-                    "+x",
-                    "${bundleDir}/Contents/MacOS/$divyamAppName"
-                )
-            }
-
-            println("App bundle created at: $bundleDir")
-        }
-    }
-
-    // Simple task to zip the app bundle
-    tasks.register("macAppBundleZip", Zip::class.java) {
-        group = "distribution"
-        description = "Creates a ZIP archive of the app bundle"
-
-        dependsOn("macAppBundle")
-
-
-        from(file("$projectBuildDir/distributions/macos/"))
-        include("${divyamPackageName}.app/**")
-
-        archiveFileName.set(
-            "${divyamPackageName}-${
-                sanitizedVersion
-            }-mac.zip"
-        )
-        destinationDirectory.set(file("build/distributions"))
+        pkgFile.parentFile.mkdirs()
 
         doLast {
-            println("App ZIP created at: ${destinationDirectory.get().asFile}/${archiveFileName.get()}")
+            // Prepare staging folder with only the CLI binary
+            val binary =
+                file("$projectBuildDir/native/nativeCompile/$divyamAppName")
+            val tempDir = file("$projectBuildDir/pkg-temp")
+            val binDir = file("${tempDir}/usr/local/bin")
+
+            tempDir.deleteRecursively()
+            tempDir.mkdirs()
+            binDir.mkdirs()
+
+            copy {
+                from(binary)
+                into(binDir)
+            }
+
+            // Create the component package
+            providers.exec {
+                commandLine(
+                    "pkgbuild",
+                    "--root", tempDir.absolutePath,
+                    "--identifier", "${companyId}.${divyamPackageName}",
+                    "--version", sanitizedVersion,
+                    pkgFile.absolutePath
+                )
+            }.result.get()
+
+            // Cleanup temp files
+            tempDir.deleteRecursively()
+
+            println("PKG created at: $pkgFile")
         }
     }
 
@@ -326,7 +287,6 @@ fun Project.configurePackaging(
             str.replaceFirstChar { if (it.isLowerCase()) it.titlecase(getDefault()) else it.toString() }
         }
 
-        val binaryName = divyamAppName
         val versionString = project.version.toString()
         val archiveFile = brewPackageDist.flatMap { it.archiveFile }
 
@@ -363,11 +323,11 @@ fun Project.configurePackaging(
               version "$versionString"
 
               def install
-                bin.install "$binaryName"
+                bin.install "$divyamAppName"
               end
 
               test do
-                system "#{bin}/$binaryName", "--help"
+                system "#{bin}/$divyamAppName", "--help"
               end
             end
         """.trimIndent()
