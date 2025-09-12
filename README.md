@@ -1,12 +1,14 @@
 # Divyam CLI
 
-Divyam command line tool to manage and configure Divyam and run quick manual
-tests.
+Divyam command line tool to manage and configure Divyam and verify Divyam
+installations.
 
 This is a native application that requires not dependencies currently available
 
 - Linux (debian and RHEL based) amd64
-- macOS (Apple silicon M1/M2/M3)
+- Linux (debian and RHEL based) arm64
+- macOS (Apple silicon M1/M2/M3/M4)
+- macOS (Intel/amd64)
 
 ## Installation
 
@@ -17,41 +19,38 @@ building for macOS.
 
 ### macOS
 
-**TBD:** Apple DMG packaging or homebrew repository.
-
-#### Apple Silicon (M1/M2/M3)
-
-Prerequisite
-
-- [Homebrew](https://brew.sh/)
-
 Select latest successful build
 from [Github actions](https://github.com/Divyam-AI/divyam-cli/actions).
 
-To the bottom of the page from the `Artifacts` section, download the
-`macos-app` zip file.
+* Apple silicon arm64 (M1/M2/M3/M4)- To the bottom of the page from the
+  `Artifacts` section, download the
+  `macos-packages-arm64` zip file.
+* Apple amd64 - To the bottom of the page from the `Artifacts`
+  section, download the
+  `macos-packages-amd64` zip file.
+
+#### Finder
+
+Extract the zip from the finder and open the pkg file to start the
+installation. Follow the install wizard to complete installation.
+
+#### Terminal
 
 Extract the zip contents after download.
 
 ```shell
 # Change appropriately to match the downloaded file.
-unzip macos-app.zip 
-unzip divyam-cli*.zip
+unzip macos-packages-arm64.zip 
 ```
 
-Install as a local homebrew tap
+Install as the package
 
 ```shell
 # Use the extracted directory. Change name to match the extracted directory
-cd macos-app
+cd macos-packages-arm64
 
-# Create a local tap directory
-mkdir -p $(brew --repository)/Library/Taps/local/homebrew-divyam/Formula
-
-cp divyam-cli.local.rb $(brew --repository)/Library/Taps/local/homebrew-divyam/Formula/divyam-cli.rb
-
-# Install from the tap
-brew install local/divyam/divyam-cli
+# Install the package
+sudo installer -pkg ~/divyam-cli-*.pkg  -target /
 ```
 
 ### Linux

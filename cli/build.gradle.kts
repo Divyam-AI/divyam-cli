@@ -2,6 +2,7 @@ import ai.divyam.gradle.Versions
 import ai.divyam.gradle.configureGraalVMKotlin
 import ai.divyam.gradle.configureGraalVmReflectionConfig
 import ai.divyam.gradle.configurePackaging
+import ai.divyam.gradle.configureVersionInfo
 
 plugins {
     application
@@ -48,7 +49,11 @@ dependencies {
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${Versions.jackson}")
 
     // Ascii Tables
-    implementation("de.vandermeer:asciitable:0.3.2")
+    implementation("de.vandermeer:asciitable:0.3.2") {
+        exclude(group = "org.apache.commons", module = "commons-lang3")
+    }
+
+    implementation("org.apache.commons:commons-lang3:3.18.0")
 
     // Tests
     testImplementation(kotlin("test"))
@@ -58,7 +63,15 @@ dependencies {
 project.configureGraalVMKotlin()
 project.configurePackaging()
 project.configureGraalVmReflectionConfig()
+project.configureVersionInfo()
 
 tasks.test {
     useJUnitPlatform()
+}
+
+
+sourceSets {
+    main {
+        resources.srcDir("${layout.buildDirectory.get().asFile}/generated/resources")
+    }
 }

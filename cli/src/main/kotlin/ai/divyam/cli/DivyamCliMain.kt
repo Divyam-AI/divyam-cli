@@ -8,6 +8,7 @@ import ai.divyam.cli.org.OrgCommand
 import ai.divyam.cli.sa.SaCommand
 import ai.divyam.cli.selector.ModelSelectorCommand
 import ai.divyam.cli.user.UserCommand
+import ai.divyam.cli.version.VersionCommand
 import picocli.CommandLine
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
@@ -17,7 +18,7 @@ import kotlin.system.exitProcess
     description = ["Divyam CLI"],
     subcommands = [OrgCommand::class, SaCommand::class, EvalCommand::class,
         ModelSelectorCommand::class, ModelInfoCommand::class,
-        UserCommand::class, ChatCommand::class, DebugCommand::class]
+        UserCommand::class, ChatCommand::class, DebugCommand::class, VersionCommand::class]
 )
 class DivyamCliMain : Callable<Int> {
     @Suppress("unused")

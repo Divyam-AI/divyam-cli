@@ -3,6 +3,7 @@ package ai.divyam.gradle
 import org.graalvm.buildtools.gradle.dsl.GraalVMExtension
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.internal.os.OperatingSystem
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.jvm.toolchain.JvmVendorSpec
@@ -101,7 +102,6 @@ fun Project.configureGraalVMKotlin(
                 val defaultBuildArgs = listOf(
                     "--no-fallback",
                     "--enable-preview",
-                    //"--static",
 
                     // Kotlin-specific configurations
                     "--initialize-at-build-time=kotlin",
@@ -124,13 +124,28 @@ fun Project.configureGraalVMKotlin(
                     "--initialize-at-build-time=kotlinx.serialization.json.ClassDiscriminatorMode",
                     "--initialize-at-build-time=kotlinx.serialization.modules.SerializersModuleKt",
 
+                    "--initialize-at-build-time=org.fusesource.jansi.internal" +
+                            ".CLibrary",
+                    "--initialize-at-build-time=org.fusesource.jansi.internal.OSInfo",
+
+                    "-H:+UnlockExperimentalVMOptions",
+                    "-H:IncludeResources=org/fusesource/jansi/internal/native" +
+                            "/.*",
+
                     // Memory and performance
                     "-H:+ReportExceptionStackTraces",
                     "--enable-url-protocols=http,https",
                     "-O3" // Additional compiler optimizations
                 )
 
-                buildArgs.addAll(defaultBuildArgs + additionalBuildArgs)
+                val osSpecificArgs: List<String> =
+                    if (OperatingSystem.current().isLinux) {
+                        listOf("--static")
+                    } else {
+                        emptyList()
+                    }
+
+                buildArgs.addAll(defaultBuildArgs + additionalBuildArgs + osSpecificArgs)
                 imageName.set(binaryName)
                 verbose.set(true)
                 debug.set(project.hasProperty("debug"))

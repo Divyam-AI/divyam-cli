@@ -12,11 +12,15 @@ on:
   pull_request:
 
 jobs:
-  linux-packages:
+  linux-build:
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        os: [ ubuntu-22.04 ] # TODO: add ubuntu-22.04-arm once arm support is added.
-    runs-on: ${{ matrix.os }}
+        include:
+          - arch: amd64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: github-actions-linux-arm64-runner
 
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +30,9 @@ jobs:
         with:
           distribution: temurin
           java-version: 24
+
+      - name: JDK version
+        run: java --version
 
       - name: Grant execute permissions
         run: chmod +x gradlew
@@ -33,20 +40,29 @@ jobs:
       - name: Build deb and rpm
         run: ./gradlew clean deb rpm
 
-      - name: Prepare Linux artifacts (flatten)
+      - name: Prepare Linux artifacts
         run: |
-          mkdir -p temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }}
-          find . -type f -name "*.deb" -exec cp {} temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }} \;
-          find . -type f -name "*.rpm" -exec cp {} temp-artifacts/linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }} \;
+          mkdir -p temp-artifacts/linux-packages-${{ matrix.arch }}
+          find . -type f -name "*.deb" -exec mv {} temp-artifacts/linux-packages-${{ matrix.arch }} \;
+          find . -type f -name "*.rpm" -exec mv {} temp-artifacts/linux-packages-${{ matrix.arch }} \;
+          cp cli/build/native/nativeCompile/divyam temp-artifacts/linux-packages-${{ matrix.arch }}
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-packages-${{ contains(matrix.os, 'arm64') && 'arm64' || 'amd64' }}
-          path: temp-artifacts/*
+          name: linux-packages-${{ matrix.arch }}
+          path: temp-artifacts/
 
-  macos-app:
-    runs-on: macos-latest
+  macos-build:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: macos-13
+          - arch: arm64
+            runner: macos-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -56,20 +72,85 @@ jobs:
           distribution: temurin
           java-version: 24
 
-      - name: Grant execute permissions
-        run: chmod +x gradlew
-
-      - name: Build macOS app zip
-        run: ./gradlew clean generateBrewFormulaLocal
-
-      - name: Prepare macOS artifact (flatten)
+      - name: Build the pkg
         run: |
-          mkdir -p temp-artifacts/macos-app
-          find . -type f -name "*-mac*.tar.gz" -exec cp {} temp-artifacts/macos-app/ \;
-          find . -type f -name "divyam-cli*.rb" -exec cp {} temp-artifacts/macos-app/ \;
+          chmod +x gradlew
+          ./gradlew clean macPkg
+
+      - name: Prepare macOS artifact
+        run: |
+          mkdir -p temp-artifacts/macos-packages-${{ matrix.arch }}
+          find . -type f -name "divyam-cli*.pkg" -exec mv {} temp-artifacts/macos-packages-${{ matrix.arch }} \;
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-app
-          path: temp-artifacts/*
+          name: macos-packages-${{ matrix.arch }}
+          path: temp-artifacts/
+
+  docker-images:
+    runs-on: ubuntu-22.04
+    needs: [ linux-build ]
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      PROJECT_ID: prod-benchmarking
+      GAR_LOCATION: asia-south1
+      REPOSITORY: divyam-docker-dev-as1
+      IMAGE: divyam-cli
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: cli/dist/
+          pattern: linux-packages-*
+          merge-multiple-artifacts: true
+
+      - name: Extract version
+        id: get_version
+        run: |
+          VERSION=$(grep '^version=' cli/gradle.properties | cut -d'=' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/244819244005/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'github-actions-sa@prod-benchmarking.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Debug
+        run: ls -R cli
+
+      - name: Build and push multi-arch image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./cli
+          file: ./cli/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ steps.get_version.outputs.version }}
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:latest
+          build-args: |
+            AMD64_BINARY_DIR=dist/linux-packages-amd64/linux-packages-amd64
+            ARM64_BINARY_DIR=dist/linux-packages-arm64/linux-packages-arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

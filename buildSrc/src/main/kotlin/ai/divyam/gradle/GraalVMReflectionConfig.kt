@@ -205,6 +205,34 @@ fun Project.configureGraalVmReflectionConfig() {
             // Generate JSON manually
             val jsonContent = buildString {
                 appendLine("[")
+
+                // Jansi related
+                appendLine(
+                    """
+                      {
+                        "name": "org.fusesource.jansi.internal.CLibrary",
+                        "allDeclaredConstructors": true,
+                        "allPublicConstructors": true,
+                        "allDeclaredMethods": true,
+                        "allPublicMethods": true
+                      },
+                      {
+                        "name": "org.fusesource.jansi.AnsiConsole",
+                        "allDeclaredConstructors": true,
+                        "allPublicConstructors": true,
+                        "allDeclaredMethods": true,
+                        "allPublicMethods": true
+                      },
+                      {
+                        "name": "org.fusesource.jansi.internal.WindowsSupport",
+                        "allDeclaredConstructors": true,
+                        "allPublicConstructors": true,
+                        "allDeclaredMethods": true,
+                        "allPublicMethods": true
+                       },
+                """.trimIndent().replaceIndent("  ")
+                )
+
                 discoveredClasses.forEachIndexed { index, clazz ->
                     appendLine("  {")
                     appendLine("    \"name\": \"${clazz.name}\",")
@@ -249,9 +277,7 @@ fun Project.configureGraalVmReflectionConfig() {
                         appendLine("    \"methods\": [")
                         methods.forEachIndexed { methodIndex, method ->
                             appendLine("      {")
-                            appendLine("        \"name\": \"${method.name}\",")
-                            appendLine("        \"allowWrite\": true,")
-                            appendLine("        \"allowUnsafeAccess\": false")
+                            appendLine("        \"name\": \"${method.name}\"")
                             if (methodIndex < methods.size - 1) {
                                 appendLine("      },")
                             } else {
@@ -285,6 +311,25 @@ fun Project.configureGraalVmReflectionConfig() {
             val configFile = file("$configDir/reflect-config.json")
             configFile.writeText(jsonContent)
 
+            val jniFile = file("$configDir/jni-config.json")
+            jniFile.writeText(
+                file(
+                    "${
+                        rootProject.rootDir
+                            .absolutePath
+                    }/buildSrc/src/main/resources/jni-config.json"
+                ).readText()
+            )
+
+            val resourceFile = file("$configDir/resource-config.json")
+            resourceFile.writeText(
+                file(
+                    "${
+                        rootProject.rootDir
+                            .absolutePath
+                    }/buildSrc/src/main/resources/resource-config.json"
+                ).readText()
+            )
 
             println("Generated reflect-config.json at: ${configFile.absolutePath}")
         }
