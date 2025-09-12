@@ -19,6 +19,8 @@ import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.util.Scanner
 import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
+import kotlin.system.measureNanoTime
 
 @CommandLine.Command(
     name = "chat",
@@ -54,6 +56,12 @@ class ChatCommand : BaseCommand(), Callable<Int> {
         description = ["Optional: Prints HTTP response details"],
     )
     private var debug: Boolean = false
+
+    @Option(
+        names = ["--latency"],
+        description = ["Optional: Measures and prints response latency"],
+    )
+    private var computeLatency: Boolean = false
 
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
 
@@ -123,12 +131,19 @@ class ChatCommand : BaseCommand(), Callable<Int> {
 
             try {
                 runBlocking {
-                    val response =
-                        generateResponse(conversationHistory, loaderJob)
+                    val (response, measuredLatency) = measureAndDisplayTime {
+                        runBlocking {
+                            generateResponse(conversationHistory, loaderJob)
+                        }
+                    }
                     loaderJob.cancelAndJoin()
                     print("\r")
                     printDivyamResponse(response)
 
+                    if (computeLatency) {
+                        print(ansi().fgGreen().a("Latency: ").reset())
+                        println(measuredLatency)
+                    }
                     conversationHistory.add(
                         ChatMessage(
                             role = ChatRole.ASSISTANT,
@@ -156,6 +171,44 @@ class ChatCommand : BaseCommand(), Callable<Int> {
     private fun printDivyamResponse(response: String) {
         print(ansi().fgMagenta().a("Divyam: ").reset())
         println(response)
+    }
+
+    fun <T> measureAndDisplayTime(block: () -> T): Pair<T, String> {
+        if (!computeLatency) {
+            return block.invoke() to ""
+        }
+
+        var result: T
+        val durationNanos = measureNanoTime {
+            result = block.invoke()
+        }
+        val durationMillis = TimeUnit.NANOSECONDS.toMillis(durationNanos)
+
+        val timeString = when {
+            durationMillis >= TimeUnit.MINUTES.toMillis(1) -> {
+                val minutes = TimeUnit.NANOSECONDS.toMinutes(durationNanos)
+                val remainingSeconds =
+                    TimeUnit.NANOSECONDS.toSeconds(durationNanos) % 60
+                "Took $minutes min, $remainingSeconds sec"
+            }
+
+            durationMillis >= 1000 -> {
+                String.format("Took %.2f sec", durationNanos / 1_000_000_000.0)
+            }
+
+            durationNanos >= 1_000_000 -> {
+                "Took $durationMillis ms"
+            }
+
+            durationNanos >= 1000 -> {
+                String.format("Took %.2f µs", durationNanos / 1000.0)
+            }
+
+            else -> {
+                "Took $durationNanos ns"
+            }
+        }
+        return result to timeString
     }
 
     private suspend fun generateResponse(

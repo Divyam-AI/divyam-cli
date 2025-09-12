@@ -1,7 +1,6 @@
 package ai.divyam.gradle
 
 import org.gradle.api.Project
-import java.io.ByteArrayOutputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -9,13 +8,9 @@ fun Project.configureVersionInfo() {
 
     fun getGitCommitHashShort(): String {
         return try {
-            val stdout = ByteArrayOutputStream()
-            @Suppress("DEPRECATION")
-            exec {
+            providers.exec {
                 commandLine("git", "rev-parse", "--short", "HEAD")
-                standardOutput = stdout
-            }
-            stdout.toString().trim()
+            }.standardOutput.asText.get().trim()
         } catch (e: Exception) {
             println("Failed getting commit: ${e.message}")
             "unknown"

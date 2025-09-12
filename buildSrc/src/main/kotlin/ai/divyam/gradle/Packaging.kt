@@ -160,8 +160,7 @@ fun Project.configurePackaging(
             }
 
             // Create the component package
-            @Suppress("DEPRECATION")
-            exec {
+            providers.exec {
                 commandLine(
                     "pkgbuild",
                     "--root", tempDir.absolutePath,
@@ -169,7 +168,7 @@ fun Project.configurePackaging(
                     "--version", sanitizedVersion,
                     pkgFile.absolutePath
                 )
-            }
+            }.result.get()
 
             // Cleanup temp files
             tempDir.deleteRecursively()

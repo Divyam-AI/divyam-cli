@@ -29,6 +29,13 @@ from [Github actions](https://github.com/Divyam-AI/divyam-cli/actions).
   section, download the
   `macos-packages-amd64` zip file.
 
+#### Finder
+
+Extract the zip from the finder and open the pkg file to start the
+installation. Follow the install wizard to complete installation.
+
+#### Terminal
+
 Extract the zip contents after download.
 
 ```shell
@@ -36,8 +43,7 @@ Extract the zip contents after download.
 unzip macos-packages-arm64.zip 
 ```
 
-Install as the package from the terminal (opening the package from the
-Finder also installs it.)
+Install as the package
 
 ```shell
 # Use the extracted directory. Change name to match the extracted directory
