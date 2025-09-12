@@ -38,7 +38,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build deb and rpm
-        run: ./gradlew clean deb rpm
+        run: ./gradlew clean deb rpm --debug --stacktrace
 
       - name: Prepare Linux artifacts
         run: |
