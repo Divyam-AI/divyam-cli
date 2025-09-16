@@ -39,7 +39,6 @@ class ModelInfoUpdateCommand : BaseCommand() {
     @Option(
         names = ["--model-name"],
         description = ["Optional: New name of the model is change is desired"],
-        required = true
     )
     private var modelName: String? = null
 
@@ -55,6 +54,8 @@ class ModelInfoUpdateCommand : BaseCommand() {
         names = ["--provider-api-key"],
         description = ["Optional: Provider API Key to make the calls while " +
                 "proxying requests"],
+        interactive = true,
+        arity = "0..1"
     )
     private var providerApiKey: String? = null
 

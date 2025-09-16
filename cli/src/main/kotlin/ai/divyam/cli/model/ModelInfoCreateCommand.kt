@@ -38,9 +38,10 @@ class ModelInfoCreateCommand : BaseCommand() {
     @Option(
         names = ["--provider-api-key"],
         description = ["Required: Provider API Key to make the calls while proxying requests"],
-        required = true
+        interactive = true,
+        arity = "0..1"
     )
-    private lateinit var providerApiKey: String
+    private var providerApiKey: String? = null
 
     @Option(
         names = ["--provider-base-url"],
@@ -83,7 +84,11 @@ class ModelInfoCreateCommand : BaseCommand() {
 
     override fun execute(): Int {
         // TODO: Is allowing same model info, provider info tuple to be
-        //  readded. is this expected.
+        //  re-added. is this expected?
+        if (providerApiKey == null) {
+            throw Exception("Provider API Key is required")
+        }
+
         val mInfos = runBlocking {
             val pricingStore = pricingStore(modelPricingYaml)
 
@@ -123,7 +128,7 @@ class ModelInfoCreateCommand : BaseCommand() {
                         serviceAccountId = serviceAccountId,
                         nameProvider = providerName,
                         endpoint = providerBaseUrl,
-                        apiKeyModel = providerApiKey,
+                        apiKeyModel = providerApiKey!!,
                         nameModel = modelName,
                         textPricing = TextPricing(
                             input = modelPricing.textInputPrice,
