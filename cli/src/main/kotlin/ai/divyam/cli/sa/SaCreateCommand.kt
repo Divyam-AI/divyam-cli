@@ -2,9 +2,10 @@ package ai.divyam.cli.sa
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.HasSecurityPolicy
-import ai.divyam.client.IpVerificationStrategy
-import ai.divyam.client.ModelAPIAuthMode
-import ai.divyam.client.OptimizationGoal
+import ai.divyam.client.data.models.IpVerificationStrategy
+import ai.divyam.client.data.models.ModelAPIAuthMode
+import ai.divyam.client.data.models.OptimizationGoal
+import ai.divyam.client.data.models.ServiceAccountCreateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -24,8 +25,9 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
     @Option(
         names = ["--name"],
         description = ["New service account name"],
+        required = true
     )
-    var name: String? = null
+    lateinit var name: String
 
     @Option(
         names = ["--traffic-allocation-config"],
@@ -100,16 +102,19 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
         }
         val created = runBlocking {
             divyamClient.createServiceAccount(
-                orgId = orgId,
-                name = name,
-                isOrgAdmin = isOrgAdmin,
-                isAdmin = isAdmin,
-                authModeModelApi =
-                    authMode ?: ModelAPIAuthMode.API_KEYS_SAVED,
-                trafficAllocationConfig = trafficAllocationConfigObj,
-                optimizationGoal = optimizationGoal
-                    ?: OptimizationGoal.HIGH_QUALITY,
-                securityPolicy = createSecurityPolicy()
+                ServiceAccountCreateRequest(
+                    orgId = orgId,
+                    name = name,
+                    isOrgAdmin = isOrgAdmin,
+                    isAdmin = isAdmin,
+                    authmodeModelApi =
+                        authMode ?: ModelAPIAuthMode.API_KEYS_SAVED,
+                    trafficAllocationConfig = trafficAllocationConfigObj
+                        ?: emptyMap(),
+                    optimizationGoal = optimizationGoal
+                        ?: OptimizationGoal.HIGH_QUALITY,
+                    securityPolicy = createSecurityPolicy()
+                )
             )
         }
         printObjs(created)

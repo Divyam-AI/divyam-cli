@@ -1,8 +1,8 @@
 package ai.divyam.cli.selector
 
 import ai.divyam.cli.base.BaseCommand
-import ai.divyam.client.ModelSelectorState
-import ai.divyam.client.ModelSelectorUpdateRequest
+import ai.divyam.client.data.models.ModelSelectorState
+import ai.divyam.client.data.models.ModelSelectorUpdateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option

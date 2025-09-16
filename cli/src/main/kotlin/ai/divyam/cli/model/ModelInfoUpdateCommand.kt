@@ -2,8 +2,8 @@ package ai.divyam.cli.model
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.model.ModelPricingStore.Companion.pricingStore
-import ai.divyam.client.ModelProviderInfoUpdation
-import ai.divyam.client.TextPricing
+import ai.divyam.client.data.models.ModelProviderInfoUpdation
+import ai.divyam.client.data.models.TextPricing
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option

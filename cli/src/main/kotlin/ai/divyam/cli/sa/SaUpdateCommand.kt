@@ -2,11 +2,11 @@ package ai.divyam.cli.sa
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.HasSecurityPolicy
-import ai.divyam.client.IpVerificationStrategy
-import ai.divyam.client.ModelAPIAuthMode
-import ai.divyam.client.OptimizationGoal
-import ai.divyam.client.ServiceAccount
-import ai.divyam.client.ServiceAccountUpdateRequest
+import ai.divyam.client.data.models.IpVerificationStrategy
+import ai.divyam.client.data.models.ModelAPIAuthMode
+import ai.divyam.client.data.models.OptimizationGoal
+import ai.divyam.client.data.models.ServiceAccount
+import ai.divyam.client.data.models.ServiceAccountUpdateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -109,7 +109,7 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
                     name = sa.name,
                     trafficAllocationConfig = sa.trafficAllocationConfig,
                     optimizationGoal = sa.optimizationGoal,
-                    authModeModelApi = sa.authModeModelApi,
+                    authmodeModelApi = sa.authmodeModelApi,
                     isOrgAdmin = sa.isOrgAdmin,
                     isAdmin = sa.isAdmin,
                     regenerateApiKey = regenerateApiKey,
@@ -145,7 +145,7 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
 
         optimizationGoal?.let { sa = sa.copy(optimizationGoal = it) }
 
-        authMode?.let { sa = sa.copy(authModeModelApi = it) }
+        authMode?.let { sa = sa.copy(authmodeModelApi = it) }
 
         isAdmin?.let { sa = sa.copy(isAdmin = it) }
         isOrgAdmin?.let { sa = sa.copy(isOrgAdmin = it) }

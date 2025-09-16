@@ -2,9 +2,10 @@ package ai.divyam.cli.model
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.model.ModelPricingStore.Companion.pricingStore
-import ai.divyam.client.ModelProviderInfo
-import ai.divyam.client.ModelProviderInfoCreation
-import ai.divyam.client.TextPricing
+import ai.divyam.client.data.models.Modality
+import ai.divyam.client.data.models.ModelProviderInfo
+import ai.divyam.client.data.models.ModelProviderInfoCreation
+import ai.divyam.client.data.models.TextPricing
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -72,6 +73,14 @@ class ModelInfoCreateCommand : BaseCommand() {
     )
     private var modelPricingYaml: File? = null
 
+    @Option(
+        names = ["--supported-modalities"],
+        description = ["Optional: Comma separated list of supported modalities. " +
+                $$"Valid values are ${COMPLETION-CANDIDATES}"],
+        split = ","
+    )
+    var supportedModalities: List<Modality> = listOf(Modality.TEXT)
+
     override fun execute(): Int {
         // TODO: Is allowing same model info, provider info tuple to be
         //  readded. is this expected.
@@ -122,7 +131,8 @@ class ModelInfoCreateCommand : BaseCommand() {
                         ),
                         currency = modelPricing.currency,
                         perNTokens = modelPricing.perNTokens,
-                        configsModel = modelConfigsJson
+                        configsModel = modelConfigsJson,
+                        supportedModalities = supportedModalities
                     )
                 )
 

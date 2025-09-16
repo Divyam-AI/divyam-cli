@@ -2,7 +2,7 @@ package ai.divyam.cli.org
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.HasSecurityPolicy
-import ai.divyam.client.IpVerificationStrategy
+import ai.divyam.client.data.models.IpVerificationStrategy
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option

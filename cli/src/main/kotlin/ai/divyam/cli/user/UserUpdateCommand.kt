@@ -2,9 +2,9 @@ package ai.divyam.cli.user
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.HasSecurityPolicy
-import ai.divyam.client.IpVerificationStrategy
-import ai.divyam.client.User
-import ai.divyam.client.UserUpdateRequest
+import ai.divyam.client.data.models.IpVerificationStrategy
+import ai.divyam.client.data.models.User
+import ai.divyam.client.data.models.UserUpdateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option

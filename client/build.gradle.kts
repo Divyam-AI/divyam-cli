@@ -1,5 +1,6 @@
 import ai.divyam.gradle.Versions
 import ai.divyam.gradle.configureKotlin
+import com.pswidersk.gradle.python.VenvTask
 
 plugins {
     java
@@ -7,6 +8,8 @@ plugins {
 
     // TODO: Version set from buildSrc
     kotlin("plugin.serialization") version "2.2.0"
+
+    id("com.pswidersk.python-plugin")
 }
 
 group = "ai.divyam"
@@ -42,4 +45,17 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+pythonPlugin {
+    pythonVersion = "3.13.3"
+}
+
+tasks.register<VenvTask>("generateDataModels") {
+    workingDir = projectDir.resolve("data-model-sync/src")
+    args = listOf("generate_kotlin_models.py")
+}
+
+tasks.named("compileKotlin") {
+    dependsOn("generateDataModels")
 }

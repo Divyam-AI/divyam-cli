@@ -1,9 +1,9 @@
 package ai.divyam.cli.eval
 
 import ai.divyam.cli.base.SaSpecificCommand
-import ai.divyam.client.EvalGranularity
-import ai.divyam.client.EvalState
-import ai.divyam.client.EvalUpdateRequest
+import ai.divyam.client.data.models.EvalGranularity
+import ai.divyam.client.data.models.EvalState
+import ai.divyam.client.data.models.EvalUpdateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option

@@ -1,13 +1,31 @@
 package ai.divyam.client
 
-import com.fasterxml.jackson.annotation.JsonCreator
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonProperty
-import com.fasterxml.jackson.annotation.JsonValue
+import ai.divyam.client.data.models.ChatCompletionDebugResponse
+import ai.divyam.client.data.models.ChatCompletionResponse
+import ai.divyam.client.data.models.ChatRequest
+import ai.divyam.client.data.models.Eval
+import ai.divyam.client.data.models.EvalCreateRequest
+import ai.divyam.client.data.models.EvalState
+import ai.divyam.client.data.models.EvalUpdateRequest
+import ai.divyam.client.data.models.ModelProviderInfo
+import ai.divyam.client.data.models.ModelProviderInfoCreation
+import ai.divyam.client.data.models.ModelProviderInfoUpdation
+import ai.divyam.client.data.models.ModelSelector
+import ai.divyam.client.data.models.ModelSelectorCreateRequest
+import ai.divyam.client.data.models.ModelSelectorState
+import ai.divyam.client.data.models.ModelSelectorUpdateRequest
+import ai.divyam.client.data.models.Org
+import ai.divyam.client.data.models.OrgUpdateRequest
+import ai.divyam.client.data.models.SecurityPolicy
+import ai.divyam.client.data.models.ServiceAccount
+import ai.divyam.client.data.models.ServiceAccountCreateRequest
+import ai.divyam.client.data.models.ServiceAccountUpdateRequest
+import ai.divyam.client.data.models.User
+import ai.divyam.client.data.models.UserCreateRequest
+import ai.divyam.client.data.models.UserUpdateRequest
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import com.formkiq.graalvm.annotations.Reflectable
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
@@ -28,578 +46,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.InternalSerializationApi
 import java.security.cert.X509Certificate
-import java.util.Locale
 import javax.net.ssl.X509TrustManager
 
-//TODO: Consistent arguments. Take payloads instead of all options! And don't
-// call then payloads.
-// ------------------- Enums -------------------
-@Reflectable
-enum class EvalState {
-    ACTIVE, INACTIVE;
-
-    @JsonCreator
-    fun fromString(value: String?): EvalState? {
-        if (value == null) {
-            return null
-        }
-        return EvalState.valueOf(value.uppercase(Locale.getDefault()))
-    }
-}
-
-@Reflectable
-enum class EvalGranularity {
-    LLM_REQUEST_RESPONSE,
-    TURN_BASED,
-    SESSION_BASED;
-
-    @JsonCreator
-    fun fromString(value: String?): EvalGranularity? {
-        if (value == null) {
-            return null
-        }
-        return EvalGranularity.valueOf(value.uppercase(Locale.getDefault()))
-    }
-}
-
-@Reflectable
-enum class OptimizationGoal {
-    HIGH_QUALITY, COST_EFFICIENT;
-
-    @JsonCreator
-    fun fromString(value: String?): OptimizationGoal? {
-        if (value == null) {
-            return null
-        }
-        return OptimizationGoal.valueOf(value.uppercase(Locale.getDefault()))
-    }
-}
-
-@Reflectable
-enum class ModelAPIAuthMode {
-    API_KEYS_SAVED, OAUTH;
-
-    @JsonCreator
-    fun fromString(value: String?): ModelAPIAuthMode? {
-        if (value == null) {
-            return null
-        }
-        return ModelAPIAuthMode.valueOf(value.uppercase(Locale.getDefault()))
-    }
-}
-
-@Reflectable
-enum class Modality {
-    TEXT;
-
-    @JsonCreator
-    fun fromString(value: String?): Modality? {
-        if (value == null) {
-            return null
-        }
-        return Modality.valueOf(value.uppercase(Locale.getDefault()))
-    }
-
-    @JsonValue
-    fun toLower(): String {
-        return this.name.lowercase(Locale.getDefault())
-    }
-}
-
-@Reflectable
-enum class ModelSelectorState {
-    TRAINED,
-    SHADOW,
-    PROD,
-    INACTIVE;
-
-    @JsonCreator
-    fun fromString(value: String?): ModelSelectorState? {
-        if (value == null) {
-            return null
-        }
-        return ModelSelectorState.valueOf(value.uppercase(Locale.getDefault()))
-    }
-}
-
-@Reflectable
-enum class IpVerificationStrategy {
-    IP,
-    XFF;
-
-    @JsonCreator
-    fun fromString(value: String?): IpVerificationStrategy? {
-        if (value == null) {
-            return null
-        }
-        return IpVerificationStrategy.valueOf(value.uppercase(Locale.getDefault()))
-    }
-
-    @JsonValue
-    fun toLowerCase(): String {
-        return this.name.lowercase(Locale.getDefault())
-    }
-}
-
-@Reflectable
-enum class ChatRole {
-    SYSTEM,
-    USER,
-    ASSISTANT;
-
-    @JsonCreator
-    fun fromString(value: String?): ChatRole? {
-        if (value == null) {
-            return null
-        }
-        return ChatRole.valueOf(value.uppercase(Locale.getDefault()))
-    }
-
-    @JsonValue
-    fun toLowerCase(): String {
-        return this.name.lowercase(Locale.getDefault())
-    }
-}
-
-// ------------------- Models -------------------
-@Reflectable
-@JsonIgnoreProperties(ignoreUnknown = true)
-data class SecurityPolicy(
-    @param:JsonProperty("allowed_ip_networks")
-    val allowedIpNetworks: List<String>? = null,
-
-    @param:JsonProperty("blocked_ip_networks")
-    val blockedIpNetworks: List<String>? = null,
-
-    @param:JsonProperty("ip_verifications")
-    val ipVerifications: List<IpVerificationStrategy>? = null,
-
-    @param:JsonProperty("xff_indices")
-    val xffIndices: List<Int>? = null
-)
-
-@Reflectable
-data class Org(
-    val id: Int? = null,
-    val name: String,
-    @param:JsonProperty("security_policy")
-    val securityPolicy: SecurityPolicy? = null
-)
-
-@Reflectable
-data class OrgUpdateRequest(
-    val name: String? = null,
-    @param:JsonProperty("security_policy")
-    val securityPolicy: SecurityPolicy? = null
-)
-
-@Reflectable
-data class User(
-    val id: Int,
-
-    @param:JsonProperty("email_id")
-    val emailId: String,
-
-    val name: String,
-
-    @param:JsonProperty("is_admin")
-    val isAdmin: Boolean? = null,
-
-    @param:JsonProperty("is_org_admin")
-    val isOrgAdmin: Boolean? = null,
-
-    @param:JsonProperty("org_id")
-    val orgId: Int,
-
-    @param:JsonProperty("org_name")
-    val orgName: String,
-
-    @param:JsonProperty("security_policy")
-    val securityPolicy: SecurityPolicy? = null
-)
-
-@Reflectable
-data class UserCreateRequest(
-    @param:JsonProperty("email_id")
-    val emailId: String,
-
-    val name: String,
-
-    @param:JsonProperty("is_admin")
-    val isAdmin: Boolean? = null,
-
-    @param:JsonProperty("is_org_admin")
-    val isOrgAdmin: Boolean? = null,
-
-    @param:JsonProperty("org_id")
-    val orgId: Int,
-
-    @param:JsonProperty("security_policy")
-    val securityPolicy: SecurityPolicy? = null,
-    val password: String,
-)
-
-@Reflectable
-data class UserUpdateRequest(
-    val name: String? = null,
-
-    @get:JsonProperty("is_org_admin")
-    val isOrgAdmin: Boolean? = null,
-
-    @get:JsonProperty("is_admin")
-    val isAdmin: Boolean? = null,
-
-    val password: String? = null,
-
-    @get:JsonProperty("security_policy")
-    val securityPolicy: SecurityPolicy? = null
-)
-
-@Reflectable
-data class ServiceAccount(
-    val id: String,
-    val name: String,
-    @get:JsonProperty("org_id")
-    val orgId: Int,
-
-    @get:JsonProperty("org_name")
-    val orgName: String,
-
-    @get:JsonProperty("api_key")
-    val apiKey: String? = null,
-
-    @get:JsonProperty("divyam_auth_key_hashed")
-    val divyamAuthKeyHashed: String,
-
-    @get:JsonProperty("optimization_goal")
-    val optimizationGoal: OptimizationGoal,
-
-    @get:JsonProperty("authmode_model_api")
-    val authModeModelApi: ModelAPIAuthMode,
-
-    @get:JsonProperty("traffic_allocation_config")
-    val trafficAllocationConfig: Map<String, Double>,
-
-    @get:JsonProperty("is_org_admin")
-    val isOrgAdmin: Boolean? = null,
-
-    @get:JsonProperty("is_admin")
-    val isAdmin: Boolean? = null,
-
-    @get:JsonProperty("security_policy")
-    val securityPolicy: SecurityPolicy? = null
-)
-
-@Reflectable
-data class ServiceAccountCreateRequest(
-    val name: String,
-
-    @get:JsonProperty("org_id")
-    val orgId: Int,
-
-    @get:JsonProperty("optimization_goal")
-    val optimizationGoal: OptimizationGoal,
-
-    @get:JsonProperty("authmode_model_api")
-    val authModeModelApi: ModelAPIAuthMode,
-
-    @get:JsonProperty("traffic_allocation_config")
-    val trafficAllocationConfig: Map<String, Double>? = null,
-
-    @get:JsonProperty("is_org_admin")
-    val isOrgAdmin: Boolean,
-
-    @get:JsonProperty("is_admin")
-    val isAdmin: Boolean? = null,
-
-    @get:JsonProperty("security_policy")
-    val securityPolicy: SecurityPolicy? = null
-)
-
-@Reflectable
-data class ServiceAccountUpdateRequest(
-    val name: String? = null,
-    @get:JsonProperty("optimization_goal")
-    val optimizationGoal: OptimizationGoal? = null,
-    @get:JsonProperty("authmode_model_api")
-    val authModeModelApi: ModelAPIAuthMode? = null,
-    @get:JsonProperty("traffic_allocation_config")
-    val trafficAllocationConfig: Map<String, Double>? = null,
-    @get:JsonProperty("is_org_admin")
-    val isOrgAdmin: Boolean? = null,
-    @get:JsonProperty("is_admin")
-    val isAdmin: Boolean? = null,
-    @get:JsonProperty("security_policy")
-    val securityPolicy: SecurityPolicy? = null,
-    @get:JsonProperty("regenerate_api_key")
-    val regenerateApiKey: Boolean? = null
-)
-
-@Reflectable
-data class TextPricing(val input: Double, var output: Double)
-
-@Reflectable
-data class ModelProviderInfo(
-    val id: Int,
-    @get:JsonProperty("name_provider")
-    val nameProvider: String,
-    @get:JsonProperty("id_provider")
-    val idProvider: Int,
-    @get:JsonProperty("name_model")
-    val nameModel: String,
-    @get:JsonProperty("id_model")
-    val idModel: Int,
-    val endpoint: String,
-    @get:JsonProperty("masked_api_key_model")
-    val maskedApiKeyModel: String,
-    @get:JsonProperty("service_account_id")
-    val serviceAccountId: String?,
-    @get:JsonProperty("org_name")
-    val orgName: String? = null,
-    @get:JsonProperty("configs_model")
-    val configsModel: String,
-    @get:JsonProperty("supported_modalities")
-    val supportedModalities: List<Modality> = listOf(Modality.TEXT),
-    @get:JsonProperty("text_pricing")
-    val textPricing: TextPricing,
-    val currency: String? = null,
-    @get:JsonProperty("per_n_tokens")
-    val perNTokens: Int? = null
-)
-
-@Reflectable
-data class ModelProviderInfoCreation(
-    @get:JsonProperty("service_account_id")
-    val serviceAccountId: String? = null,
-
-    // TODO: some places name_provider, some places provider_name.
-    @get:JsonProperty("name_provider")
-    val nameProvider: String,
-
-    // TODO: some places name_mode, some places model_name.
-    @get:JsonProperty("name_model")
-    val nameModel: String,
-    val endpoint: String,
-    @get:JsonProperty("api_key_model")
-    val apiKeyModel: String,
-    @get:JsonProperty("configs_model")
-    val configsModel: String,
-    @get:JsonProperty("supported_modalities")
-    val supportedModalities: List<Modality> = listOf(Modality.TEXT),
-    @get:JsonProperty("text_pricing")
-    val textPricing: TextPricing,
-    val currency: String? = null,
-    @get:JsonProperty("per_n_tokens")
-    val perNTokens: Int? = null
-)
-
-@Reflectable
-data class ModelProviderInfoUpdation(
-    @get:JsonProperty("service_account_id")
-    val serviceAccountId: String? = null,
-    @get:JsonProperty("provider_name")
-    val providerName: String? = null,
-    @get:JsonProperty("model_name")
-    val modelName: String? = null,
-    val endpoint: String? = null,
-    @get:JsonProperty("api_key_model")
-    val apiKeyModel: String? = null,
-    @get:JsonProperty("configs_model")
-    val configsModel: String? = null,
-    @get:JsonProperty("supported_modalities")
-    val supportedModalities: List<Modality>? = null,
-    @get:JsonProperty("text_pricing")
-    val textPricing: TextPricing? = null,
-    val currency: String? = null,
-    @get:JsonProperty("per_n_tokens")
-    val perNTokens: Int? = null
-)
-
-@Reflectable
-data class ModelSelector(
-    val id: Int,
-    val name: String,
-    @get:JsonProperty("org_id")
-    val orgId: Int,
-    @get:JsonProperty("service_account_id")
-    val serviceAccountId: String? = null,
-    val state: ModelSelectorState,
-    val endpoint: String? = null,
-    @get:JsonProperty("created_at")
-    val createdAt: Long
-)
-
-@Reflectable
-data class ModelSelectorCreateRequest(
-    val name: String,
-    @get:JsonProperty("org_id")
-    val orgId: Int,
-    @get:JsonProperty("service_account_id")
-    val serviceAccountId: String? = null,
-    val state: ModelSelectorState = ModelSelectorState.TRAINED,
-    val endpoint: String? = null
-)
-
-@Reflectable
-data class ModelSelectorUpdateRequest(
-    val name: String? = null,
-    val state: ModelSelectorState? = null,
-    val endpoint: String? = null
-)
-
-@Reflectable
-data class Eval(
-    val id: Int,
-    @get:JsonProperty("org_id")
-    val orgId: Int,
-    @get:JsonProperty("service_account_id")
-    val serviceAccountId: String,
-    val name: String,
-    val granularity: EvalGranularity,
-    @get:JsonProperty("class_name")
-    val className: String,
-    @get:JsonProperty("class_init_config")
-    val classInitConfig: Map<String, Any> = emptyMap(),
-    val state: EvalState,
-    @get:JsonProperty("created_at")
-    val createdAt: Int
-)
-
-@Reflectable
-data class EvalCreateRequest(
-    @get:JsonProperty("org_id")
-    val orgId: Int,
-    @get:JsonProperty("service_account_id")
-    val serviceAccountId: String,
-    val name: String,
-    val granularity: EvalGranularity,
-    @get:JsonProperty("class_name")
-    val className: String,
-    @get:JsonProperty("class_init_config")
-    val classInitConfig: Map<String, Any> = emptyMap(),
-    val state: EvalState
-)
-
-// TODO: Only allow state change.
-@Reflectable
-data class EvalUpdateRequest(
-    val name: String? = null,
-    val granularity: EvalGranularity? = null,
-    @get:JsonProperty("class_name")
-    val className: String? = null,
-    @get:JsonProperty("class_init_config")
-    val classInitConfig: Map<String, Any>? = null,
-    val state: EvalState? = null
-)
-
-@Reflectable
-data class ChatMessage(
-    @get:JsonProperty("role")
-    val role: ChatRole,
-
-    @get:JsonProperty("content")
-    val content: String
-)
-
-@Reflectable
-data class ChatRequest(
-    @get:JsonProperty("model")
-    val model: String,
-    @get:JsonProperty("messages")
-    val messages: List<ChatMessage>,
-    @get:JsonProperty("temperature")
-    val temperature: Double? = null,
-    @get:JsonProperty("top_p")
-    val topP: Double? = null,
-    @get:JsonProperty("n")
-    val n: Int? = null,
-    @get:JsonProperty("stream")
-    val stream: Boolean? = null,
-    @get:JsonProperty("stop")
-    val stop: List<String>? = null,
-    @get:JsonProperty("max_tokens")
-    val maxTokens: Int? = null,
-    @get:JsonProperty("presence_penalty")
-    val presencePenalty: Double? = null,
-    @get:JsonProperty("frequency_penalty")
-    val frequencyPenalty: Double? = null,
-    @get:JsonProperty("user")
-    val user: String? = null
-)
-
-@Reflectable
-data class ChatCompletionResponse(
-    val id: String,
-    val choices: List<Choice>,
-    val created: Long,
-    val model: String,
-
-    @get:JsonProperty("object")
-    val objectType: String,
-
-    @get:JsonProperty("service_tier")
-    val serviceTier: String? = null,
-
-    @get:JsonProperty("system_fingerprint")
-    val systemFingerprint: String? = null,
-
-    val usage: Usage
-)
-
-@Reflectable
-data class ChatCompletionDebugResponse(
-    @get:JsonProperty("chat-response")
-    val chatResponse: ChatCompletionResponse,
-
-    @get:JsonProperty("response-headers")
-    val responseHeaders: Map<String, Any>,
-)
-
-@Reflectable
-data class Choice(
-    @get:JsonProperty("finish_reason")
-    val finishReason: String,
-
-    val index: Int,
-    val logprobs: Any? = null,
-    val message: Message
-)
-
-@Reflectable
-data class Message(
-    val content: String,
-    val refusal: String? = null,
-    val role: String,
-
-    val annotations: Any? = null,
-    val audio: Any? = null,
-
-    @get:JsonProperty("function_call")
-    val functionCall: Any? = null,
-
-    @get:JsonProperty("tool_calls")
-    val toolCalls: Any? = null
-)
-
-@Reflectable
-data class Usage(
-    @get:JsonProperty("completion_tokens")
-    val completionTokens: Int,
-
-    @get:JsonProperty("prompt_tokens")
-    val promptTokens: Int,
-
-    @get:JsonProperty("total_tokens")
-    val totalTokens: Int,
-
-    @get:JsonProperty("completion_tokens_details")
-    val completionTokensDetails: Any? = null,
-
-    @get:JsonProperty("prompt_tokens_details")
-    val promptTokensDetails: Any? = null
-)
-
-// ------------------- Client -------------------
 class DivyamClient(
     emailId: String? = null,
     password: String? = null,
@@ -677,11 +125,6 @@ class DivyamClient(
     private fun headers() =
         headersOf("Authorization" to listOf("Bearer $apiToken"))
 
-    fun generateRandomString(prefix: String = "", length: Int = 6): String {
-        val chars = ('a'..'z') + ('A'..'Z') + ('0'..'9')
-        return prefix + (1..length).map { chars.random() }.joinToString("")
-    }
-
     // ---------------- Orgs ----------------
     suspend fun getOrgById(orgId: Int): Org {
         val httpResponse =
@@ -706,6 +149,7 @@ class DivyamClient(
         return httpResponse.body()
     }
 
+    @Suppress("unused")
     suspend fun getOrg(name: String): Org {
         val httpResponse =
             client.get("$endpoint/v1/orgs/") { headers.appendAll(headers()) }
@@ -764,28 +208,14 @@ class DivyamClient(
     }
 
     suspend fun createUser(
-        orgId: Int, password: String, emailId: String, name: String? = null,
-        isOrgAdmin: Boolean = false, isAdmin: Boolean = false,
-        securityPolicy: SecurityPolicy? = null
+        userCreateRequest: UserCreateRequest
     ): User {
-        val finalName = name ?: generateRandomString(
-            prefix = if (isAdmin) "admin_" else if (isOrgAdmin) "org_admin_" else "org_user_"
-        )
-        val payload = UserCreateRequest(
-            emailId = emailId,
-            name = finalName,
-            password = password,
-            orgId = orgId,
-            isOrgAdmin = isOrgAdmin,
-            isAdmin =
-                isAdmin,
-            securityPolicy = securityPolicy
-        )
-        val httpResponse = client.post("$endpoint/v1/orgs/$orgId/users/") {
-            headers.appendAll(headers())
-            contentType(ContentType.Application.Json)
-            setBody(payload)
-        }
+        val httpResponse =
+            client.post("$endpoint/v1/orgs/${userCreateRequest.orgId}/users/") {
+                headers.appendAll(headers())
+                contentType(ContentType.Application.Json)
+                setBody(userCreateRequest)
+            }
         if (httpResponse.status != HttpStatusCode.OK) {
             error("Error creating user: ${httpResponse.status} - ${httpResponse.body<String>()}")
         }
@@ -851,33 +281,30 @@ class DivyamClient(
     }
 
     suspend fun createServiceAccount(
-        orgId: Int, name: String? = null,
-        isOrgAdmin: Boolean = false, isAdmin: Boolean = false,
-        authModeModelApi: ModelAPIAuthMode = ModelAPIAuthMode.API_KEYS_SAVED,
-        trafficAllocationConfig: Map<String, Double>? = null,
-        optimizationGoal: OptimizationGoal = OptimizationGoal.HIGH_QUALITY,
-        securityPolicy: SecurityPolicy? = null
+        serviceAccountCreateRequest: ServiceAccountCreateRequest
     ): ServiceAccount {
-        val finalName = name ?: generateRandomString(
-            prefix = if (isAdmin) "admin_" else if (isOrgAdmin) "org_admin_" else "org_user_sa_"
-        )
-        trafficAllocationConfig ?: mapOf(
-            "control" to 10.0,
-            "selector_disabled" to 90.0
-        )
-        val payload = ServiceAccountCreateRequest(
-            orgId = orgId,
-            name = finalName,
-            optimizationGoal = optimizationGoal,
-            authModeModelApi = authModeModelApi,
-            trafficAllocationConfig = trafficAllocationConfig,
-            isOrgAdmin = isOrgAdmin,
-            isAdmin =
-                isAdmin,
-            securityPolicy = securityPolicy
-        )
+        // TODO: no defaults in client/tools
+        val trafficAllocationConfig = if (serviceAccountCreateRequest
+                .trafficAllocationConfig.isEmpty()
+        ) {
+            mapOf(
+                "control" to 10.0,
+                "selector_disabled" to 90.0
+            )
+        } else {
+            serviceAccountCreateRequest.trafficAllocationConfig
+        }
+
+        val payload =
+            serviceAccountCreateRequest.copy(trafficAllocationConfig = trafficAllocationConfig)
+
         val httpResponse =
-            client.post("$endpoint/v1/orgs/$orgId/service_accounts/") {
+            client.post(
+                "$endpoint/v1/orgs/${
+                    serviceAccountCreateRequest
+                        .orgId
+                }/service_accounts/"
+            ) {
                 headers.appendAll(headers())
                 contentType(ContentType.Application.Json)
                 setBody(payload)
