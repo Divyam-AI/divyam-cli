@@ -1,8 +1,8 @@
 package ai.divyam.cli.selector
 
 import ai.divyam.cli.base.BaseCommand
-import ai.divyam.client.ModelSelectorCreateRequest
-import ai.divyam.client.ModelSelectorState
+import ai.divyam.client.data.models.ModelSelectorCreateRequest
+import ai.divyam.client.data.models.ModelSelectorState
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -53,7 +53,8 @@ class ModelSelectorCreateCommand : BaseCommand() {
                     orgId = orgId,
                     serviceAccountId = serviceAccountId,
                     name = name,
-                    state = state
+                    state = state,
+                    endpoint = selectorEndpoint
                 )
             )
         }

@@ -1,10 +1,10 @@
 package ai.divyam.cli.base
 
-import ai.divyam.client.IpVerificationStrategy
-import ai.divyam.client.SecurityPolicy
+import ai.divyam.client.data.models.IpVerificationStrategy
+import ai.divyam.client.data.models.SecurityPolicy
 
 /**
- * A command that has an optional [ai.divyam.client.SecurityPolicy]
+ * A command that has an optional [ai.divyam.client.data.models.SecurityPolicy]
  */
 interface HasSecurityPolicy {
     var allowedIpNetworks: List<String>?
@@ -59,7 +59,7 @@ interface HasSecurityPolicy {
     /**
      * Creates and updated copy of the security policy of an object based on
      * command-line arguments.
-     * @param obj The object whose security policy is to be updated.
+     * @param original The object whose security policy is to be updated.
      */
     fun updateSecurityPolicyFromArgs(original: SecurityPolicy?):
             SecurityPolicy? {

@@ -12,17 +12,17 @@ This is a native application that requires not dependencies currently available
 
 ## Installation
 
-**TBD:** Github Releases / and or proper repositories.
+**TBD:** GitHub Releases / and or proper repositories.
 
-For now please pick the installers from Github actions. Actions allow
+For now please pick the installers from GitHub actions. Actions allow
 building for macOS.
 
 ### macOS
 
 Select latest successful build
-from [Github actions](https://github.com/Divyam-AI/divyam-cli/actions).
+from [GitHub actions](https://github.com/Divyam-AI/divyam-cli/actions).
 
-* Apple silicon arm64 (M1/M2/M3/M4)- To the bottom of the page from the
+* Apple Silicon arm64 (M1/M2/M3/M4)- To the bottom of the page from the
   `Artifacts` section, download the
   `macos-packages-arm64` zip file.
 * Apple amd64 - To the bottom of the page from the `Artifacts`
@@ -32,7 +32,7 @@ from [Github actions](https://github.com/Divyam-AI/divyam-cli/actions).
 #### Finder
 
 Extract the zip from the finder and open the pkg file to start the
-installation. Follow the install wizard to complete installation.
+installation. Follow the installation wizard to complete installation.
 
 #### Terminal
 
@@ -43,20 +43,52 @@ Extract the zip contents after download.
 unzip macos-packages-arm64.zip 
 ```
 
-Install as the package
+Install the package
 
 ```shell
 # Use the extracted directory. Change name to match the extracted directory
 cd macos-packages-arm64
 
 # Install the package
-sudo installer -pkg ~/divyam-cli-*.pkg  -target /
+sudo installer -pkg divyam-cli-*.pkg  -target /
+```
+
+#### Autocomplete
+
+##### Bash
+
+To enable autocompletion for divyam, add the following line to your ~/.bashrc (
+or ~/.bash_profile on macOS):
+
+```shell
+source /usr/local/etc/bash_completion.d/divyam
+```
+
+Then reload your shell configuration:
+
+```shell
+source ~/.bashrc    # or source ~/.bash_profile
+```
+
+##### Zsh
+
+To enable autocompletion for divyam, ensure the completion script is available
+and then add the following to your ~/.zshrc:
+
+```shell
+source /usr/local/etc/bash_completion.d/divyam
+```
+
+Then reload your shell configuration:
+
+```shell
+source ~/.zshrc
 ```
 
 ### Linux
 
 Select latest successful build
-from [Github actions](https://github.com/Divyam-AI/divyam-cli/actions).
+from [GitHub actions](https://github.com/Divyam-AI/divyam-cli/actions).
 
 To the bottom of the page from the `Artifacts` section, download the zip
 for your architecture. E.g. `linux-packages-amd64`.
@@ -84,6 +116,38 @@ sudo dpkg -i divyam*.deb
 cd linux-packages-amd64
 
 sudo rpm -ivh divyam*.rpm 
+```
+
+#### Autocomplete
+
+##### Bash
+
+To enable autocompletion for divyam, add the following line to your ~/.bashrc (
+or ~/.bash_profile on macOS):
+
+```shell
+source /etc/bash_completion.d/divyam
+```
+
+Then reload your shell configuration:
+
+```shell
+source ~/.bashrc    # or source ~/.bash_profile
+```
+
+##### Zsh
+
+To enable autocompletion for divyam, ensure the completion script is available
+and then add the following to your ~/.zshrc:
+
+```shell
+source /etc/bash_completion.d/divyam
+```
+
+Then reload your shell configuration:
+
+```shell
+source ~/.zshrc
 ```
 
 ## Usage

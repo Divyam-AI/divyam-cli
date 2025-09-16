@@ -2,9 +2,9 @@ package ai.divyam.cli.chat
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.OutputFormat
-import ai.divyam.client.ChatMessage
-import ai.divyam.client.ChatRequest
-import ai.divyam.client.ChatRole
+import ai.divyam.client.data.models.ChatMessage
+import ai.divyam.client.data.models.ChatRequest
+import ai.divyam.client.data.models.ChatRole
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

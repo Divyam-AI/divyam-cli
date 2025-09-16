@@ -34,4 +34,10 @@ dependencies {
 
     // Gradle Kotlin DSL API - for kotlin-dsl features
     implementation(gradleKotlinDsl())
+
+    // Python runner for code translation
+    implementation(
+        "com.pswidersk.python-plugin:com.pswidersk.python-plugin.gradle" +
+                ".plugin:2.9.0"
+    )
 }

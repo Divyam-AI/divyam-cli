@@ -9,6 +9,7 @@ import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
 import org.redline_rpm.header.Os
 import org.redline_rpm.header.RpmType
+import java.io.File
 import java.security.MessageDigest
 import java.util.Locale.getDefault
 
@@ -66,7 +67,7 @@ fun Project.configurePackaging(
     val sanitizedVersion = project.version.toString().replace("-SNAPSHOT", "")
 
     fun SystemPackagingTask.setupPackaging() {
-        dependsOn("nativeCompile")
+        dependsOn("nativeCompile", "generateCompletion")
         val archMap = if (this is Deb) {
             debArchMap
         } else {
@@ -99,6 +100,28 @@ fun Project.configurePackaging(
                 unix("rwxr-xr-x")
             }
         }
+
+        into("/etc/bash_completion.d") {
+            from("build/generated/completion") {
+                include("divyam_completion")
+                rename("divyam_completion", "divyam")
+                // Set the file permissions to be executable.
+                filePermissions {
+                    unix("rwxr-xr-x")
+                }
+            }
+        }
+
+        into("/usr/share/zsh/site-functions") {
+            from("build/generated/completion") {
+                include("divyam_completion")
+                rename("divyam_completion", "divyam")
+                // Set the file permissions to be executable.
+                filePermissions {
+                    unix("rwxr-xr-x")
+                }
+            }
+        }
     }
 
     tasks.register("deb", Deb::class.java) {
@@ -124,7 +147,7 @@ fun Project.configurePackaging(
     tasks.register("macPkg") {
         group = "distribution"
         description = "Creates a PKG installer for CLI tool without a custom UI"
-        dependsOn("nativeCompile")
+        dependsOn("nativeCompile", "generateCompletion")
 
         // Determine the architecture to tag the package
         val pkgArch = when (val arch = System.getProperty("os.arch")) {
@@ -138,8 +161,6 @@ fun Project.configurePackaging(
                 "$projectBuildDir/distributions/${divyamPackageName}-${sanitizedVersion}" +
                         ".$pkgArch.pkg"
             )
-
-
 
         doLast {
             pkgFile.parentFile.mkdirs()
@@ -157,6 +178,34 @@ fun Project.configurePackaging(
             copy {
                 from(binary)
                 into(binDir)
+            }
+
+            // Bash completion
+            val bashDir = File("$tempDir/usr/local/etc/bash_completion.d")
+            bashDir.mkdirs()
+
+            val zshDir = File("$tempDir/usr/local/share/zsh/site-functions")
+            zshDir.mkdirs()
+
+            copy {
+                from("${projectBuildDir}/generated/completion/${divyamAppName}_completion")
+                into("$tempDir/usr/local/etc/bash_completion.d")
+                rename("${divyamAppName}_completion", divyamAppName)
+                // Set the file permissions to be executable.
+                filePermissions {
+                    unix("rwxr-xr-x")
+                }
+            }
+
+            // Zsh completion
+            copy {
+                from("${projectBuildDir}/generated/completion/${divyamAppName}_completion")
+                into("$tempDir/usr/local/share/zsh/site-functions")
+                rename("${divyamAppName}_completion", divyamAppName)
+                // Set the file permissions to be executable.
+                filePermissions {
+                    unix("rwxr-xr-x")
+                }
             }
 
             // Create the component package
@@ -178,7 +227,7 @@ fun Project.configurePackaging(
     }
 
     val brewPackageDist = tasks.register("brewPackageDist", Tar::class.java) {
-        dependsOn("nativeCompile")
+        dependsOn("nativeCompile", "generateCompletion")
 
         group = "distribution"
         description = "Packages binary, LICENSE, and README.md into a tar.gz"

@@ -2,7 +2,8 @@ package ai.divyam.cli.user
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.HasSecurityPolicy
-import ai.divyam.client.IpVerificationStrategy
+import ai.divyam.client.data.models.IpVerificationStrategy
+import ai.divyam.client.data.models.UserCreateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -19,8 +20,9 @@ class UserCreateCommand : BaseCommand(), HasSecurityPolicy {
     @Option(
         names = ["--name"],
         description = ["New user name"],
+        required = true
     )
-    private var name: String? = null
+    private lateinit var name: String
 
     @Option(
         names = ["--email"],
@@ -92,13 +94,15 @@ class UserCreateCommand : BaseCommand(), HasSecurityPolicy {
 
         val created = runBlocking {
             divyamClient.createUser(
-                orgId = orgId,
-                name = name,
-                isOrgAdmin = isOrgAdmin,
-                isAdmin = isAdmin,
-                securityPolicy = createSecurityPolicy(),
-                password = userPassword!!,
-                emailId = userEmail
+                UserCreateRequest(
+                    orgId = orgId,
+                    name = name,
+                    isOrgAdmin = isOrgAdmin,
+                    isAdmin = isAdmin,
+                    securityPolicy = createSecurityPolicy(),
+                    password = userPassword!!,
+                    emailId = userEmail
+                )
             )
         }
         printObjs(created)

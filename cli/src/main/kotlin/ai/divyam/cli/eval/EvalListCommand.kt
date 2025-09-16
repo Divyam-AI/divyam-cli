@@ -1,7 +1,7 @@
 package ai.divyam.cli.eval
 
 import ai.divyam.cli.base.SaSpecificCommand
-import ai.divyam.client.EvalState
+import ai.divyam.client.data.models.EvalState
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 

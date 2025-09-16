@@ -65,13 +65,35 @@ project.configurePackaging()
 project.configureGraalVmReflectionConfig()
 project.configureVersionInfo()
 
-tasks.test {
-    useJUnitPlatform()
-}
 
 
 sourceSets {
     main {
         resources.srcDir("${layout.buildDirectory.get().asFile}/generated/resources")
+    }
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+tasks.register<JavaExec>("generateCompletion") {
+    group = "build"
+    description = "Generates bash/zsh completion scripts for Picocli"
+
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("picocli.AutoComplete")
+
+    val outputDir =
+        layout.buildDirectory.dir("generated/completion").get().asFile
+
+    args = listOf(
+        "ai.divyam.cli.DivyamCliMain", "-n", "divyam", "-o",
+        File(outputDir, "divyam_completion").absolutePath
+    )
+
+    outputs.dir(outputDir)
+    doFirst {
+        outputDir.mkdirs()
     }
 }

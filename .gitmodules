@@ -1,0 +1,8 @@
+[submodule "client/data-model-sync/divyam-api"]
+	path = client/data-model-sync/divyam-api
+	url = ../divyam_router_controller.git
+	branch = main
+[submodule "client/data-model-sync/divyam-libs"]
+	path = client/data-model-sync/divyam-libs
+	url = ../divyam_python_libs.git
+	branch = main
