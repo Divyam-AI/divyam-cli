@@ -147,7 +147,7 @@ fun Project.configurePackaging(
     tasks.register("macPkg") {
         group = "distribution"
         description = "Creates a PKG installer for CLI tool without a custom UI"
-        dependsOn("nativeCompile")
+        dependsOn("nativeCompile", "generateCompletion")
 
         // Determine the architecture to tag the package
         val pkgArch = when (val arch = System.getProperty("os.arch")) {
@@ -227,7 +227,7 @@ fun Project.configurePackaging(
     }
 
     val brewPackageDist = tasks.register("brewPackageDist", Tar::class.java) {
-        dependsOn("nativeCompile")
+        dependsOn("nativeCompile", "generateCompletion")
 
         group = "distribution"
         description = "Packages binary, LICENSE, and README.md into a tar.gz"
