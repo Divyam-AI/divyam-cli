@@ -35,6 +35,7 @@ abstract class BaseCommand : Callable<Int> {
         description = ["Disable TLS verification for non-production cases " +
                 "only"],
         help = false,
+        hidden = true
     )
     var disableTlsVerification: Boolean = false
 

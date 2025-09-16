@@ -11,7 +11,7 @@ import picocli.CommandLine.Option
 @CommandLine.Command(name = "update", description = ["Update an eval."])
 class EvalUpdateCommand : SaSpecificCommand() {
     @Option(
-        names = ["-o", "--eval-id"],
+        names = ["--id"],
         description = ["The eval id to update"],
         required = true
     )
@@ -33,9 +33,8 @@ class EvalUpdateCommand : SaSpecificCommand() {
     @Option(
         names = ["--class-name"],
         description = ["Optional: New class name of the eval"],
-        required = true
     )
-    private lateinit var className: String
+    private var className: String? = null
 
     @Option(
         names = ["--class-init-config"],
