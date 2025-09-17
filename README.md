@@ -12,43 +12,30 @@ This is a native application that requires not dependencies currently available
 
 ## Installation
 
-**TBD:** GitHub Releases / and or proper repositories.
+Download the appropriate artifact for
+the [latest release](https://github.com/Divyam-AI/divyam-cli/releases/latest)
+based on
 
-For now please pick the installers from GitHub actions. Actions allow
-building for macOS.
+- your OS
+- the CPU architecture (arm64, amd64). The Apple Silicon mac books use arm64
+  architecture.
 
 ### macOS
 
-Select latest successful build
-from [GitHub actions](https://github.com/Divyam-AI/divyam-cli/actions).
-
-* Apple Silicon arm64 (M1/M2/M3/M4)- To the bottom of the page from the
-  `Artifacts` section, download the
-  `macos-packages-arm64` zip file.
-* Apple amd64 - To the bottom of the page from the `Artifacts`
-  section, download the
-  `macos-packages-amd64` zip file.
+* Apple Silicon arm64 (M1/M2/M3/M4)- Download the `divyam-cli-<version>.arm64.
+pkg` file.
+* Apple amd64 - Download the `divyam-cli-<version>.x86_64.pkg` file.
 
 #### Finder
 
-Extract the zip from the finder and open the pkg file to start the
-installation. Follow the installation wizard to complete installation.
+Locate the downloaded in the finder launch the installer and follow the
+installation wizard to complete installation.
 
 #### Terminal
-
-Extract the zip contents after download.
-
-```shell
-# Change appropriately to match the downloaded file.
-unzip macos-packages-arm64.zip 
-```
 
 Install the package
 
 ```shell
-# Use the extracted directory. Change name to match the extracted directory
-cd macos-packages-arm64
-
 # Install the package
 sudo installer -pkg divyam-cli-*.pkg  -target /
 ```
@@ -87,34 +74,27 @@ source ~/.zshrc
 
 ### Linux
 
-Select latest successful build
-from [GitHub actions](https://github.com/Divyam-AI/divyam-cli/actions).
-
-To the bottom of the page from the `Artifacts` section, download the zip
-for your architecture. E.g. `linux-packages-amd64`.
-
-Extract the zip contents after download.
-
-```shell
-# Change appropriately to match the downloaded file.
-unzip linux-packages-amd64.zip 
-```
-
 #### Debian based distro
 
-```shell
-# Use the extracted directory. Change name to match the extracted directory
-cd linux-packages-amd64
+Download the `divyam-cli_<version>_amd64.deb` or
+`divyam-cli_<version>_arm64.deb` based on your architecture from the GitHub
+releases page.
 
+Install the deb package.
+
+```shell
 sudo dpkg -i divyam*.deb 
 ```
 
 #### RHEL based distro
 
-```shell
-# Use the extracted directory. Change name to match the extracted directory
-cd linux-packages-amd64
+Download the `divyam-cli-<version>.x86_64.rpm` or
+`divyam-cli-<version>.aarch64.rpm` based on your architecture from the GitHub
+releases page.
 
+Install the RPM package.
+
+```shell
 sudo rpm -ivh divyam*.rpm 
 ```
 
@@ -226,6 +206,13 @@ List users
 ```
 
 To run a command provide the appropriate arguments.
+
+### Autocomplete
+
+Use TAB to see commands and subcommand based on current context, and
+autocomplete them.
+
+Type '--' + TAB to see what options are available.
 
 ### Authentication
 
