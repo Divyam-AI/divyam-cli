@@ -6,8 +6,11 @@ import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import java.util.concurrent.Callable
+import java.util.concurrent.TimeUnit
+import kotlin.system.measureNanoTime
 
 /**
  * Output format.
@@ -145,5 +148,48 @@ abstract class BaseCommand : Callable<Int> {
         // For example, to ignore unknown properties in the JSON response
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
         return mapper
+    }
+
+    protected fun <T> measureAndDisplayTime(
+        computeLatency: Boolean,
+        block: suspend () -> T
+    ): Pair<T, String> {
+        if (!computeLatency) {
+            return runBlocking {
+                block.invoke() to ""
+            }
+        }
+
+        var result: T
+        val durationNanos = measureNanoTime {
+            result = runBlocking { block.invoke() }
+        }
+        val durationMillis = TimeUnit.NANOSECONDS.toMillis(durationNanos)
+
+        val timeString = when {
+            durationMillis >= TimeUnit.MINUTES.toMillis(1) -> {
+                val minutes = TimeUnit.NANOSECONDS.toMinutes(durationNanos)
+                val remainingSeconds =
+                    TimeUnit.NANOSECONDS.toSeconds(durationNanos) % 60
+                "Took $minutes min, $remainingSeconds sec"
+            }
+
+            durationMillis >= 1000 -> {
+                String.format("Took %.2f sec", durationNanos / 1_000_000_000.0)
+            }
+
+            durationNanos >= 1_000_000 -> {
+                "Took $durationMillis ms"
+            }
+
+            durationNanos >= 1000 -> {
+                String.format("Took %.2f µs", durationNanos / 1000.0)
+            }
+
+            else -> {
+                "Took $durationNanos ns"
+            }
+        }
+        return result to timeString
     }
 }

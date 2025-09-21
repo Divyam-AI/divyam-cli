@@ -18,9 +18,8 @@ import org.fusesource.jansi.AnsiConsole
 import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.util.Scanner
+import java.util.TreeMap
 import java.util.concurrent.Callable
-import java.util.concurrent.TimeUnit
-import kotlin.system.measureNanoTime
 
 @CommandLine.Command(
     name = "chat",
@@ -30,6 +29,26 @@ class ChatCommand : BaseCommand(), Callable<Int> {
     companion object {
         const val GREETING =
             "Hello, my name is Divyam. I'm a simple chatbot. How may I assist you today?"
+
+        fun parseRawHeaders(rawHeaders: List<String>): Map<String,
+                List<String>> {
+            val headerMap =
+                TreeMap<String, MutableList<String>>(String.CASE_INSENSITIVE_ORDER)
+
+            rawHeaders.forEach { rawHeader ->
+                val colonIndex = rawHeader.indexOf(':')
+                if (colonIndex > 0) {
+                    val name = rawHeader.take(colonIndex).trim()
+                    val value = rawHeader.substring(colonIndex + 1).trim()
+                    headerMap.computeIfAbsent(name) { mutableListOf() }
+                        .add(value)
+                } else {
+                    System.err.println("Invalid header format: '$rawHeader'")
+                }
+            }
+
+            return headerMap
+        }
     }
 
     @Option(
@@ -62,6 +81,31 @@ class ChatCommand : BaseCommand(), Callable<Int> {
         description = ["Optional: Measures and prints response latency"],
     )
     private var computeLatency: Boolean = false
+
+    @Option(
+        names = ["--stream"],
+        description = ["Optional: Indicates if the response should be " +
+                "streaming"],
+    )
+    private var stream: Boolean = false
+
+    @Option(
+        names = ["-H", "--header"],
+        description = [
+            "Pass custom header(s) to server",
+            "Format: 'Name: Value'",
+            "Can be used multiple times",
+            "Examples:",
+            "  -H 'Accept: application/json'",
+            "  -H 'Authorization: Bearer token123'",
+            "  -H 'Accept: application/json' -H 'Accept: text/plain'"
+        ]
+    )
+    var rawHeaders: List<String> = mutableListOf()
+
+    val customHeaders: Map<String, List<String>> by lazy {
+        parseRawHeaders(rawHeaders)
+    }
 
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
 
@@ -123,7 +167,7 @@ class ChatCommand : BaseCommand(), Callable<Int> {
                                     .size]
                             }"
                         ).reset()
-                    ) //
+                    )
                     i++
                     delay(100)
                 }
@@ -131,7 +175,9 @@ class ChatCommand : BaseCommand(), Callable<Int> {
 
             try {
                 runBlocking {
-                    val (response, measuredLatency) = measureAndDisplayTime {
+                    val (response, measuredLatency) = measureAndDisplayTime(
+                        computeLatency
+                    ) {
                         runBlocking {
                             generateResponse(conversationHistory, loaderJob)
                         }
@@ -144,6 +190,7 @@ class ChatCommand : BaseCommand(), Callable<Int> {
                         print(ansi().fgGreen().a("Latency: ").reset())
                         println(measuredLatency)
                     }
+
                     conversationHistory.add(
                         ChatMessage(
                             role = ChatRole.ASSISTANT,
@@ -173,62 +220,25 @@ class ChatCommand : BaseCommand(), Callable<Int> {
         println(response)
     }
 
-    fun <T> measureAndDisplayTime(block: () -> T): Pair<T, String> {
-        if (!computeLatency) {
-            return block.invoke() to ""
-        }
-
-        var result: T
-        val durationNanos = measureNanoTime {
-            result = block.invoke()
-        }
-        val durationMillis = TimeUnit.NANOSECONDS.toMillis(durationNanos)
-
-        val timeString = when {
-            durationMillis >= TimeUnit.MINUTES.toMillis(1) -> {
-                val minutes = TimeUnit.NANOSECONDS.toMinutes(durationNanos)
-                val remainingSeconds =
-                    TimeUnit.NANOSECONDS.toSeconds(durationNanos) % 60
-                "Took $minutes min, $remainingSeconds sec"
-            }
-
-            durationMillis >= 1000 -> {
-                String.format("Took %.2f sec", durationNanos / 1_000_000_000.0)
-            }
-
-            durationNanos >= 1_000_000 -> {
-                "Took $durationMillis ms"
-            }
-
-            durationNanos >= 1000 -> {
-                String.format("Took %.2f µs", durationNanos / 1000.0)
-            }
-
-            else -> {
-                "Took $durationNanos ns"
-            }
-        }
-        return result to timeString
-    }
-
     private suspend fun generateResponse(
         conversationHistory: List<ChatMessage>,
         loaderJob: Job
     ): String {
         val chatRequest = ChatRequest(
             model = model,
-            messages = conversationHistory
+            messages = conversationHistory,
+            stream = stream
         )
         if (!debug) {
             val response = divyamClient.chatCompletion(
-                chatRequest = chatRequest, mockSelector
-                = isMockSelector, mockModel = isMockModel
+                chatRequest = chatRequest, customHeaders = customHeaders,
+                mockSelector = isMockSelector, mockModel = isMockModel
             )
             return response.choices.first().message.content
         } else {
             val response = divyamClient.chatCompletionDebugMode(
-                chatRequest = chatRequest, mockSelector
-                = isMockSelector, mockModel = isMockModel
+                chatRequest = chatRequest, customHeaders = customHeaders,
+                mockSelector = isMockSelector, mockModel = isMockModel
             )
 
             // FIXME: Kludge to stop loader before print.
@@ -236,7 +246,7 @@ class ChatCommand : BaseCommand(), Callable<Int> {
 
             print("\r")
             print(ansi().fgGreen().a("Debug: ").reset())
-            if (outputFormat != OutputFormat.JSON) {
+            if (outputFormat == OutputFormat.JSON) {
                 printJson(response)
             } else {
                 printYaml(response)

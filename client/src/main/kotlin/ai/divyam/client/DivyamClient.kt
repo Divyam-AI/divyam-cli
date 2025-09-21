@@ -1,12 +1,15 @@
 package ai.divyam.client
 
+import ai.divyam.client.data.models.ChatCompletionChunk
 import ai.divyam.client.data.models.ChatCompletionDebugResponse
 import ai.divyam.client.data.models.ChatCompletionResponse
 import ai.divyam.client.data.models.ChatRequest
+import ai.divyam.client.data.models.Choice
 import ai.divyam.client.data.models.Eval
 import ai.divyam.client.data.models.EvalCreateRequest
 import ai.divyam.client.data.models.EvalState
 import ai.divyam.client.data.models.EvalUpdateRequest
+import ai.divyam.client.data.models.Message
 import ai.divyam.client.data.models.ModelProviderInfo
 import ai.divyam.client.data.models.ModelProviderInfoCreation
 import ai.divyam.client.data.models.ModelProviderInfoUpdation
@@ -23,8 +26,10 @@ import ai.divyam.client.data.models.ServiceAccountUpdateRequest
 import ai.divyam.client.data.models.User
 import ai.divyam.client.data.models.UserCreateRequest
 import ai.divyam.client.data.models.UserUpdateRequest
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.MapperFeature
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -36,12 +41,15 @@ import io.ktor.client.request.patch
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.ContentType
 import io.ktor.http.Headers
+import io.ktor.http.HeadersImpl
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import io.ktor.http.headersOf
 import io.ktor.serialization.jackson.jackson
+import io.ktor.utils.io.readUTF8Line
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.InternalSerializationApi
@@ -83,13 +91,16 @@ class DivyamClient(
         }
 
         install(ContentNegotiation) {
-            jackson {
-                registerKotlinModule()
-                disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                @Suppress("DEPRECATION")
-                enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
-            }
+            jackson(block = configureObjectMapper())
         }
+    }
+
+    private fun configureObjectMapper(): ObjectMapper.() -> Unit = {
+        registerKotlinModule()
+        disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        @Suppress("DEPRECATION")
+        enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
+        setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
     }
 
     private val apiToken: String = apiToken ?: run {
@@ -99,6 +110,12 @@ class DivyamClient(
         runBlocking {
             getBearerToken(emailId, password)
         }
+    }
+
+    private val mapper = ObjectMapper()
+
+    init {
+        mapper.apply(configureObjectMapper())
     }
 
     private suspend fun getBearerToken(
@@ -521,86 +538,59 @@ class DivyamClient(
 
     // ---------------- Chat ----------------
     suspend fun chatCompletion(
-        chatRequest: ChatRequest, mockSelector:
-        Boolean = false, mockModel: Boolean = false
+        chatRequest: ChatRequest,
+        customHeaders: Map<String, List<String>> = emptyMap(),
+        mockSelector:
+        Boolean = false,
+        mockModel: Boolean = false
     ): ChatCompletionResponse {
-        val maxRetries = 3
-        var retries = maxRetries
-        var response: HttpResponse? = null
-
-        while (retries > 0) {
-            response = client.post("$endpoint/v1/chat/completions") {
-                headers.appendAll(headers())
-                parameter("mock_selector", mockSelector.toString())
-                parameter("mock_model", mockModel.toString())
-                contentType(ContentType.Application.Json)
-                setBody(chatRequest)
-            }
-
-            if (response.status.value == 200) {
-                return response.body()
-            }
-
-            // TODO: logging
-            // logger.info("Failed completions response: ${response.status}")
-            retries--
-            if (retries > 0) {
-                delay(1000) // wait before retrying
-            }
-        }
-
-        error(
-            "Error getting response: ${response!!.status} - ${
-                response.body<String>()
-            }"
+        val response = completionResponse(
+            customHeaders,
+            mockSelector,
+            mockModel,
+            chatRequest
         )
+        return responseToChatCompletionResponse(chatRequest, response)
     }
 
     suspend fun chatCompletionDebugMode(
-        chatRequest: ChatRequest, mockSelector:
-        Boolean = false, mockModel: Boolean = false
+        chatRequest: ChatRequest,
+        customHeaders: Map<String, List<String>> = emptyMap(),
+        mockSelector: Boolean = false,
+        mockModel: Boolean = false
     ): ChatCompletionDebugResponse {
-        val maxRetries = 3
-        var retries = maxRetries
-        var response: HttpResponse? = null
-
-        while (retries > 0) {
-            response = client.post("$endpoint/v1/chat/completions") {
-                headers.appendAll(headers())
-                parameter("mock_selector", mockSelector.toString())
-                parameter("mock_model", mockModel.toString())
-                contentType(ContentType.Application.Json)
-                setBody(chatRequest)
-            }
-
-            if (response.status.value == 200) {
-                val chatCompletionResponse: ChatCompletionResponse =
-                    response.body()
-                val debugResponse = ChatCompletionDebugResponse(
-                    chatCompletionResponse,
-                    response.headers.asMap()
-                )
-                return debugResponse
-            }
-
-            // TODO: logging
-            // logger.info("Failed completions response: ${response.status}")
-            retries--
-            if (retries > 0) {
-                delay(1000) // wait before retrying
-            }
-        }
-
-        error(
-            "Error getting response: ${response!!.status} - ${
-                response.body<String>()
-            }"
+        val response = completionResponse(
+            customHeaders,
+            mockSelector,
+            mockModel,
+            chatRequest
         )
+        val chatCompletionResponse: ChatCompletionResponse =
+            responseToChatCompletionResponse(chatRequest, response)
+        val debugResponse = ChatCompletionDebugResponse(
+            chatCompletionResponse,
+            response.headers.asMap()
+        )
+        return debugResponse
     }
 
     suspend fun chatCompletionPayloadMode(
-        payload: Any, mockSelector:
-        Boolean = false, mockModel: Boolean = false
+        payload: Any, customHeaders: Map<String, List<String>> = emptyMap(),
+        mockSelector: Boolean = false, mockModel: Boolean = false
+    ): HttpResponse {
+        return completionResponse(
+            customHeaders,
+            mockSelector,
+            mockModel,
+            payload
+        )
+    }
+
+    private suspend fun completionResponse(
+        customHeaders: Map<String, List<String>>,
+        mockSelector: Boolean,
+        mockModel: Boolean,
+        chatRequest: Any
     ): HttpResponse {
         val maxRetries = 3
         var retries = maxRetries
@@ -609,30 +599,96 @@ class DivyamClient(
         while (retries > 0) {
             response = client.post("$endpoint/v1/chat/completions") {
                 headers.appendAll(headers())
+                headers.appendAll(HeadersImpl(customHeaders))
                 parameter("mock_selector", mockSelector.toString())
                 parameter("mock_model", mockModel.toString())
                 contentType(ContentType.Application.Json)
-                setBody(payload)
+                setBody(chatRequest)
             }
 
             if (response.status.value == 200) {
                 return response
             }
 
-            // TODO: logging
-            // logger.info("Failed completions response: ${response.status}")
             retries--
             if (retries > 0) {
                 delay(1000) // wait before retrying
             }
         }
 
-        return response!!
+        error(
+            "Error getting response: ${response!!.status} - ${
+                response.body<String>()
+            }"
+        )
+    }
+
+    private suspend fun responseToChatCompletionResponse(
+        chatRequest: ChatRequest,
+        response: HttpResponse
+    ): ChatCompletionResponse {
+        return if (chatRequest.stream != true) {
+            response.body()
+        } else {
+            // For now collect the entire response.
+            streamingToCompletionResponse(response)
+        }
+    }
+
+    suspend fun streamingToCompletionResponse(response: HttpResponse): ChatCompletionResponse {
+        val channel = response.bodyAsChannel()
+
+        val contentBuilder = StringBuilder()
+        var role: String = "assistant"
+        var firstChunk: ChatCompletionChunk? = null
+        var finishReason: String? = null
+
+        while (!channel.isClosedForRead) {
+            val line = channel.readUTF8Line() ?: continue
+            if (line.isBlank()) continue
+            if (line == "data: [DONE]") break
+
+            if (line.startsWith("data: ")) {
+                val payload = line.removePrefix("data: ").trim()
+                val chunk = mapper.readValue(
+                    payload,
+                    ChatCompletionChunk::class.java
+                )
+
+                if (firstChunk == null) firstChunk = chunk
+
+                val choice = chunk.choices.firstOrNull()
+                choice?.delta?.role?.let { role = it }
+                choice?.delta?.content?.let { contentBuilder.append(it) }
+                if (choice?.finishReason != null) {
+                    finishReason = choice.finishReason
+                }
+            }
+        }
+
+        val chunk0 = firstChunk ?: error("No chunks received")
+
+        return ChatCompletionResponse(
+            id = chunk0.id,
+            objectType = "chat.completion",
+            created = chunk0.created,
+            model = chunk0.model ?: "unknown",
+            choices = listOf(
+                Choice(
+                    index = 0,
+                    message = Message(
+                        role = role,
+                        content = contentBuilder.toString()
+                    ),
+                    finishReason = finishReason
+                )
+            )
+        )
     }
 }
 
-fun Headers.asMap(): MutableMap<String, Any> {
-    val headers = mutableMapOf<String, Any>()
+fun Headers.asMap(): MutableMap<String, List<String>> {
+    val headers = mutableMapOf<String, List<String>>()
     forEach { header, value ->
         headers[header] = value
     }
