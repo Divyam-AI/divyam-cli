@@ -109,7 +109,6 @@ jobs:
     env:
       PROJECT_ID: prod-benchmarking
       GAR_LOCATION: asia-south1
-      REPOSITORY: divyam-docker-dev-as1
       IMAGE: divyam-cli
 
     steps:
@@ -117,6 +116,15 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Set repository name
+        id: set-repo
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.ref }}" == refs/tags/* ]]; then
+            echo "REPOSITORY=docker-router-docker-as1" >> $GITHUB_ENV
+          else
+            echo "REPOSITORY=divyam-docker-dev-as1" >> $GITHUB_ENV
+          fi
 
       - name: Download binaries
         uses: actions/download-artifact@v4
