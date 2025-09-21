@@ -1,7 +1,7 @@
 name: Build and Release
 
 permissions:
-  contents: write 
+  contents: write
 
 on:
   workflow_dispatch:
@@ -216,8 +216,14 @@ jobs:
           path: release-artifacts/
           pattern: macos-packages-*
 
-      - name: Show collected artifacts
-        run: ls -R release-artifacts
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+          # Only copy files with extensions (.deb, .rpm, .pkg)
+          find release-artifacts -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.pkg" \) -exec cp {} release-files/ \;
+
+      - name: Show release files
+        run: ls -la release-files/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -225,8 +231,7 @@ jobs:
           name: Release ${{ steps.get_version.outputs.version }}
           tag_name: ${{ steps.get_version.outputs.version }}
           generate_release_notes: true
-          files: |
-            release-artifacts/**/*
+          files: release-files/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
