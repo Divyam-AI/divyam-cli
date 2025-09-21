@@ -121,7 +121,7 @@ jobs:
         id: set-repo
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.ref }}" == refs/tags/* ]]; then
-            echo "REPOSITORY=docker-router-docker-as1" >> $GITHUB_ENV
+            echo "REPOSITORY=divyam-router-docker-as1" >> $GITHUB_ENV
           else
             echo "REPOSITORY=divyam-docker-dev-as1" >> $GITHUB_ENV
           fi
