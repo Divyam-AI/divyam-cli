@@ -50,7 +50,7 @@ data class ChatRequest(
     @get:JsonProperty("n")
     val n: Int? = null,
     @get:JsonProperty("stream")
-    val stream: Boolean? = null,
+    val stream: Boolean? = false,
     @get:JsonProperty("stop")
     val stop: List<String>? = null,
     @get:JsonProperty("max_tokens")
@@ -61,6 +61,21 @@ data class ChatRequest(
     val frequencyPenalty: Double? = null,
     @get:JsonProperty("user")
     val user: String? = null
+)
+
+@Reflectable
+data class ChatCompletionChunk(
+    val id: String,
+    val `object`: String,
+    val created: Long,
+    val model: String? = null,
+    val choices: List<StreamingChoice>
+)
+
+@Reflectable
+data class Delta(
+    val role: String? = null,
+    val content: String? = null
 )
 
 @Reflectable
@@ -79,7 +94,7 @@ data class ChatCompletionResponse(
     @get:JsonProperty("system_fingerprint")
     val systemFingerprint: String? = null,
 
-    val usage: Usage
+    val usage: Usage? = null
 )
 
 @Reflectable
@@ -94,11 +109,20 @@ data class ChatCompletionDebugResponse(
 @Reflectable
 data class Choice(
     @get:JsonProperty("finish_reason")
-    val finishReason: String,
+    val finishReason: String? = null,
 
     val index: Int,
     val logprobs: Any? = null,
     val message: Message
+)
+
+@Reflectable
+data class StreamingChoice(
+    @get:JsonProperty("finish_reason")
+    val finishReason: String? = null,
+
+    val index: Int,
+    val delta: Delta? = null,
 )
 
 @Reflectable
