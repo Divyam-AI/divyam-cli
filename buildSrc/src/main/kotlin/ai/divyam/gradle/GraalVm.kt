@@ -128,6 +128,7 @@ fun Project.configureGraalVMKotlin(
                             ".CLibrary",
                     "--initialize-at-build-time=org.fusesource.jansi.internal.OSInfo",
 
+                    "-H:+AddAllCharsets",
                     "-H:+UnlockExperimentalVMOptions",
                     "-H:IncludeResources=org/fusesource/jansi/internal/native" +
                             "/.*",
@@ -140,7 +141,7 @@ fun Project.configureGraalVMKotlin(
 
                 val osSpecificArgs: List<String> =
                     if (OperatingSystem.current().isLinux) {
-                        listOf("--static")
+                        listOf("--static", "--libc=musl")
                     } else {
                         emptyList()
                     }

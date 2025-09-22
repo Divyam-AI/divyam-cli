@@ -1,18 +1,10 @@
 import ai.divyam.gradle.Versions
-import ai.divyam.gradle.configureGraalVMKotlin
-import ai.divyam.gradle.configureGraalVmReflectionConfig
-import ai.divyam.gradle.configurePackaging
-import ai.divyam.gradle.configureVersionInfo
 
 plugins {
     application
     java
     kotlin("jvm")
     kotlin("kapt")
-    id("org.graalvm.buildtools.native")
-
-    // TODO: Version set from buildSrc
-    kotlin("plugin.serialization") version "2.2.0"
 }
 
 group = "ai.divyam"
@@ -23,14 +15,10 @@ repositories {
 
 application {
     // Set this to help GraalVM find the main class
-    mainClass.set("ai.divyam.cli.DivyamCliMainKt")
+    mainClass.set("ai.divyam.cli.MockDivyamServerKt")
 }
 
 dependencies {
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}")
-
     // Divyam client
     implementation(project(":divyam-client"))
 
@@ -48,34 +36,17 @@ dependencies {
     )
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${Versions.jackson}")
 
-    // Ascii Tables
-    implementation("de.vandermeer:asciitable:0.3.2") {
-        exclude(group = "org.apache.commons", module = "commons-lang3")
-    }
-
     implementation("org.apache.commons:commons-lang3:3.18.0")
+
+    implementation("io.ktor:ktor-server-core:${Versions.ktorServer}")
+    implementation("io.ktor:ktor-server-netty:${Versions.ktorServer}")
+    implementation("io.ktor:ktor-client-cio:${Versions.ktorClient}")
+    implementation("io.ktor:ktor-server-content-negotiation:${Versions.ktorServer}")
+    implementation("io.ktor:ktor-serialization-jackson:${Versions.ktorClient}")
 
     // Tests
     testImplementation(kotlin("test"))
-    testImplementation("io.ktor:ktor-server-core:${Versions.ktorServer}")
-    testImplementation("io.ktor:ktor-server-netty:${Versions.ktorServer}")
-    testImplementation("io.ktor:ktor-client-cio:${Versions.ktorClient}")
-    testImplementation("io.ktor:ktor-server-content-negotiation:${Versions.ktorServer}")
-    testImplementation("io.ktor:ktor-serialization-jackson:${Versions.ktorClient}")
-}
 
-// Setup the project.
-project.configureGraalVMKotlin()
-project.configurePackaging()
-project.configureGraalVmReflectionConfig()
-project.configureVersionInfo()
-
-
-
-sourceSets {
-    main {
-        resources.srcDir("${layout.buildDirectory.get().asFile}/generated/resources")
-    }
 }
 
 tasks.test {

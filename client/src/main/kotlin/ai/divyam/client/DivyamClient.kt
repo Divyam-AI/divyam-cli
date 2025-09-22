@@ -34,6 +34,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpRedirect
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
@@ -92,6 +93,12 @@ class DivyamClient(
 
         install(ContentNegotiation) {
             jackson(block = configureObjectMapper())
+        }
+
+        install(HttpRedirect) {
+            checkHttpMethod =
+                false   // follow for all methods (GET, POST, etc.)
+            allowHttpsDowngrade = false
         }
     }
 
@@ -639,7 +646,7 @@ class DivyamClient(
         val channel = response.bodyAsChannel()
 
         val contentBuilder = StringBuilder()
-        var role: String = "assistant"
+        var role = "assistant"
         var firstChunk: ChatCompletionChunk? = null
         var finishReason: String? = null
 

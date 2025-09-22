@@ -39,8 +39,6 @@ dependencies {
 
     // Annotation to discover reflectable classes for Graal VM
     api("com.formkiq:graalvm-annotations:1.0.0")
-
-    testImplementation(kotlin("test"))
 }
 
 tasks.test {
