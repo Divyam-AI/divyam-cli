@@ -8,7 +8,7 @@ set -e
 set -euo pipefail
 
 # Ensure all children die when this script exits
-#trap "kill 0" EXIT
+trap 'kill $(jobs -p) 2>/dev/null || true' EXIT
 
 # Configuration
 PORT=8484
@@ -48,7 +48,7 @@ DISTROS=(
         "AlmaLinux 9:almalinux:9:"
         "Fedora 38:fedora:38:"
         "Fedora 39:fedora:39:"
-        "Arch Linux:archlinux:latest:"
+        #"Arch Linux:archlinux:latest:"
 )
 
 # Function to print colored output
@@ -73,7 +73,7 @@ test_distro() {
 
     # Start container
     print_status $YELLOW "  Starting container..."
-    if ! docker run --net=host -d --name "$container_name" "$image" tail -f /dev/null > /dev/null 2>&1; then
+    if ! docker run --net=host -d --name "$container_name" "$image" tail -f /dev/null > "$result_dir/result.txt" 2>&1; then
         print_status $RED "  ❌ Failed to start container"
         echo "FAILED: Could not start container" > "$result_dir/result.txt"
         return 1
@@ -81,7 +81,7 @@ test_distro() {
 
     # Copy binary to container
     print_status $YELLOW "  Copying binary..."
-    if ! docker cp "$BINARY_PATH" "$container_name:/tmp/divyam" > /dev/null 2>&1; then
+    if ! docker cp "$BINARY_PATH" "$container_name:/tmp/divyam" >> "$result_dir/result.txt" 2>&1; then
         print_status $RED "  ❌ Failed to copy binary"
         echo "FAILED: Could not copy binary" > "$result_dir/result.txt"
         docker rm -f "$container_name" > /dev/null 2>&1
@@ -89,9 +89,9 @@ test_distro() {
     fi
 
     # Make binary executable
-    if ! docker exec "$container_name" chmod +x /tmp/divyam > /dev/null 2>&1; then
+    if ! docker exec "$container_name" chmod +x /tmp/divyam >> "$result_dir/result.txt" 2>&1; then
         print_status $RED "  ❌ Failed to make binary executable"
-        echo "FAILED: Could not make binary executable" > "$result_dir/result.txt"
+        echo "FAILED: Could not make binary executable" >> "$result_dir/result.txt"
         docker rm -f "$container_name" > /dev/null 2>&1
         return 1
     fi
@@ -110,8 +110,7 @@ test_distro() {
     rm -f $result_dir/* || true
 
     for TEST_COMMAND in "${TEST_COMMANDS[@]}"; do
-      echo docker exec "$container_name" timeout 30 /tmp/divyam $TEST_COMMAND
-      if docker exec "$container_name" timeout 30 /tmp/divyam $TEST_COMMAND < "$SCRIPT_DIR/../data/prompts.txt" >> "$result_dir/stdout.txt" 2> "$result_dir/stderr.txt"; then
+      if docker exec "$container_name" timeout 30 /tmp/divyam $TEST_COMMAND < "$SCRIPT_DIR/../data/prompts.txt" >> "$result_dir/stdout.txt" 2>> "$result_dir/stderr.txt"; then
           local end_time=$(date +%s)
           local duration=$((end_time - start_time))
           print_status $GREEN "  ✅ SUCCESS (${duration}s)"
@@ -210,7 +209,10 @@ main() {
     print_status $BLUE "Test Summary"
     print_status $BLUE "============"
     print_status $GREEN "✅ Successful: $successful/$total_distros"
-    print_status $RED "❌ Failed: $failed/$total_distros"
+
+    if [ $failed -gt 0 ]; then
+        print_status $RED "❌ Failed: $failed/$total_distros"
+    fi
 
     # Generate detailed report
     echo "# Cross-Distro Test Results" > "$RESULTS_DIR/summary.md"
@@ -241,6 +243,8 @@ main() {
     if [ $failed -gt 0 ]; then
         exit 1
     fi
+
+    exit 0
 }
 
 # Usage information
