@@ -141,7 +141,7 @@ fun Project.configureGraalVMKotlin(
 
                 val osSpecificArgs: List<String> =
                     if (OperatingSystem.current().isLinux) {
-                        listOf("--static", "--libc=musl")
+                        listOf("--static")
                     } else {
                         emptyList()
                     }
