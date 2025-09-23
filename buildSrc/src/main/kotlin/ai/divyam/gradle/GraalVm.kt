@@ -133,10 +133,6 @@ fun Project.configureGraalVMKotlin(
                     "-H:IncludeResources=org/fusesource/jansi/internal/native" +
                             "/.*",
 
-                    // Makes a mistake in locating tool arm64 chain, Disable
-                    // check
-                    "-H:-CheckToolchain",
-
                     // Memory and performance
                     "-H:+ReportExceptionStackTraces",
                     "--enable-url-protocols=http,https",

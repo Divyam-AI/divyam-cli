@@ -72,6 +72,9 @@ jobs:
               ;;
             aarch64)
               LIBDIR="/usr/lib/aarch64-linux-musl/"
+          
+              # Graalvm is using incorrect cc. Link to the amd64 name
+              sudo ln -s /usr/bin/aarch64-linux-musl-gcc /usr/bin/x86_64-linux-musl-gcc
               echo "CC=/usr/bin/aarch64-linux-musl-gcc" >> $GITHUB_OUTPUT
               ;;
             *)
