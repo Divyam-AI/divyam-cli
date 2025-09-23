@@ -21,6 +21,11 @@ SA_TOKEN="token"
 COMMON_ARGS="--disable-tls-verification"
 RESULTS_DIR="$SCRIPT_DIR/../../../build/distro-test-results"
 
+DOCKER="docker"
+if ! $DOCKER >> /dev/null 2>&1; then
+  DOCKER="sudo docker"
+fi
+
 TEST_COMMANDS=()
 TEST_COMMANDS+=("org ls -e $ENDPOINT -u $USER -p $PASSWORD $COMMON_ARGS")
 TEST_COMMANDS+=("sa create -e $ENDPOINT -u $USER -p $PASSWORD $COMMON_ARGS --name test_sa --org-id 1")
@@ -73,7 +78,7 @@ test_distro() {
 
     # Start container
     print_status $YELLOW "  Starting container..."
-    if ! docker run --net=host -d --name "$container_name" "$image" tail -f /dev/null > "$result_dir/debug.txt" 2>&1; then
+    if ! $DOCKER run --net=host -d --name "$container_name" "$image" tail -f /dev/null > "$result_dir/debug.txt" 2>&1; then
         print_status $RED "  ❌ Failed to start container"
         echo "FAILED: Could not start container" > "$result_dir/result.txt"
         return 1
@@ -81,25 +86,25 @@ test_distro() {
 
     # Copy binary to container
     print_status $YELLOW "  Copying binary..."
-    if ! docker cp "$BINARY_PATH" "$container_name:/tmp/divyam" >> "$result_dir/debug.txt" 2>&1; then
+    if ! $DOCKER cp "$BINARY_PATH" "$container_name:/tmp/divyam" >> "$result_dir/debug.txt" 2>&1; then
         print_status $RED "  ❌ Failed to copy binary"
         echo "FAILED: Could not copy binary" > "$result_dir/result.txt"
-        docker rm -f "$container_name" > /dev/null 2>&1
+        $DOCKER rm -f "$container_name" > /dev/null 2>&1
         return 1
     fi
 
     # Make binary executable
-    if ! docker exec "$container_name" chmod +x /tmp/divyam >> "$result_dir/debug.txt" 2>&1; then
+    if ! $DOCKER exec "$container_name" chmod +x /tmp/divyam >> "$result_dir/debug.txt" 2>&1; then
         print_status $RED "  ❌ Failed to make binary executable"
         echo "FAILED: Could not make binary executable" > "$result_dir/result.txt"
-        docker rm -f "$container_name" > /dev/null 2>&1
+        $DOCKER rm -f "$container_name" > /dev/null 2>&1
         return 1
     fi
 
     # Run setup command if provided
     if [ -n "$setup_cmd" ]; then
         print_status $YELLOW "  Running setup..."
-        docker exec "$container_name" sh -c "$setup_cmd" > /dev/null 2>&1 || true
+        $DOCKER exec "$container_name" sh -c "$setup_cmd" > /dev/null 2>&1 || true
     fi
 
     # Test the binary
@@ -110,7 +115,7 @@ test_distro() {
     rm -f $result_dir/* || true
 
     for TEST_COMMAND in "${TEST_COMMANDS[@]}"; do
-      if docker exec "$container_name" timeout 30 /tmp/divyam $TEST_COMMAND < "$SCRIPT_DIR/../data/prompts.txt" >> "$result_dir/stdout.txt" 2>> "$result_dir/stderr.txt"; then
+      if $DOCKER exec "$container_name" timeout 30 /tmp/divyam $TEST_COMMAND < "$SCRIPT_DIR/../data/prompts.txt" >> "$result_dir/stdout.txt" 2>> "$result_dir/stderr.txt"; then
           local end_time=$(date +%s)
           local duration=$((end_time - start_time))
           print_status $GREEN "  ✅ SUCCESS (${duration}s)"
@@ -130,19 +135,19 @@ test_distro() {
           fi
 
           # Cleanup
-          docker rm -f "$container_name" > /dev/null 2>&1
+          $DOCKER rm -f "$container_name" > /dev/null 2>&1
 
           return 1
       fi
     done
 
     # Get system info
-    docker exec "$container_name" sh -c "cat /etc/os-release 2>/dev/null || echo 'OS info not available'" > "$result_dir/os-release.txt"
-    docker exec "$container_name" uname -a > "$result_dir/uname.txt" 2>/dev/null || echo "uname not available" > "$result_dir/uname.txt"
-    docker exec "$container_name" ldd --version > "$result_dir/libc-version.txt" 2>/dev/null || echo "glibc not available (might be musl)" > "$result_dir/libc-version.txt"
+    $DOCKER exec "$container_name" sh -c "cat /etc/os-release 2>/dev/null || echo 'OS info not available'" > "$result_dir/os-release.txt"
+    $DOCKER exec "$container_name" uname -a > "$result_dir/uname.txt" 2>/dev/null || echo "uname not available" > "$result_dir/uname.txt"
+    $DOCKER exec "$container_name" ldd --version > "$result_dir/libc-version.txt" 2>/dev/null || echo "glibc not available (might be musl)" > "$result_dir/libc-version.txt"
 
     # Cleanup
-    docker rm -f "$container_name" > /dev/null 2>&1
+    $DOCKER rm -f "$container_name" > /dev/null 2>&1
     return 0
 }
 
