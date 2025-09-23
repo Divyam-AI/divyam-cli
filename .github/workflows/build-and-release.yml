@@ -67,15 +67,11 @@ jobs:
           case "$ARCH" in
             x86_64)
               LIBDIR="/usr/lib/x86_64-linux-musl/"
+              echo "CC=/usr/bin/x86_64-linux-musl-gcc" >> $GITHUB_OUTPUT
               ;;
             aarch64)
               LIBDIR="/usr/lib/aarch64-linux-musl/"
-              ;;
-            armv7l)
-              LIBDIR="/usr/lib/arm-linux-musleabihf/"
-              ;;
-            armv6l)
-              LIBDIR="/usr/lib/arm-linux-musleabi/"
+              echo "CC=/usr/bin/aarch64-linux-musl-gcc" >> $GITHUB_OUTPUT
               ;;
             *)
               echo "Unsupported architecture: $ARCH"
@@ -91,7 +87,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build deb and rpm
-        run: ./gradlew clean deb rpm
+        run: |
+          export CC=${{ steps.version.outputs.CC }}
+          ./gradlew clean deb rpm
 
       - name: Prepare Linux artifacts
         run: |
