@@ -46,6 +46,7 @@ jobs:
         run: java --version
 
       - name: Install musl and zlib 1.3.1
+        id: install_musl
         run: |
           sudo apt-get update
           sudo apt-get install -y musl-dev musl-tools build-essential
@@ -88,7 +89,7 @@ jobs:
 
       - name: Build deb and rpm
         run: |
-          export CC=${{ steps.version.outputs.CC }}
+          export CC=${{ steps.install_musl.outputs.CC }}
           ./gradlew clean deb rpm
 
       - name: Prepare Linux artifacts
