@@ -22,7 +22,7 @@ COMMON_ARGS="--disable-tls-verification"
 RESULTS_DIR="$SCRIPT_DIR/../../../build/distro-test-results"
 
 DOCKER="docker"
-if ! $DOCKER >> /dev/null 2>&1; then
+if ! $DOCKER ls >> /dev/null 2>&1; then
   DOCKER="sudo docker"
 fi
 
