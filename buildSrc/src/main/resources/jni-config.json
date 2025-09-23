@@ -1,5 +1,27 @@
 [
   {
     "name": "org.fusesource.jansi.internal.CLibrary"
+  },
+  {
+    "name": "java.net.Inet4AddressImpl",
+    "methods": [
+      {
+        "name": "lookupAllHostAddr",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.net.Inet6AddressImpl",
+    "methods": [
+      {
+        "name": "lookupAllHostAddr",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      }
+    ]
   }
 ]

@@ -4,6 +4,8 @@ plugins {
 
 include("cli")
 include("client")
+include("mock")
+
 rootProject.name = "divyam"
 
 // Apply the prefix to all subproject names

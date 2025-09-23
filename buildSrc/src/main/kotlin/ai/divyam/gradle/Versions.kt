@@ -11,6 +11,7 @@ object Versions {
     const val jansi = "2.4.2"
 
     const val ktorClient = "3.0.0"
+    const val ktorServer = "3.0.0"
 
     object Java {
         const val target = 21

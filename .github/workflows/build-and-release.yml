@@ -26,7 +26,7 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-22.04
+            runner: ubuntu-24.04
           - arch: arm64
             runner: github-actions-linux-arm64-runner
 
@@ -49,7 +49,12 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build deb and rpm
-        run: ./gradlew clean deb rpm
+        run: |
+          ./gradlew clean deb rpm
+
+      - name: Smoke tests
+        run: |
+          cli/src/test/scripts/test-binary-across-distros.sh
 
       - name: Prepare Linux artifacts
         run: |
@@ -139,6 +144,10 @@ jobs:
         id: get_version
         run: |
           VERSION=$(grep '^version=' cli/gradle.properties | cut -d'=' -f2)
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.ref }}" == refs/tags/* ]]; then
+            # Remove -SNAPSHOT
+            VERSION="${VERSION%-SNAPSHOT}"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Authenticate to Google Cloud
