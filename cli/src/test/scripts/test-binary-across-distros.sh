@@ -73,7 +73,7 @@ test_distro() {
 
     # Start container
     print_status $YELLOW "  Starting container..."
-    if ! docker run --net=host -d --name "$container_name" "$image" tail -f /dev/null > "$result_dir/result.txt" 2>&1; then
+    if ! docker run --net=host -d --name "$container_name" "$image" tail -f /dev/null > "$result_dir/debug.txt" 2>&1; then
         print_status $RED "  ❌ Failed to start container"
         echo "FAILED: Could not start container" > "$result_dir/result.txt"
         return 1
@@ -81,7 +81,7 @@ test_distro() {
 
     # Copy binary to container
     print_status $YELLOW "  Copying binary..."
-    if ! docker cp "$BINARY_PATH" "$container_name:/tmp/divyam" >> "$result_dir/result.txt" 2>&1; then
+    if ! docker cp "$BINARY_PATH" "$container_name:/tmp/divyam" >> "$result_dir/debug.txt" 2>&1; then
         print_status $RED "  ❌ Failed to copy binary"
         echo "FAILED: Could not copy binary" > "$result_dir/result.txt"
         docker rm -f "$container_name" > /dev/null 2>&1
@@ -89,9 +89,9 @@ test_distro() {
     fi
 
     # Make binary executable
-    if ! docker exec "$container_name" chmod +x /tmp/divyam >> "$result_dir/result.txt" 2>&1; then
+    if ! docker exec "$container_name" chmod +x /tmp/divyam >> "$result_dir/debug.txt" 2>&1; then
         print_status $RED "  ❌ Failed to make binary executable"
-        echo "FAILED: Could not make binary executable" >> "$result_dir/result.txt"
+        echo "FAILED: Could not make binary executable" > "$result_dir/result.txt"
         docker rm -f "$container_name" > /dev/null 2>&1
         return 1
     fi
@@ -114,6 +114,7 @@ test_distro() {
           local end_time=$(date +%s)
           local duration=$((end_time - start_time))
           print_status $GREEN "  ✅ SUCCESS (${duration}s)"
+          echo "Command: $TEST_COMMAND" >> "$result_dir/result.txt"
           echo "SUCCESS: Completed in ${duration}s" >> "$result_dir/result.txt"
       else
           local exit_code=$?

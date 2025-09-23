@@ -52,16 +52,16 @@ jobs:
         run: |
           ./gradlew clean deb rpm
 
+      - name: Smoke tests
+        run: |
+          cli/src/test/scripts/test-binary-across-distros.sh
+
       - name: Prepare Linux artifacts
         run: |
           mkdir -p temp-artifacts/linux-packages-${{ matrix.arch }}
           find . -type f -name "*.deb" -exec mv {} temp-artifacts/linux-packages-${{ matrix.arch }} \;
           find . -type f -name "*.rpm" -exec mv {} temp-artifacts/linux-packages-${{ matrix.arch }} \;
           cp cli/build/native/nativeCompile/divyam temp-artifacts/linux-packages-${{ matrix.arch }}
-
-      - name: Smoke tests
-        run: |
-          cli/src/test/scripts/test-binary-across-distros.sh
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
