@@ -62,8 +62,29 @@ jobs:
           ls -la /usr/local/musl/lib/
           musl-gcc --version
           
+          ARCH=$(uname -m)
+          
+          case "$ARCH" in
+            x86_64)
+              LIBDIR="/usr/lib/x86_64-linux-musl/"
+              ;;
+            aarch64)
+              LIBDIR="/usr/lib/aarch64-linux-musl/"
+              ;;
+            armv7l)
+              LIBDIR="/usr/lib/arm-linux-musleabihf/"
+              ;;
+            armv6l)
+              LIBDIR="/usr/lib/arm-linux-musleabi/"
+              ;;
+            *)
+              echo "Unsupported architecture: $ARCH"
+                exit 1
+                ;;
+          esac
+          
           #Install zlib 
-          sudo cp /usr/local/musl/lib/libz.a /usr/lib/x86_64-linux-musl/
+          sudo cp /usr/local/musl/lib/libz.a "$LIBDIR"
 
 
       - name: Grant execute permissions
