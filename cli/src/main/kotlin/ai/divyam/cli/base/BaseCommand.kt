@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import kotlinx.coroutines.runBlocking
+import org.fusesource.jansi.Ansi.ansi
+import org.fusesource.jansi.AnsiConsole
 import picocli.CommandLine
 import java.util.concurrent.Callable
 import java.util.concurrent.TimeUnit
@@ -81,6 +83,14 @@ abstract class BaseCommand : Callable<Int> {
     )
     private var helpRequested = false
 
+    @CommandLine.Option(
+        names = ["--stacktrace"],
+        description = ["Show stacktrace on errors"],
+        help = false,
+        hidden = true
+    )
+    var showStackTrace: Boolean = false
+
     protected val divyamClient: DivyamClient by lazy(
         mode =
             LazyThreadSafetyMode.SYNCHRONIZED
@@ -109,13 +119,42 @@ abstract class BaseCommand : Callable<Int> {
     }
 
     final override fun call(): Int {
-        if (apiToken == null) {
-            require(user != null && password != null) {
-                "One of api token or user email and password are required for" +
-                        " authentication."
+        System.setProperty("jansi.force", "true")
+
+        // Coloured output support.
+        AnsiConsole.systemInstall()
+
+        try {
+            if (apiToken == null) {
+                require(user != null && password != null) {
+                    "One of api token or user email and password are required for" +
+                            " authentication."
+                }
             }
+            return execute()
+        } catch (e: Exception) {
+            if (showStackTrace) {
+                System.err.print(ansi().fgRed().a(""))
+                e.printStackTrace()
+                System.err.print(ansi().reset())
+            } else {
+                System.err.println(
+                    ansi().fgRed().a(getDisplayMessage(e))
+                        .reset()
+                )
+            }
+            return 1
         }
-        return execute()
+    }
+
+    private fun getDisplayMessage(e: Throwable?): String {
+        val messageBuffer = StringBuilder()
+        messageBuffer.append(e?.message ?: "")
+        e?.cause?.let {
+            messageBuffer.append("->")
+            messageBuffer.append(getDisplayMessage(it))
+        }
+        return messageBuffer.toString()
     }
 
     abstract fun execute(): Int

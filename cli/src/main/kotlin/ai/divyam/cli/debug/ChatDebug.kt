@@ -8,7 +8,6 @@ import com.formkiq.graalvm.annotations.Reflectable
 import io.ktor.client.call.body
 import kotlinx.coroutines.runBlocking
 import org.fusesource.jansi.Ansi.ansi
-import org.fusesource.jansi.AnsiConsole
 import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.util.concurrent.Callable
@@ -55,11 +54,6 @@ class ChatDebug : BaseCommand(), Callable<Int> {
     }
 
     override fun execute(): Int {
-        System.setProperty("jansi.force", "true")
-
-        // Coloured output support.
-        AnsiConsole.systemInstall()
-
         // Gather input payload
         val input = generateSequence {
             readlnOrNull() // returns null at EOF

@@ -8,7 +8,7 @@ import picocli.CommandLine.Option
  */
 abstract class SaSpecificCommand : BaseCommand() {
     @Option(
-        names = ["--sa-id", "--service-account-id"],
+        names = ["-s", "--sa-id", "--service-account-id"],
         description = ["Required: service account id to associate with"],
         required = true
     )

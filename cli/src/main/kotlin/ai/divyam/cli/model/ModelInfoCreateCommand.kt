@@ -22,7 +22,7 @@ class ModelInfoCreateCommand : BaseCommand() {
     private var orgId: Int = 0
 
     @Option(
-        names = ["--sa-id", "--service-account-id"],
+        names = ["-s", "--sa-id", "--service-account-id"],
         description = ["Optional: service account id to associate the model " +
                 "info with"],
     )
@@ -82,6 +82,13 @@ class ModelInfoCreateCommand : BaseCommand() {
     )
     var supportedModalities: List<Modality> = listOf(Modality.TEXT)
 
+    @Option(
+        names = ["--is-selection-enabled"],
+        arity = "1",
+        description = ["Optional: indicates if selection is enabled for these models. Defaults to true."],
+    )
+    var isSelectionEnabled: Boolean? = null
+
     override fun execute(): Int {
         // TODO: Is allowing same model info, provider info tuple to be
         //  re-added. is this expected?
@@ -137,7 +144,8 @@ class ModelInfoCreateCommand : BaseCommand() {
                         currency = modelPricing.currency,
                         perNTokens = modelPricing.perNTokens,
                         configsModel = modelConfigsJson,
-                        supportedModalities = supportedModalities
+                        supportedModalities = supportedModalities,
+                        isSelectionEnabled = isSelectionEnabled
                     )
                 )
 
