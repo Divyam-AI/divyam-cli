@@ -71,7 +71,7 @@ abstract class BaseCommand : Callable<Int> {
 
     @CommandLine.Option(
         names = ["--format"],
-        description = ["output format. Valid values: \${COMPLETION-CANDIDATES}"]
+        description = [$$"output format. Valid values: ${COMPLETION-CANDIDATES}"]
     )
     protected var outputFormat: OutputFormat = OutputFormat.TEXT
 
@@ -91,6 +91,14 @@ abstract class BaseCommand : Callable<Int> {
     )
     var showStackTrace: Boolean = false
 
+    @CommandLine.Option(
+        names = ["--authority-override"],
+        description = ["Authority ot HTTP Host override. Use for example to " +
+                "set a specific host name and or port for proxies or " +
+                "load-balancers."],
+    )
+    var authorityOverrides: String? = null
+
     protected val divyamClient: DivyamClient by lazy(
         mode =
             LazyThreadSafetyMode.SYNCHRONIZED
@@ -98,7 +106,7 @@ abstract class BaseCommand : Callable<Int> {
         DivyamClient(
             endpoint = endpoint, emailId = user, password =
                 password, apiToken = apiToken, disableTlsVerification =
-                disableTlsVerification
+                disableTlsVerification, authorityOverride = authorityOverrides
         )
     }
 

@@ -6,9 +6,6 @@ plugins {
     java
     kotlin("jvm")
 
-    // TODO: Version set from buildSrc
-    kotlin("plugin.serialization") version "2.2.0"
-
     id("com.pswidersk.python-plugin")
 }
 
@@ -50,10 +47,22 @@ pythonPlugin {
 }
 
 tasks.register<VenvTask>("generateDataModels") {
-    workingDir = projectDir.resolve("data-model-sync/src")
-    args = listOf("generate_kotlin_models.py")
-}
 
-tasks.named("compileKotlin") {
-    dependsOn("generateDataModels")
+    val libsDir = System.getenv("DIVYAM_LIBS_DIR") ?: "${
+        project.rootDir.absolutePath
+    }/../divyam_python_libs"
+    val apiDir = System.getenv("DIVYAM_API_DIR") ?: "${
+        project.rootDir.absolutePath
+    }/../divyam_router_controller"
+    workingDir = projectDir.resolve("data-model-sync/src")
+    val destDir = "${
+        project.projectDir
+            .absolutePath
+    }/src/main/kotlin/ai/divyam/client/data/models"
+
+    args =
+        listOf(
+            "generate_kotlin_models.py", "--libs", libsDir, "--api",
+            apiDir, "--dest", destDir
+        )
 }
