@@ -93,7 +93,7 @@ abstract class BaseCommand : Callable<Int> {
 
     @CommandLine.Option(
         names = ["--authority-override"],
-        description = ["Authority ot HTTP Host override. Use for example to " +
+        description = ["Authority or HTTP Host override. Use for example to " +
                 "set a specific host name and or port for proxies or " +
                 "load-balancers."],
     )
