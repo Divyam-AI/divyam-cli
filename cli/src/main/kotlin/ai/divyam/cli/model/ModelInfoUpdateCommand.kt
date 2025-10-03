@@ -28,7 +28,7 @@ class ModelInfoUpdateCommand : BaseCommand() {
     private var orgId: Int = 0
 
     @Option(
-        names = ["--sa-id", "--service-account-id"],
+        names = ["-s", "--sa-id", "--service-account-id"],
         description = ["Optional: service account id to associate the model " +
                 "info with"],
     )
@@ -89,6 +89,20 @@ class ModelInfoUpdateCommand : BaseCommand() {
     )
     private var modelConfigsJson: String? = null
 
+    @Option(
+        names = ["--is-selection-enabled"],
+        arity = "1",
+        description = ["Optional: indicates if selection is enabled for this model"],
+    )
+    var isSelectionEnabled: Boolean? = null
+
+    @Option(
+        names = ["--is-active"],
+        arity = "1",
+        description = ["Optional: indicates if this mode is active"],
+    )
+    var isSActive: Boolean? = null
+
     override fun execute(): Int {
         runBlocking {
             val modelPricing = if (!skipPricing) {
@@ -147,7 +161,9 @@ class ModelInfoUpdateCommand : BaseCommand() {
                     ) else null,
                     currency = modelPricing?.currency,
                     perNTokens = modelPricing?.perNTokens,
-                    configsModel = modelConfigsJson
+                    configsModel = modelConfigsJson,
+                    isSelectionEnabled = isSelectionEnabled,
+                    isActive = isSActive
                 )
             )
 

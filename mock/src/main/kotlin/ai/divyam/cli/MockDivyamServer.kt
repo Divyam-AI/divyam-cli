@@ -336,7 +336,9 @@ fun Application.configureRouting(password: String) {
                         supportedModalities = request.supportedModalities,
                         textPricing = request.textPricing,
                         currency = request.currency,
-                        perNTokens = request.perNTokens
+                        perNTokens = request.perNTokens,
+                        isActive = true,
+                        isSelectionEnabled = true
                     )
 
                     MockDataStore.modelInfos[id] = modelInfo

@@ -16,7 +16,7 @@ class ModelInfoListCommand : BaseCommand() {
     private var orgId: Int = 0
 
     @Option(
-        names = ["--sa-id", "--service-account-id"],
+        names = ["-s", "--sa-id", "--service-account-id"],
         description = ["Optional: service account id to filter model " +
                 "info with"],
     )

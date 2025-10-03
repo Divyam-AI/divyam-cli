@@ -14,7 +14,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.fusesource.jansi.Ansi.ansi
-import org.fusesource.jansi.AnsiConsole
 import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.util.Scanner
@@ -110,11 +109,6 @@ class ChatCommand : BaseCommand(), Callable<Int> {
     private val coroutineScope = CoroutineScope(Dispatchers.Default)
 
     override fun execute(): Int {
-        System.setProperty("jansi.force", "true")
-
-        // Coloured output support.
-        AnsiConsole.systemInstall()
-
         // Display divyam art
         println(
             object {}.javaClass.getResourceAsStream(

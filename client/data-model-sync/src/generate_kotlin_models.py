@@ -53,8 +53,9 @@ class GenerationResult:
 class GenerateKotlinModels:
     """Generate kotlin data models from python code."""
 
-    def __init__(self, source_dir: str, dest_dir: str):
-        self.source_dir = source_dir
+    def __init__(self, libs_dir: str, api_dir: str, dest_dir: str):
+        self.libs_dir = libs_dir
+        self.api_dir = api_dir
         self.dest_dir = dest_dir
 
     @staticmethod
@@ -196,8 +197,8 @@ class GenerateKotlinModels:
             generated_types = []
 
             # Generate models from the external DAO
-            external_models_dir = str(Path(self.source_dir) / "divyam-api" /
-                                      "divyam_router" / "external_do")
+            external_models_dir = str(
+                Path(self.api_dir) / "divyam_router" / "external_do")
             inputs = self.list_files_matching(external_models_dir, "*.py")
             assert inputs
             for input_file in inputs:
@@ -207,8 +208,8 @@ class GenerateKotlinModels:
                 generated_types.append(generated_types)
 
             # Generate some models from libs router models
-            db_models_dir = str(Path(self.source_dir) /
-                                "divyam-libs" / "src" / "divyamlibs" / "router" / "models")
+            db_models_dir = str(Path(
+                self.libs_dir) / "src" / "divyamlibs" / "router" / "models")
             inputs = self.list_files_matching(db_models_dir, "router_models.py")
             assert inputs
             for input_file in inputs:
@@ -218,27 +219,25 @@ class GenerateKotlinModels:
                 generated_types.append(generated_types)
 
             # Generate reused enums from libs
-            db_models_dir = str(Path(self.source_dir) /
-                                "divyam-libs" / "src" / "divyamlibs" / "router" / "models")
+            db_models_dir = str(Path(
+                self.libs_dir) / "src" / "divyamlibs" / "router" / "models")
             inputs = self.list_files_matching(db_models_dir,
                                               "router_db_models.py")
             assert inputs
             for input_file in inputs:
                 converted = GenerateKotlinModels.convert_python_to_kotlin(Path(
-                    input_file).read_text(), enum_only=True,
-                                                                          generated_types=generated_types)
+                    input_file).read_text(), enum_only=True, generated_types=generated_types)
                 print(converted.code, file=f)
                 generated_types.append(generated_types)
 
             # Imports from other places
-            other_enums_dir = str(Path(self.source_dir) /
-                                  "divyam-libs" / "src" / "divyamlibs" / "router" / "security")
+            other_enums_dir = str(Path(
+                self.libs_dir) / "src" / "divyamlibs" / "router" / "security")
             inputs = self.list_files_matching(other_enums_dir, "*.py")
             assert inputs
             for input_file in inputs:
                 converted = GenerateKotlinModels.convert_python_to_kotlin(Path(
-                    input_file).read_text(), enum_only=True,
-                                                                          generated_types=generated_types)
+                    input_file).read_text(), enum_only=True, generated_types=generated_types)
                 print(converted.code, file=f)
                 generated_types.append(generated_types)
 
@@ -246,21 +245,16 @@ class GenerateKotlinModels:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Generate Kotlin data models from Divyam python API data model")
-    parser.add_argument('--source',
-                        help="Optional: The root directory where api and libs are located. Default is this project root")
+    parser.add_argument('--libs',
+                        help="The libs directory.")
+    parser.add_argument('--api',
+                        help="The api directory.")
     parser.add_argument('--dest',
-                        help="Optional: The directory where generated models "
-                             "will be saved. "
-                             "Default "
-                             "is ../src/main/kotlin/ai/divyam/client/data/models")
+                        help="The directory where generated models "
+                             "will be saved.")
 
     args = parser.parse_args()
-
-    source_dir = args.source if args.source else Path(
-        __file__).resolve().parent.parent
-
-    dest_dir = args.dest if args.dest else str(Path(
-        __file__).resolve().parent.parent.parent / "src" / "main" / "kotlin" / "ai" / "divyam" / "client" / "data" / "models")
-
-    generator = GenerateKotlinModels(str(source_dir.absolute()), dest_dir)
+    
+    generator = GenerateKotlinModels(libs_dir=args.libs, api_dir=args.api,
+                                     dest_dir=args.dest)
     generator.generate()

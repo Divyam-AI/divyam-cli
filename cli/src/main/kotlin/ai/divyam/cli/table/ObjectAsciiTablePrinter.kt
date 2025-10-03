@@ -5,10 +5,15 @@ import de.vandermeer.asciitable.CWC_LongestWord
 import de.vandermeer.asciithemes.a8.A8_Grids
 import de.vandermeer.asciithemes.u8.U8_Grids
 import java.lang.reflect.Field
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Arrays
 import java.util.stream.Collectors
 
 object ObjectAsciiTablePrinter {
+    val timestampFields = setOf("createdAt", "updatedAt")
+
     fun printTable(objects: List<Any>?) {
         if (objects == null || objects.isEmpty()) {
             println("No objects to display.")
@@ -21,7 +26,7 @@ object ObjectAsciiTablePrinter {
 
         // Dynamically create headers
         val headers = Arrays.stream(fields)
-            .map { obj: Field? -> splitCamelCase(obj!!.name) }
+            .map { field: Field? -> splitCamelCase(field!!.name) }
             .collect(Collectors.toList())
 
         val table = AsciiTable()
@@ -47,7 +52,10 @@ object ObjectAsciiTablePrinter {
                 .map { field: Field? ->
                     try {
                         field!!.setAccessible(true) // Allow access to private fields
-                        return@map field.get(obj)?.toString() ?: ""
+                        return@map formatValue(
+                            field,
+                            field.get(obj)?.toString() ?: ""
+                        )
                     } catch (_: IllegalAccessException) {
                         return@map "N/A"
                     }
@@ -58,6 +66,27 @@ object ObjectAsciiTablePrinter {
         table.addRule()
 
         println(table.render(100))
+    }
+
+    private fun formatValue(field: Field, value: String): String {
+        try {
+            if (timestampFields.contains(field.name)) {
+                return formatUnixTimestamp(value.toLong())
+            }
+        } catch (_: Exception) {
+            // Ignore.
+        }
+        return value
+    }
+
+    private fun formatUnixTimestamp(
+        unixTimestamp: Long,
+        pattern: String = "yyyy-MM-dd HH:mm:ss",
+        zone: ZoneId = ZoneId.systemDefault()
+    ): String {
+        val instant = Instant.ofEpochSecond(unixTimestamp)
+        val formatter = DateTimeFormatter.ofPattern(pattern).withZone(zone)
+        return formatter.format(instant)
     }
 
     private fun splitCamelCase(input: String): String {

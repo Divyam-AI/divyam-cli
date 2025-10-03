@@ -62,6 +62,7 @@ class DivyamClient(
     password: String? = null,
     private val endpoint: String = "https://api.divyam.ai",
     apiToken: String? = null,
+    private val authorityOverride: String? = null,
     /**
      * Non-production only
      */
@@ -130,6 +131,8 @@ class DivyamClient(
         password: String
     ): String {
         val httpResponse = client.post("$endpoint/token") {
+            // Add all headers but authorization.
+            headers.appendAll(headers(addAuthorization = false))
             contentType(ContentType.Application.Json)
             setBody(mapOf("email_id" to emailId, "password" to password))
         }
@@ -146,8 +149,17 @@ class DivyamClient(
             ?: error("Bearer token missing in response")
     }
 
-    private fun headers() =
-        headersOf("Authorization" to listOf("Bearer $apiToken"))
+    private fun headers(addAuthorization: Boolean = true): Headers {
+        val headers =
+            if (addAuthorization) mutableListOf(
+                "Authorization" to listOf
+                    ("Bearer $apiToken")
+            ) else mutableListOf()
+        if (authorityOverride != null) {
+            headers.add("Host" to listOf(authorityOverride))
+        }
+        return headersOf(*headers.toTypedArray())
+    }
 
     // ---------------- Orgs ----------------
     suspend fun getOrgById(orgId: Int): Org {
@@ -163,8 +175,7 @@ class DivyamClient(
     suspend fun listOrgs(): List<Org> {
         val httpResponse = client.get("$endpoint/v1/orgs/") {
             headers.appendAll(
-                headers
-                    ()
+                headers()
             )
         }
         if (httpResponse.status != HttpStatusCode.OK) {

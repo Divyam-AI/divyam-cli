@@ -61,6 +61,9 @@ data class ModelProviderInfo(
     @param:JsonProperty("service_account_id")
     val serviceAccountId: String,
 
+    @param:JsonProperty("org_id")
+    val orgId: Int? = null,
+
     @param:JsonProperty("org_name")
     val orgName: String? = null,
 
@@ -77,7 +80,13 @@ data class ModelProviderInfo(
     val currency: String? = null,
 
     @param:JsonProperty("per_n_tokens")
-    val perNTokens: Int? = null
+    val perNTokens: Int? = null,
+
+    @param:JsonProperty("is_active")
+    val isActive: Boolean,
+
+    @param:JsonProperty("is_selection_enabled")
+    val isSelectionEnabled: Boolean
 )
 
 
@@ -112,7 +121,10 @@ data class ModelProviderInfoCreation(
     val currency: String? = null,
 
     @param:JsonProperty("per_n_tokens")
-    val perNTokens: Int? = null
+    val perNTokens: Int? = null,
+
+    @param:JsonProperty("is_selection_enabled")
+    val isSelectionEnabled: Boolean? = null
 )
 
 
@@ -147,7 +159,13 @@ data class ModelProviderInfoUpdation(
     val currency: String? = null,
 
     @param:JsonProperty("per_n_tokens")
-    val perNTokens: Int? = null
+    val perNTokens: Int? = null,
+
+    @param:JsonProperty("is_active")
+    val isActive: Boolean? = null,
+
+    @param:JsonProperty("is_selection_enabled")
+    val isSelectionEnabled: Boolean? = null
 )
 
 @Reflectable
