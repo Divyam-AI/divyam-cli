@@ -7,6 +7,8 @@ import ai.divyam.gradle.configureVersionInfo
 plugins {
     application
     java
+    id("java-test-fixtures")
+
     kotlin("jvm")
     kotlin("kapt")
     id("org.graalvm.buildtools.native")
@@ -56,6 +58,7 @@ dependencies {
     implementation("org.apache.commons:commons-lang3:3.18.0")
 
     // Tests
+    testImplementation(project(":divyam-mock", "archives"))
     testImplementation(kotlin("test"))
     testImplementation("io.ktor:ktor-server-core:${Versions.ktorServer}")
     testImplementation("io.ktor:ktor-server-netty:${Versions.ktorServer}")

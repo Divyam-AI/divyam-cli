@@ -27,7 +27,7 @@ if ! $DOCKER ls >> /dev/null 2>&1; then
 fi
 
 TEST_COMMANDS=()
-TEST_COMMANDS+=("org ls -e $ENDPOINT -u $USER -p $PASSWORD $COMMON_ARGS")
+TEST_COMMANDS+=("org ls -e $ENDPOINT -u $USER -p $PASSWORD $COMMON_ARGS --stacktrace")
 TEST_COMMANDS+=("sa create -e $ENDPOINT -u $USER -p $PASSWORD $COMMON_ARGS --name test_sa --org-id 1")
 TEST_COMMANDS+=("sa ls -e $ENDPOINT -u $USER -p $PASSWORD $COMMON_ARGS --org-id 1")
 TEST_COMMANDS+=("chat -e $ENDPOINT -u $USER -p $PASSWORD $COMMON_ARGS -t $SA_TOKEN --model-name gpt-4.1-mini")
@@ -115,11 +115,12 @@ test_distro() {
     rm -f $result_dir/* || true
 
     for TEST_COMMAND in "${TEST_COMMANDS[@]}"; do
+      echo "Command: $TEST_COMMAND" >> "$result_dir/result.txt"
+
       if $DOCKER exec "$container_name" timeout 30 /tmp/divyam $TEST_COMMAND < "$SCRIPT_DIR/../data/prompts.txt" >> "$result_dir/stdout.txt" 2>> "$result_dir/stderr.txt"; then
           local end_time=$(date +%s)
           local duration=$((end_time - start_time))
           print_status $GREEN "  ✅ SUCCESS (${duration}s)"
-          echo "Command: $TEST_COMMAND" >> "$result_dir/result.txt"
           echo "SUCCESS: Completed in ${duration}s" >> "$result_dir/result.txt"
       else
           local exit_code=$?

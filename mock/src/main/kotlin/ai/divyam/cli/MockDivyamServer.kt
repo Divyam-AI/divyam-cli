@@ -182,7 +182,12 @@ fun Application.configureRouting(password: String) {
 
             if (email_id == "admin@dashboard.divyam.ai" && incomingPassword == password
             ) {
-                call.respond(mapOf("bearer_token" to "mock-bearer-token-12345"))
+                call.respond(
+                    mapOf(
+                        "bearer_token" to
+                                "mock-bearer-token-12345", "name" to email_id
+                    )
+                )
             } else {
                 call.respond(HttpStatusCode.Unauthorized, "Invalid credentials")
             }
@@ -193,11 +198,11 @@ fun Application.configureRouting(password: String) {
             // Orgs routes
             // -----------------------
             route("/orgs") {
-                get("/") {
+                get {
                     call.respond(MockDataStore.orgs.values.toList())
                 }
 
-                post("/") {
+                post {
                     val org = call.receive<OrgInput>()
                     val id = MockDataStore.orgIdCounter.getAndIncrement()
                     val newOrg = org.copy(id = id)
@@ -233,14 +238,14 @@ fun Application.configureRouting(password: String) {
                 // -----------------------
                 // Users under org
                 // -----------------------
-                get("/{org_id}/users/") {
+                get("/{org_id}/users") {
                     val org_id = call.parameters["org_id"]?.toIntOrNull()
                     val users =
                         MockDataStore.users.values.filter { it.orgId == org_id }
                     call.respond(users)
                 }
 
-                post("/{org_id}/users/") {
+                post("/{org_id}/users") {
                     val userRequest = call.receive<UserCreateRequest>()
                     val org = MockDataStore.orgs[userRequest.orgId]
                     if (org == null) {
@@ -264,14 +269,14 @@ fun Application.configureRouting(password: String) {
                 // -----------------------
                 // Service accounts under org
                 // -----------------------
-                get("/{org_id}/service_accounts/") {
+                get("/{org_id}/service_accounts") {
                     val org_id = call.parameters["org_id"]?.toIntOrNull()
                     val accounts =
                         MockDataStore.serviceAccounts.values.filter { it.orgId == org_id }
                     call.respond(accounts)
                 }
 
-                post("/{org_id}/service_accounts/") {
+                post("/{org_id}/service_accounts") {
                     val request = call.receive<ServiceAccountCreateRequest>()
                     val org = MockDataStore.orgs[request.orgId]
                     if (org == null) {
