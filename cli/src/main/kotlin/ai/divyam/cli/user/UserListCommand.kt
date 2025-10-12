@@ -16,7 +16,7 @@ class UserListCommand : BaseCommand() {
 
     override fun execute(): Int {
         runBlocking {
-            val users = divyamClient.getUsers(orgId)
+            val users = divyamClient.listOrgUsers(orgId)
             printObjs(users)
         }
         return 0

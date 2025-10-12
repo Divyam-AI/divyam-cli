@@ -1,6 +1,6 @@
 package ai.divyam.cli.base
 
-import ai.divyam.client.data.models.ServiceAccount
+import ai.divyam.data.model.ServiceAccount
 import picocli.CommandLine.Option
 
 /**

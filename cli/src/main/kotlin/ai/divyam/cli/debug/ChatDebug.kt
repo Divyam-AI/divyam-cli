@@ -4,7 +4,7 @@ import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.OutputFormat
 import ai.divyam.cli.chat.ChatCommand.Companion.parseRawHeaders
 import ai.divyam.client.asMap
-import com.formkiq.graalvm.annotations.Reflectable
+import ai.divyam.client.reflection.Reflectable
 import io.ktor.client.call.body
 import kotlinx.coroutines.runBlocking
 import org.fusesource.jansi.Ansi.ansi

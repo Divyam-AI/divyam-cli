@@ -25,7 +25,7 @@ class ModelInfoListCommand : BaseCommand() {
     override fun execute(): Int {
         runBlocking {
             val infos =
-                divyamClient.getModelInfos(orgId, serviceAccountId)
+                divyamClient.listModelInfos(orgId, serviceAccountId)
             printObjs(infos)
         }
         return 0

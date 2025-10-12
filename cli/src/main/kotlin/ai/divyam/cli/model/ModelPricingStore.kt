@@ -1,5 +1,6 @@
 package ai.divyam.cli.model
 
+import ai.divyam.client.reflection.Reflectable
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -7,7 +8,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import com.formkiq.graalvm.annotations.Reflectable
 import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream

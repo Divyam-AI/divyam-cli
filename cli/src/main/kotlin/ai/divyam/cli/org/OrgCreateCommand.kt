@@ -2,7 +2,8 @@ package ai.divyam.cli.org
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.HasSecurityPolicy
-import ai.divyam.client.data.models.IpVerificationStrategy
+import ai.divyam.data.model.IpVerificationStrategy
+import ai.divyam.data.model.OrgInput
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -48,8 +49,10 @@ class OrgCreateCommand : BaseCommand(), HasSecurityPolicy {
     override fun execute(): Int {
         val newOrg = runBlocking {
             divyamClient.createOrg(
-                name = name,
-                securityPolicy = createSecurityPolicy()
+                orgInput = OrgInput(
+                    name = name,
+                    securityPolicy = createSecurityPolicy()
+                )
             )
         }
         printObjs(newOrg)

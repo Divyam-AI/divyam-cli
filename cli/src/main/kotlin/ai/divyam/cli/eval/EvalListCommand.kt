@@ -1,7 +1,7 @@
 package ai.divyam.cli.eval
 
 import ai.divyam.cli.base.SaSpecificCommand
-import ai.divyam.client.data.models.EvalState
+import ai.divyam.data.model.EvalState
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 
@@ -22,7 +22,7 @@ class EvalListCommand : SaSpecificCommand() {
             val evals =
                 divyamClient.listEvals(
                     serviceAccountId = serviceAccountId,
-                    states = states
+                    evalState = states
                 )
             printObjs(evals)
         }

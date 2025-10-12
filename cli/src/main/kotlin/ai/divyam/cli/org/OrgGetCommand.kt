@@ -17,7 +17,7 @@ class OrgGetCommand : BaseCommand() {
 
     override fun execute(): Int {
         runBlocking {
-            val orgs = divyamClient.getOrgById(orgId)
+            val orgs = divyamClient.getOrg(orgId)
             printObjs(orgs)
         }
         return 0

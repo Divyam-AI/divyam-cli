@@ -2,8 +2,9 @@ package ai.divyam.cli.model
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.model.ModelPricingStore.Companion.pricingStore
-import ai.divyam.client.data.models.ModelProviderInfoUpdation
-import ai.divyam.client.data.models.TextPricing
+import ai.divyam.data.model.ModelApiType
+import ai.divyam.data.model.ModelProviderInfoUpdation
+import ai.divyam.data.model.TextPricing
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -66,6 +67,14 @@ class ModelInfoUpdateCommand : BaseCommand() {
     )
     private var providerBaseUrl: String? = null
 
+    @Option(
+        names = ["--api-type"],
+        description = ["Optional: The API type to use for this mode." +
+                $$"Valid values are ${COMPLETION-CANDIDATES}"],
+        split = ","
+    )
+    private var apiType: ModelApiType? = null
+
     // TODO: Any better way of getting pricing done.
     @Option(
         names = ["--model-pricing-yaml"],
@@ -107,7 +116,7 @@ class ModelInfoUpdateCommand : BaseCommand() {
         runBlocking {
             val modelPricing = if (!skipPricing) {
                 val pricingStore = pricingStore(modelPricingYaml)
-                val existingModelInfo = divyamClient.getModelInfo(
+                val existingModelInfo = divyamClient.getModelInfoById(
                     orgId = orgId,
                     modelInfoId = id
                 )
@@ -149,10 +158,11 @@ class ModelInfoUpdateCommand : BaseCommand() {
             val updated = divyamClient.updateModelInfo(
                 orgId = orgId,
                 modelInfoId = id,
-                providerInfoUpdation = ModelProviderInfoUpdation(
+                modelProviderInfoUpdation = ModelProviderInfoUpdation(
                     serviceAccountId = serviceAccountId,
                     providerName = providerName,
                     endpoint = providerBaseUrl,
+                    apiType = apiType,
                     apiKeyModel = providerApiKey,
                     modelName = modelName,
                     textPricing = if (modelPricing != null) TextPricing(

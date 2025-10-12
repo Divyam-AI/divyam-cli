@@ -2,9 +2,9 @@ package ai.divyam.cli.user
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.HasSecurityPolicy
-import ai.divyam.client.data.models.IpVerificationStrategy
-import ai.divyam.client.data.models.User
-import ai.divyam.client.data.models.UserUpdateRequest
+import ai.divyam.data.model.IpVerificationStrategy
+import ai.divyam.data.model.User
+import ai.divyam.data.model.UserUpdateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -84,7 +84,7 @@ class UserUpdateCommand : BaseCommand(), HasSecurityPolicy {
             val user = getAndUpdateLocalUser()
             divyamClient.updateUser(
                 emailId = userEmail,
-                updateRequest = UserUpdateRequest(
+                userUpdateRequest = UserUpdateRequest(
                     name = user.name,
                     isOrgAdmin = user.isOrgAdmin,
                     isAdmin = user.isAdmin,

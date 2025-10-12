@@ -15,7 +15,7 @@ class SaListCommand : BaseCommand() {
 
     override fun execute(): Int {
         runBlocking {
-            val orgs = divyamClient.getServiceAccounts(orgId = orgId)
+            val orgs = divyamClient.listServiceAccounts(orgId = orgId)
             printObjs(orgs)
         }
         return 0

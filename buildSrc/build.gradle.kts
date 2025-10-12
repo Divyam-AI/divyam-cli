@@ -27,7 +27,7 @@ dependencies {
     implementation("com.formkiq:graalvm-annotations:1.0.0")
 
     // Packaging
-    implementation("com.netflix.nebula:gradle-ospackage-plugin:12.1.0")
+    implementation("com.netflix.nebula:gradle-ospackage-plugin:12.1.1")
 
     // Gradle API - gives you access to Project, Task, etc.
     implementation(gradleApi())

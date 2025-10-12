@@ -1,8 +1,8 @@
 package ai.divyam.cli.selector
 
 import ai.divyam.cli.base.BaseCommand
-import ai.divyam.client.data.models.ModelSelectorState
-import ai.divyam.client.data.models.ModelSelectorUpdateRequest
+import ai.divyam.data.model.ModelSelectorState
+import ai.divyam.data.model.ModelSelectorUpdateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -15,7 +15,7 @@ class ModelSelectorUpdateCommand : BaseCommand() {
         description = ["The model selector id to update"],
         required = true
     )
-    private lateinit var id: String
+    private var id: Int = 0
 
     @Option(
         names = ["--name"],
@@ -39,8 +39,8 @@ class ModelSelectorUpdateCommand : BaseCommand() {
     override fun execute(): Int {
         val updatedSelector = runBlocking {
             divyamClient.updateModelSelector(
-                id = id,
-                selectorUpdateRequest = ModelSelectorUpdateRequest(
+                modelSelectorId = id,
+                modelSelectorUpdateRequest = ModelSelectorUpdateRequest(
                     name = name,
                     state = state,
                     endpoint = selectorEndpoint

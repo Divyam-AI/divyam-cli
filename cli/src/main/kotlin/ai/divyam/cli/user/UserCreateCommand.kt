@@ -2,8 +2,8 @@ package ai.divyam.cli.user
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.HasSecurityPolicy
-import ai.divyam.client.data.models.IpVerificationStrategy
-import ai.divyam.client.data.models.UserCreateRequest
+import ai.divyam.data.model.IpVerificationStrategy
+import ai.divyam.data.model.UserCreateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -94,6 +94,7 @@ class UserCreateCommand : BaseCommand(), HasSecurityPolicy {
 
         val created = runBlocking {
             divyamClient.createUser(
+                orgId = orgId,
                 UserCreateRequest(
                     orgId = orgId,
                     name = name,

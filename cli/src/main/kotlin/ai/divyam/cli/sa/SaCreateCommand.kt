@@ -2,10 +2,10 @@ package ai.divyam.cli.sa
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.HasSecurityPolicy
-import ai.divyam.client.data.models.IpVerificationStrategy
-import ai.divyam.client.data.models.ModelAPIAuthMode
-import ai.divyam.client.data.models.OptimizationGoal
-import ai.divyam.client.data.models.ServiceAccountCreateRequest
+import ai.divyam.data.model.IpVerificationStrategy
+import ai.divyam.data.model.ModelAPIAuthMode
+import ai.divyam.data.model.OptimizationGoal
+import ai.divyam.data.model.ServiceAccountCreateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -102,7 +102,8 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
         }
         val created = runBlocking {
             divyamClient.createServiceAccount(
-                ServiceAccountCreateRequest(
+                orgId = orgId,
+                serviceAccountCreateRequest = ServiceAccountCreateRequest(
                     orgId = orgId,
                     name = name,
                     isOrgAdmin = isOrgAdmin,

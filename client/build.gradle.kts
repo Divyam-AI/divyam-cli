@@ -1,12 +1,10 @@
 import ai.divyam.gradle.Versions
 import ai.divyam.gradle.configureKotlin
-import com.pswidersk.gradle.python.VenvTask
 
 plugins {
     java
     kotlin("jvm")
-
-    id("com.pswidersk.python-plugin")
+    id("org.openapi.generator") version "7.16.0"
 }
 
 group = "ai.divyam"
@@ -33,36 +31,47 @@ dependencies {
         "com.fasterxml.jackson" +
                 ".module:jackson-module-kotlin:${Versions.jackson}"
     )
-
-    // Annotation to discover reflectable classes for Graal VM
-    api("com.formkiq:graalvm-annotations:1.0.0")
+    api(
+        "com.fasterxml.jackson.datatype:jackson-datatype-jsr310:${
+            Versions
+                .jackson
+        }"
+    )
 }
 
 tasks.test {
     useJUnitPlatform()
 }
 
-pythonPlugin {
-    pythonVersion = "3.13.3"
+kotlin {
+    sourceSets {
+        getByName("main") {
+            kotlin.srcDir(
+                "${
+                    layout.buildDirectory.get()
+                        .asFile.absolutePath
+                }/generated/src/main/kotlin"
+            )
+        }
+    }
 }
 
-tasks.register<VenvTask>("generateDataModels") {
-
-    val libsDir = System.getenv("DIVYAM_LIBS_DIR") ?: "${
-        project.rootDir.absolutePath
-    }/../divyam_python_libs"
-    val apiDir = System.getenv("DIVYAM_API_DIR") ?: "${
-        project.rootDir.absolutePath
-    }/../divyam_router_controller"
-    workingDir = projectDir.resolve("data-model-sync/src")
-    val destDir = "${
-        project.projectDir
-            .absolutePath
-    }/src/main/kotlin/ai/divyam/client/data/models"
-
-    args =
-        listOf(
-            "generate_kotlin_models.py", "--libs", libsDir, "--api",
-            apiDir, "--dest", destDir
+openApiGenerate {
+    generatorName.set("kotlin")
+    library.set("jvm-ktor")
+    inputSpec.set("$projectDir/specs/openapi.json") // 👈 JSON works fine
+    outputDir.set("${layout.buildDirectory.get().asFile}/generated")
+    apiPackage.set("ai.divyam.api")
+    modelPackage.set("ai.divyam.data.model")
+    invokerPackage.set("ai.divyam.invoker")
+    templateDir.set("$projectDir/openapi-templates/ktor")
+    typeMappings.set(mapOf("number" to "kotlin.Double"))
+    configOptions.set(
+        mapOf(
+            "dateLibrary" to "java8",
+            "serializationLibrary" to "jackson",
         )
+    )
 }
+
+tasks.named("compileKotlin").get().dependsOn("openApiGenerate")

@@ -1,11 +1,11 @@
 @file:Suppress("unused")
 
-package ai.divyam.client.data.models
+package ai.divyam.data.model
 
+import ai.divyam.client.reflection.Reflectable
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
-import com.formkiq.graalvm.annotations.Reflectable
 import java.util.Locale
 
 @Reflectable
@@ -19,7 +19,7 @@ enum class ChatRole {
         if (value == null) {
             return null
         }
-        return ChatRole.valueOf(value.uppercase(Locale.getDefault()))
+        return valueOf(value.uppercase(Locale.getDefault()))
     }
 
     @JsonValue
