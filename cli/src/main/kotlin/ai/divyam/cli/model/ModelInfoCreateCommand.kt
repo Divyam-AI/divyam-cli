@@ -54,8 +54,7 @@ class ModelInfoCreateCommand : BaseCommand() {
     @Option(
         names = ["--api-type"],
         description = ["Optional: The API type to use for this mode." +
-                $$"Valid values are ${COMPLETION-CANDIDATES}"],
-        split = ","
+                $$"Valid values are ${COMPLETION-CANDIDATES}"]
     )
     private var apiType: ModelApiType? = null
 

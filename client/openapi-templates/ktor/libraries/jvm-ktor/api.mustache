@@ -140,15 +140,18 @@ import io.ktor.client.call.body
 
             {{! Divyam start - Allow additional headers }}
             val localVariableHeaders = mutableMapOf<String,
-                                List<String>>()
+                    List<String>>()
             extraHeaders?.let {
-                it.keys.forEach {key->
+                it.entries.forEach { (key, value) ->
                     val existing =
                         localVariableHeaders.getOrDefault(
                             key,
                             listOf()
                         )
-                    localVariableHeaders[key] = (existing + extraHeaders[key]) as List<String>
+                    val result = mutableListOf<String>()
+                    result.addAll(existing)
+                    result.addAll(value)
+                    localVariableHeaders[key] = result
                 }
             }
             {{! Divyam end }}
