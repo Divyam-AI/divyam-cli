@@ -10,7 +10,7 @@ class ModelInfoDeleteCommand : BaseCommand() {
     // TODO: Consistent IDs types and scope of ids for all objects?
     @Option(
         names = ["--id"],
-        description = ["Required: Id of model info to update"],
+        description = ["Required: Id of model info to delete"],
         required = true
     )
     private var id: Int = 0

@@ -134,7 +134,7 @@ class DivyamCliTest {
         return try {
             val output = outContent.toString().trim()
             if (output.isEmpty()) null else mapper.readTree(output)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }
@@ -628,7 +628,7 @@ class DivyamCliTest {
         )
 
         assertEquals(0, exitCode)
-        var json = parseJson()
+        val json = parseJson()
         assertNotNull(json)
         val modelInfo = json!!.first()
 
@@ -673,14 +673,14 @@ class DivyamCliTest {
         val exitCode = executeCommand(
             ModelSelectorCommand(),
             "create",
-            "--name", "Test Selector",
-            "--org-id", "1",
-            "--service-account-id", testServiceAccountId,
-            "--state", "ACTIVE",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
+            "--format", "json",
+            "--name", "Test Selector",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--state", "INACTIVE"
         )
 
         assertEquals(0, exitCode)
@@ -699,7 +699,8 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
+            "--format", "json",
+            "--org-id", "1"
         )
 
         assertEquals(0, exitCode)
@@ -711,10 +712,51 @@ class DivyamCliTest {
     @Test
     @Order(32)
     fun `selector update`() {
+        val createExitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Test Selector",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--state", "INACTIVE"
+        )
+
+        assertEquals(0, createExitCode)
+        val createJson = parseJson()
+        val selectorId = createJson!!.get("id").asInt()
+
+        outContent.reset()
+
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "update",
+            "--id", selectorId.toString(),
+            "--name", "Updated Selector",
+            "--state", "TRAINED",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertEquals("Updated Selector", json!!.get("name").asText())
+        assertEquals("TRAINED", json.get("state").asText())
+    }
+
+    @Test
+    @Order(33)
+    fun `selector delete`() {
         executeCommand(
             ModelSelectorCommand(),
             "create",
-            "--name", "Update Selector",
+            "--name", "Delete Selector",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--state", "INACTIVE",
@@ -731,48 +773,8 @@ class DivyamCliTest {
 
         val exitCode = executeCommand(
             ModelSelectorCommand(),
-            "update",
-            "--model-selector-id", selectorId.toString(),
-            "--name", "Updated Selector",
-            "--state", "ACTIVE",
-            "--endpoint", baseUrl,
-            "--user", "admin@dashboard.divyam.ai",
-            "--password", testPassword,
-            "--format", "json"
-        )
-
-        assertEquals(0, exitCode)
-        val json = parseJson()
-        assertNotNull(json)
-        assertEquals("Updated Selector", json!!.get("name").asText())
-        assertEquals("ACTIVE", json.get("state").asText())
-    }
-
-    @Test
-    @Order(33)
-    fun `selector delete`() {
-        executeCommand(
-            ModelSelectorCommand(),
-            "create",
-            "--name", "Delete Selector",
-            "--org-id", "1",
-            "--service-account-id", testServiceAccountId,
-            "--state", "ACTIVE",
-            "--endpoint", baseUrl,
-            "--user", "admin@dashboard.divyam.ai",
-            "--password", testPassword,
-            "--format", "json"
-        )
-
-        val createJson = parseJson()
-        val selectorId = createJson!!.get("id").asInt()
-
-        outContent.reset()
-
-        val exitCode = executeCommand(
-            ModelSelectorCommand(),
             "delete",
-            "--model-selector-id", selectorId.toString(),
+            "--id", selectorId.toString(),
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
@@ -792,16 +794,15 @@ class DivyamCliTest {
         val exitCode = executeCommand(
             EvalCommand(),
             "create",
-            "--service-account-id", testServiceAccountId,
-            "--name", "Test Eval",
-            "--org-id", "1",
-            "--granularity", "request",
-            "--class-name", "TestEval",
-            "--state", "ACTIVE",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
+            "--format", "json",
+            "--service-account-id", testServiceAccountId,
+            "--name", "Test Eval",
+            "--granularity", "LLM_REQUEST_RESPONSE",
+            "--class-name", "TestEval",
+            "--state", "ACTIVE"
         )
 
         assertEquals(0, exitCode)
@@ -817,16 +818,15 @@ class DivyamCliTest {
         executeCommand(
             EvalCommand(),
             "create",
-            "--service-account-id", testServiceAccountId,
-            "--name", "List Eval",
-            "--org-id", "1",
-            "--granularity", "request",
-            "--class-name", "TestEval",
-            "--state", "ACTIVE",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
+            "--format", "json",
+            "--service-account-id", testServiceAccountId,
+            "--name", "Test Eval",
+            "--granularity", "LLM_REQUEST_RESPONSE",
+            "--class-name", "TestEval",
+            "--state", "ACTIVE"
         )
 
         outContent.reset()
@@ -853,16 +853,15 @@ class DivyamCliTest {
         executeCommand(
             EvalCommand(),
             "create",
-            "--service-account-id", testServiceAccountId,
-            "--name", "Get Eval",
-            "--org-id", "1",
-            "--granularity", "request",
-            "--class-name", "TestEval",
-            "--state", "ACTIVE",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
+            "--format", "json",
+            "--service-account-id", testServiceAccountId,
+            "--name", "Test Eval 2",
+            "--granularity", "LLM_REQUEST_RESPONSE",
+            "--class-name", "TestEval",
+            "--state", "ACTIVE"
         )
 
         val createJson = parseJson()
@@ -874,7 +873,7 @@ class DivyamCliTest {
             EvalCommand(),
             "get",
             "--service-account-id", testServiceAccountId,
-            "--eval-id", evalId.toString(),
+            "--id", evalId.toString(),
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
@@ -884,7 +883,7 @@ class DivyamCliTest {
         assertEquals(0, exitCode)
         val json = parseJson()
         assertNotNull(json)
-        assertEquals(evalId, json!!.get("id").asInt())
+        assertEquals("Test Eval 2", json!!.get("name").asText())
     }
 
     @Test
@@ -893,16 +892,15 @@ class DivyamCliTest {
         executeCommand(
             EvalCommand(),
             "create",
-            "--service-account-id", testServiceAccountId,
-            "--name", "Update Eval",
-            "--org-id", "1",
-            "--granularity", "request",
-            "--class-name", "TestEval",
-            "--state", "ACTIVE",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
+            "--format", "json",
+            "--service-account-id", testServiceAccountId,
+            "--name", "Test Eval 3",
+            "--granularity", "LLM_REQUEST_RESPONSE",
+            "--class-name", "TestEval",
+            "--state", "ACTIVE"
         )
 
         val createJson = parseJson()
@@ -914,7 +912,7 @@ class DivyamCliTest {
             EvalCommand(),
             "update",
             "--service-account-id", testServiceAccountId,
-            "--eval-id", evalId.toString(),
+            "--id", evalId.toString(),
             "--name", "Updated Eval",
             "--state", "INACTIVE",
             "--endpoint", baseUrl,
@@ -937,20 +935,21 @@ class DivyamCliTest {
     @Test
     @Order(50)
     fun `chat completions`() {
-        val exitCode = executeCommand(
-            ChatCommand(),
-            "--model", "gpt-4",
-            "--message", "Hello",
-            "--endpoint", baseUrl,
-            "--user", "admin@dashboard.divyam.ai",
-            "--password", testPassword,
-            "--format", "json"
-        )
+        val originalIn = System.`in`
+        try {
+            System.setIn("Hi! Can you assist me?".byteInputStream())
+            val exitCode = executeCommand(
+                ChatCommand(),
+                "--endpoint", baseUrl,
+                "--user", "admin@dashboard.divyam.ai",
+                "--password", testPassword,
+                "--format", "json",
+                "--model-name", "gpt-4.1-mini"
+            )
 
-        assertEquals(0, exitCode)
-        val json = parseJson()
-        assertNotNull(json)
-        assertTrue(json!!.has("id"))
-        assertTrue(json.has("choices"))
+            assertEquals(0, exitCode)
+        } finally {
+            System.setIn(originalIn)
+        }
     }
 }

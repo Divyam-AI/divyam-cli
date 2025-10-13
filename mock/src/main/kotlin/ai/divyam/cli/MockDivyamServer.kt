@@ -554,8 +554,7 @@ fun Application.configureRouting(password: String) {
                     val filtered = if (!states.isNullOrEmpty()) {
                         evals.filter { eval -> states.contains(eval.state.toString()) }
                     } else evals
-                    if (filtered.isEmpty()) call.respond(HttpStatusCode.NotFound)
-                    else call.respond(filtered)
+                    call.respond(filtered)
                 }
 
                 post("/{serviceAccountId}/evals") {
@@ -635,11 +634,11 @@ fun Application.configureRouting(password: String) {
             // Model selectors (top-level)
             // -----------------------
             route("/model_selectors") {
-                get("") {
+                get("/") {
                     val orgId =
-                        call.request.queryParameters["orgId"]?.toIntOrNull()
+                        call.request.queryParameters["org_id"]?.toIntOrNull()
                     val serviceAccountId =
-                        call.request.queryParameters["serviceAccountId"]
+                        call.request.queryParameters["service_account_id"]
                     val states = call.request.queryParameters.getAll("states")
                     var selectors = MockDataStore.modelSelectors.values.toList()
                     orgId?.let {
@@ -654,8 +653,7 @@ fun Application.configureRouting(password: String) {
                             states.contains(selector.state.toString())
                         }
                     }
-                    if (selectors.isEmpty()) call.respond(HttpStatusCode.NotFound)
-                    else call.respond(selectors)
+                    call.respond(selectors)
                 }
 
                 post("") {
@@ -679,8 +677,16 @@ fun Application.configureRouting(password: String) {
                     call.respond(HttpStatusCode.Created, selector)
                 }
 
-                get("/{model_selector_id}") {
-                    val id = call.parameters["model_selector_id"]?.toIntOrNull()
+                delete("/{modelSelectorId}") {
+                    val id = call.parameters["modelSelectorId"]?.toIntOrNull()
+                        ?: return@delete call.respond(HttpStatusCode.BadRequest)
+
+                    MockDataStore.modelSelectors.remove(id)
+                    call.respond(HttpStatusCode.OK)
+                }
+
+                get("/{modelSelectorId}") {
+                    val id = call.parameters["modelSelectorId"]?.toIntOrNull()
                         ?: return@get call.respond(HttpStatusCode.BadRequest)
                     val selector = MockDataStore.modelSelectors[id]
                     if (selector != null) call.respond(selector)
@@ -690,8 +696,8 @@ fun Application.configureRouting(password: String) {
                     )
                 }
 
-                post("/{model_selector_id}") {
-                    val id = call.parameters["model_selector_id"]?.toIntOrNull()
+                post("/{modelSelectorId}") {
+                    val id = call.parameters["modelSelectorId"]?.toIntOrNull()
                         ?: return@post call.respond(HttpStatusCode.BadRequest)
                     val existingSelector = MockDataStore.modelSelectors[id]
                     if (existingSelector != null) {
