@@ -10,7 +10,7 @@ import java.util.concurrent.Callable
     name = "model-info",
     description = ["Manage model info."],
     subcommands = [ModelInfoListCommand::class, ModelInfoCreateCommand::class,
-        ModelInfoUpdateCommand::class, ModelInfoGetCommand::class]
+        ModelInfoUpdateCommand::class, ModelInfoGetCommand::class, ModelInfoDeleteCommand::class]
 )
 class ModelInfoCommand : BaseSubCommand(), Callable<Int> {
     companion object {

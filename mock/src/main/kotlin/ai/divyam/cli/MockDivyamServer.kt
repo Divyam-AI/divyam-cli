@@ -37,6 +37,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.request.uri
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondRedirect
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
@@ -122,7 +123,7 @@ data class ModelProvider(val id: Int, val name: String)
  */
 object MockDataStore {
     val orgs = mutableMapOf<Int, OrgInput>()
-    val users = mutableMapOf<String, User>() // keyed by email_id
+    val users = mutableMapOf<String, User>() // keyed by emailId
     val serviceAccounts =
         mutableMapOf<String, ServiceAccount>() // keyed by serviceAccount.id
     val modelInfos = mutableMapOf<Int, ModelProviderInfo>() // keyed by id
@@ -145,6 +146,7 @@ object MockDataStore {
         val sampleOrg =
             OrgInput(id = 1, name = "Sample Org", securityPolicy = null)
         orgs[1] = sampleOrg
+        orgIdCounter.getAndIncrement()
     }
 }
 
@@ -153,7 +155,7 @@ fun Application.configureRouting(password: String) {
         // Normalize URLs
         intercept(ApplicationCallPipeline.Call) {
             val uri = context.request.uri
-            if (uri.endsWith("/") && uri != "/") {
+            if (uri.endsWith("/") && uri != "") {
                 context.respondRedirect {
                     pathSegments = pathSegments.normalizePathComponents()
                 }
@@ -177,15 +179,15 @@ fun Application.configureRouting(password: String) {
         // Authentication endpoint
         post("/token") {
             val credentials = call.receive<Map<String, String>>()
-            val email_id = credentials["email_id"]
+            val emailId = credentials["email_id"]
             val incomingPassword = credentials["password"]
 
-            if (email_id == "admin@dashboard.divyam.ai" && incomingPassword == password
+            if (emailId == "admin@dashboard.divyam.ai" && incomingPassword == password
             ) {
                 call.respond(
                     mapOf(
                         "bearer_token" to
-                                "mock-bearer-token-12345", "name" to email_id
+                                "mock-bearer-token-12345", "name" to emailId
                     )
                 )
             } else {
@@ -210,24 +212,24 @@ fun Application.configureRouting(password: String) {
                     call.respond(HttpStatusCode.Created, newOrg)
                 }
 
-                get("/{org_id}") {
-                    val org_id = call.parameters["org_id"]?.toIntOrNull()
-                    val org = org_id?.let { MockDataStore.orgs[it] }
+                get("/{orgId}") {
+                    val orgId = call.parameters["orgId"]?.toIntOrNull()
+                    val org = orgId?.let { MockDataStore.orgs[it] }
                     if (org != null) call.respond(org)
                     else call.respond(HttpStatusCode.NotFound, "Org not found")
                 }
 
-                patch("/{org_id}") {
-                    val org_id = call.parameters["org_id"]?.toIntOrNull()
+                patch("/{orgId}") {
+                    val orgId = call.parameters["orgId"]?.toIntOrNull()
                     val updateRequest = call.receive<OrgUpdateRequest>()
-                    val existingOrg = org_id?.let { MockDataStore.orgs[it] }
+                    val existingOrg = orgId?.let { MockDataStore.orgs[it] }
                     if (existingOrg != null) {
                         val updatedOrg = existingOrg.copy(
                             name = updateRequest.name ?: existingOrg.name,
                             securityPolicy = updateRequest.securityPolicy
                                 ?: existingOrg.securityPolicy
                         )
-                        MockDataStore.orgs[org_id] = updatedOrg
+                        MockDataStore.orgs[orgId] = updatedOrg
                         call.respond(updatedOrg)
                     } else call.respond(
                         HttpStatusCode.NotFound,
@@ -238,14 +240,14 @@ fun Application.configureRouting(password: String) {
                 // -----------------------
                 // Users under org
                 // -----------------------
-                get("/{org_id}/users") {
-                    val org_id = call.parameters["org_id"]?.toIntOrNull()
+                get("/{orgId}/users") {
+                    val orgId = call.parameters["orgId"]?.toIntOrNull()
                     val users =
-                        MockDataStore.users.values.filter { it.orgId == org_id }
+                        MockDataStore.users.values.filter { it.orgId == orgId }
                     call.respond(users)
                 }
 
-                post("/{org_id}/users") {
+                post("/{orgId}/users") {
                     val userRequest = call.receive<UserCreateRequest>()
                     val org = MockDataStore.orgs[userRequest.orgId]
                     if (org == null) {
@@ -269,14 +271,14 @@ fun Application.configureRouting(password: String) {
                 // -----------------------
                 // Service accounts under org
                 // -----------------------
-                get("/{org_id}/service_accounts") {
-                    val org_id = call.parameters["org_id"]?.toIntOrNull()
+                get("/{orgId}/service_accounts") {
+                    val orgId = call.parameters["orgId"]?.toIntOrNull()
                     val accounts =
-                        MockDataStore.serviceAccounts.values.filter { it.orgId == org_id }
+                        MockDataStore.serviceAccounts.values.filter { it.orgId == orgId }
                     call.respond(accounts)
                 }
 
-                post("/{org_id}/service_accounts") {
+                post("/{orgId}/service_accounts") {
                     val request = call.receive<ServiceAccountCreateRequest>()
                     val org = MockDataStore.orgs[request.orgId]
                     if (org == null) {
@@ -307,26 +309,26 @@ fun Application.configureRouting(password: String) {
                 // -----------------------
                 // ModelProviderInfo endpoints under org
                 // -----------------------
-                get("/{org_id}/models_info/") {
-                    val org_id = call.parameters["org_id"]?.toIntOrNull()
-                    val org = org_id?.let { MockDataStore.orgs[it] }
+                get("/{orgId}/models_info") {
+                    val orgId = call.parameters["orgId"]?.toIntOrNull()
+                    val org = orgId?.let { MockDataStore.orgs[it] }
                     if (org == null) {
                         call.respond(HttpStatusCode.NotFound)
                         return@get
                     }
-                    val service_account_id =
-                        call.request.queryParameters["service_account_id"]
+                    val serviceAccountId =
+                        call.request.queryParameters["serviceAccountId"]
                     val modelInfos = MockDataStore.modelInfos.values.filter {
-                        it.orgName == org.name && (service_account_id == null || it.serviceAccountId == service_account_id)
+                        it.orgName == org.name && (serviceAccountId == null || it.serviceAccountId == serviceAccountId)
                     }
                     call.respond(modelInfos)
                 }
 
-                post("/{org_id}/models_info/") {
-                    val org_id = call.parameters["org_id"]?.toIntOrNull()
+                post("/{orgId}/models_info") {
+                    val orgId = call.parameters["orgId"]?.toIntOrNull()
                         ?: return@post call.respond(HttpStatusCode.BadRequest)
                     val org =
-                        MockDataStore.orgs[org_id] ?: return@post call.respond(
+                        MockDataStore.orgs[orgId] ?: return@post call.respond(
                             HttpStatusCode.NotFound
                         )
                     val request = call.receive<ModelProviderInfoCreation>()
@@ -343,7 +345,7 @@ fun Application.configureRouting(password: String) {
 
                     val modelInfo = ModelProviderInfo(
                         id = id,
-                        orgId = org_id,
+                        orgId = orgId,
                         nameProvider = request.nameProvider,
                         idProvider = provider.id,
                         nameModel = request.nameModel,
@@ -368,11 +370,11 @@ fun Application.configureRouting(password: String) {
                     call.respond(HttpStatusCode.Created, modelInfo)
                 }
 
-                get("/{org_id}/models_info/{model_info_id}/") {
-                    val model_info_id =
-                        call.parameters["model_info_id"]?.toIntOrNull()
+                get("/{orgId}/models_info/{modelInfoId}") {
+                    val modelInfoId =
+                        call.parameters["modelInfoId"]?.toIntOrNull()
                     val modelInfo =
-                        model_info_id?.let { MockDataStore.modelInfos[it] }
+                        modelInfoId?.let { MockDataStore.modelInfos[it] }
                     if (modelInfo != null) call.respond(modelInfo)
                     else call.respond(
                         HttpStatusCode.NotFound,
@@ -380,11 +382,23 @@ fun Application.configureRouting(password: String) {
                     )
                 }
 
-                post("/{org_id}/models_info/{model_info_id}/") {
-                    val model_info_id =
-                        call.parameters["model_info_id"]?.toIntOrNull()
+                delete("/{orgId}/models_info/{modelInfoId}") {
+                    val modelInfoId =
+                        call.parameters["modelInfoId"]?.toIntOrNull()
+                    modelInfoId?.let { MockDataStore.modelInfos.remove(it) }
+
+                    call.respond(
+                        HttpStatusCode.OK,
+                        "Model info not found"
+                    )
+                }
+
+
+                post("/{orgId}/models_info/{modelInfoId}") {
+                    val modelInfoId =
+                        call.parameters["modelInfoId"]?.toIntOrNull()
                     val existingInfo =
-                        model_info_id?.let { MockDataStore.modelInfos[it] }
+                        modelInfoId?.let { MockDataStore.modelInfos[it] }
                     if (existingInfo == null) {
                         call.respond(
                             HttpStatusCode.NotFound,
@@ -431,7 +445,7 @@ fun Application.configureRouting(password: String) {
                             ?: existingInfo.perNTokens
                     )
 
-                    MockDataStore.modelInfos[model_info_id] = updatedInfo
+                    MockDataStore.modelInfos[modelInfoId] = updatedInfo
                     call.respond(updatedInfo)
                 }
             }
@@ -440,24 +454,24 @@ fun Application.configureRouting(password: String) {
             // Users (top-level)
             // -----------------------
             route("/users") {
-                get("/") {
+                get("") {
                     call.respond(MockDataStore.users.values.toList())
                 }
 
-                get("/{email_id}/") {
-                    val email_id = call.parameters["email_id"]
-                    val user = email_id?.let { MockDataStore.users[it] }
+                get("/{emailId}") {
+                    val emailId = call.parameters["emailId"]
+                    val user = emailId?.let { MockDataStore.users[it] }
                     if (user != null) call.respond(user)
                     else call.respond(HttpStatusCode.NotFound, "User not found")
                 }
 
-                post("/{email_id}/") {
-                    val email_id =
-                        call.parameters["email_id"] ?: return@post call.respond(
+                post("/{emailId}") {
+                    val emailId =
+                        call.parameters["emailId"] ?: return@post call.respond(
                             HttpStatusCode.BadRequest
                         )
                     val updateRequest = call.receive<UserUpdateRequest>()
-                    val existingUser = MockDataStore.users[email_id]
+                    val existingUser = MockDataStore.users[emailId]
                     if (existingUser != null) {
                         val updatedUser = existingUser.copy(
                             name = updateRequest.name ?: existingUser.name,
@@ -468,7 +482,7 @@ fun Application.configureRouting(password: String) {
                             securityPolicy = updateRequest.securityPolicy
                                 ?: existingUser.securityPolicy
                         )
-                        MockDataStore.users[email_id] = updatedUser
+                        MockDataStore.users[emailId] = updatedUser
                         call.respond(updatedUser)
                     } else call.respond(
                         HttpStatusCode.NotFound,
@@ -481,11 +495,11 @@ fun Application.configureRouting(password: String) {
             // Service accounts (top-level)
             // -----------------------
             route("/service_accounts") {
-                get("/{service_account_id}/") {
-                    val service_account_id =
-                        call.parameters["service_account_id"]
+                get("/{serviceAccountId}") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
                     val sa =
-                        service_account_id?.let { MockDataStore.serviceAccounts[it] }
+                        serviceAccountId?.let { MockDataStore.serviceAccounts[it] }
                     if (sa != null) call.respond(sa)
                     else call.respond(
                         HttpStatusCode.NotFound,
@@ -493,14 +507,14 @@ fun Application.configureRouting(password: String) {
                     )
                 }
 
-                post("/{service_account_id}/") {
-                    val service_account_id =
-                        call.parameters["service_account_id"]
+                post("/{serviceAccountId}") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
                             ?: return@post call.respond(HttpStatusCode.BadRequest)
                     val updateRequest =
                         call.receive<ServiceAccountUpdateRequest>()
                     val existingAccount =
-                        MockDataStore.serviceAccounts[service_account_id]
+                        MockDataStore.serviceAccounts[serviceAccountId]
                     if (existingAccount != null) {
                         val updatedAccount = existingAccount.copy(
                             name = updateRequest.name ?: existingAccount.name,
@@ -517,7 +531,7 @@ fun Application.configureRouting(password: String) {
                             securityPolicy = updateRequest.securityPolicy
                                 ?: existingAccount.securityPolicy
                         )
-                        MockDataStore.serviceAccounts[service_account_id] =
+                        MockDataStore.serviceAccounts[serviceAccountId] =
                             updatedAccount
                         call.respond(updatedAccount)
                     } else call.respond(
@@ -529,13 +543,13 @@ fun Application.configureRouting(password: String) {
                 // -----------------------
                 // Evals under a service account
                 // -----------------------
-                get("/{service_account_id}/evals/") {
-                    val service_account_id =
-                        call.parameters["service_account_id"]
+                get("/{serviceAccountId}/evals") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
                             ?: return@get call.respond(HttpStatusCode.BadRequest)
                     val states = call.request.queryParameters.getAll("states")
                     val evals =
-                        MockDataStore.evals[service_account_id]?.values?.toList()
+                        MockDataStore.evals[serviceAccountId]?.values?.toList()
                             ?: emptyList()
                     val filtered = if (!states.isNullOrEmpty()) {
                         evals.filter { eval -> states.contains(eval.state.toString()) }
@@ -544,9 +558,9 @@ fun Application.configureRouting(password: String) {
                     else call.respond(filtered)
                 }
 
-                post("/{service_account_id}/evals/") {
-                    val service_account_id =
-                        call.parameters["service_account_id"]
+                post("/{serviceAccountId}/evals") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
                             ?: return@post call.respond(HttpStatusCode.BadRequest)
                     val createRequest = call.receive<EvalCreateRequest>()
 
@@ -565,18 +579,18 @@ fun Application.configureRouting(password: String) {
                         createdAt = (System.currentTimeMillis() / 1000).toInt()
                     )
 
-                    MockDataStore.evals.computeIfAbsent(service_account_id) { mutableMapOf() }[evalId] =
+                    MockDataStore.evals.computeIfAbsent(serviceAccountId) { mutableMapOf() }[evalId] =
                         eval
                     call.respond(HttpStatusCode.Created, eval)
                 }
 
-                get("/{service_account_id}/evals/{eval_id}/") {
-                    val service_account_id =
-                        call.parameters["service_account_id"]
+                get("/{serviceAccountId}/evals/{evalId}") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
                             ?: return@get call.respond(HttpStatusCode.BadRequest)
-                    val eval_id = call.parameters["eval_id"]?.toIntOrNull()
-                    val eval = eval_id?.let {
-                        MockDataStore.evals[service_account_id]?.get(it)
+                    val evalId = call.parameters["evalId"]?.toIntOrNull()
+                    val eval = evalId?.let {
+                        MockDataStore.evals[serviceAccountId]?.get(it)
                     }
                     if (eval != null) call.respond(eval) else call.respond(
                         HttpStatusCode.NotFound,
@@ -584,14 +598,14 @@ fun Application.configureRouting(password: String) {
                     )
                 }
 
-                post("/{service_account_id}/evals/{eval_id}/") {
-                    val service_account_id =
-                        call.parameters["service_account_id"]
+                post("/{serviceAccountId}/evals/{evalId}") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
                             ?: return@post call.respond(HttpStatusCode.BadRequest)
-                    val eval_id = call.parameters["eval_id"]?.toIntOrNull()
+                    val evalId = call.parameters["evalId"]?.toIntOrNull()
                         ?: return@post call.respond(HttpStatusCode.BadRequest)
                     val existingEval =
-                        MockDataStore.evals[service_account_id]?.get(eval_id)
+                        MockDataStore.evals[serviceAccountId]?.get(evalId)
                     if (existingEval != null) {
                         val updateRequest = call.receive<EvalUpdateRequest>()
                         val updatedEval = existingEval.copy(
@@ -607,7 +621,7 @@ fun Application.configureRouting(password: String) {
                             state = updateRequest.state ?: existingEval.state
                             // createdAt remains unchanged (model expects createdAt)
                         )
-                        MockDataStore.evals[service_account_id]!![eval_id] =
+                        MockDataStore.evals[serviceAccountId]!![evalId] =
                             updatedEval
                         call.respond(updatedEval)
                     } else call.respond(
@@ -621,19 +635,19 @@ fun Application.configureRouting(password: String) {
             // Model selectors (top-level)
             // -----------------------
             route("/model_selectors") {
-                get("/") {
+                get("") {
                     val orgId =
-                        call.request.queryParameters["org_id"]?.toIntOrNull()
-                    val service_account_id =
-                        call.request.queryParameters["service_account_id"]
+                        call.request.queryParameters["orgId"]?.toIntOrNull()
+                    val serviceAccountId =
+                        call.request.queryParameters["serviceAccountId"]
                     val states = call.request.queryParameters.getAll("states")
                     var selectors = MockDataStore.modelSelectors.values.toList()
                     orgId?.let {
                         selectors = selectors.filter { it.orgId == orgId }
                     }
-                    service_account_id?.let {
+                    serviceAccountId?.let {
                         selectors =
-                            selectors.filter { it.serviceAccountId == service_account_id }
+                            selectors.filter { it.serviceAccountId == serviceAccountId }
                     }
                     if (!states.isNullOrEmpty()) {
                         selectors = selectors.filter { selector ->
@@ -644,7 +658,7 @@ fun Application.configureRouting(password: String) {
                     else call.respond(selectors)
                 }
 
-                post("/") {
+                post("") {
                     val createRequest =
                         call.receive<ModelSelectorCreateRequest>()
                     val id =
@@ -665,7 +679,7 @@ fun Application.configureRouting(password: String) {
                     call.respond(HttpStatusCode.Created, selector)
                 }
 
-                get("/{model_selector_id}/") {
+                get("/{model_selector_id}") {
                     val id = call.parameters["model_selector_id"]?.toIntOrNull()
                         ?: return@get call.respond(HttpStatusCode.BadRequest)
                     val selector = MockDataStore.modelSelectors[id]
@@ -676,7 +690,7 @@ fun Application.configureRouting(password: String) {
                     )
                 }
 
-                post("/{model_selector_id}/") {
+                post("/{model_selector_id}") {
                     val id = call.parameters["model_selector_id"]?.toIntOrNull()
                         ?: return@post call.respond(HttpStatusCode.BadRequest)
                     val existingSelector = MockDataStore.modelSelectors[id]

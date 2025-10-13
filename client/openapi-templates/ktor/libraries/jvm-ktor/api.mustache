@@ -189,7 +189,7 @@ import io.ktor.client.call.body
         {{/returnType}}
         {{^nonPublicApi}}{{#explicitApi}}public {{/explicitApi}}{{/nonPublicApi}}open suspend fun {{operationId}}({{#allParams}}{{{paramName}}}: {{{dataType}}}{{^required}}?{{/required}}, {{/allParams}}extraHeaders: Map<String, List<String>>? = null): {{{returnType}}}{{^returnType}}Unit{{/returnType}} {
             val httpResponse = {{operationId}}WithResponse({{#allParams}}{{paramName}}, {{/allParams}}extraHeaders)
-            if (httpResponse.status != 200) {
+            if (httpResponse.status != 200 && httpResponse.status !=201) {
                 error("Error: ${httpResponse.status} - ${httpResponse
                                     .response.body<String>()}")
             }
