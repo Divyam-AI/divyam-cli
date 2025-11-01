@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Divyam",
-    "version": "0.1.104"
+    "version": "0.1.105"
   },
   "paths": {
     "/v1/orgs/": {
@@ -1323,7 +1323,67 @@
               "schema": {
                 "type": "object",
                 "additionalProperties": true,
-                "title": "Completions Request"
+                "title": "Chat Completion Request"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/responses": {
+      "post": {
+        "summary": "Responses",
+        "operationId": "responses",
+        "parameters": [
+          {
+            "name": "mock_selector",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Mock Selector"
+            }
+          },
+          {
+            "name": "mock_model",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "title": "Mock Model"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Chat Completion Request"
               }
             }
           }
@@ -1710,8 +1770,8 @@
       "ModelApiType": {
         "type": "string",
         "enum": [
-          "completions",
-          "responses"
+          "COMPLETIONS",
+          "RESPONSES"
         ],
         "title": "ModelApiType"
       },
@@ -1733,6 +1793,17 @@
             "type": "string",
             "title": "Name Model"
           },
+          "base_model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Model Name"
+          },
           "id_model": {
             "type": "integer",
             "title": "Id Model"
@@ -1750,7 +1821,7 @@
                 "type": "null"
               }
             ],
-            "default": "completions"
+            "default": "COMPLETIONS"
           },
           "masked_api_key_model": {
             "type": "string",
@@ -1836,6 +1907,7 @@
           "name_provider",
           "id_provider",
           "name_model",
+          "base_model_name",
           "id_model",
           "endpoint",
           "masked_api_key_model",
@@ -1870,13 +1942,24 @@
             "type": "string",
             "title": "Name Model"
           },
+          "base_model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Model Name"
+          },
           "endpoint": {
             "type": "string",
             "title": "Endpoint"
           },
           "api_type": {
             "$ref": "#/components/schemas/ModelApiType",
-            "default": "completions"
+            "default": "COMPLETIONS"
           },
           "api_key_model": {
             "type": "string",
@@ -1979,6 +2062,28 @@
               }
             ],
             "title": "Model Name"
+          },
+          "base_model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Model Name"
+          },
+          "unset_base_model_name": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unset Base Model Name"
           },
           "endpoint": {
             "anyOf": [

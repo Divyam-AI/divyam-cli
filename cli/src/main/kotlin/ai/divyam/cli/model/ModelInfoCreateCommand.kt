@@ -60,7 +60,10 @@ class ModelInfoCreateCommand : BaseCommand() {
 
     @Option(
         names = ["--model-names"],
-        description = ["Required: Comma-separated list of model names which are to be allowed for the sepcified service account id(sa_id)"],
+        description = ["Required: Comma-separated list of model names which " +
+                "are to be allowed for the specified service account id" +
+                "(sa_id). Use model_name:base_model_name to specify a base " +
+                "model."],
         split = ",",
         required = true
     )
@@ -110,7 +113,15 @@ class ModelInfoCreateCommand : BaseCommand() {
             val pricingErrorModelList = mutableListOf<Map<String, Any?>>()
 
             val mInfos = mutableListOf<ModelProviderInfo>()
-            for (modelName in modelNames) {
+            for (modelNameInput in modelNames) {
+                val parts = modelNameInput.trim().split(":")
+                val modelName = parts.first().trim()
+                val baseModelName = if (parts.size > 1) {
+                    parts[1].trim()
+                } else {
+                    null
+                }
+
                 val modelPricing = try {
                     pricingStore.getModelPricing(
                         provider = providerName,
@@ -146,6 +157,7 @@ class ModelInfoCreateCommand : BaseCommand() {
                         apiType = apiType,
                         apiKeyModel = providerApiKey!!,
                         nameModel = modelName,
+                        baseModelName = baseModelName,
                         textPricing = TextPricing(
                             input = modelPricing.textInputPrice,
                             output = modelPricing.textOutputPrice

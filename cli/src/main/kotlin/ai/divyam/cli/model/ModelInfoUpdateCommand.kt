@@ -43,8 +43,18 @@ class ModelInfoUpdateCommand : BaseCommand() {
     )
     private var modelName: String? = null
 
-    // TODO: Does it make sense to allow model name update? Is it changing
-    //  the model fundamentally?
+    @Option(
+        names = ["--base-model-name"],
+        description = ["Optional: New of the base model for this model"],
+    )
+    private var baseModelName: String? = null
+
+    @Option(
+        names = ["--unset-base-model-name"],
+        description = ["Optional: Unset/resets the base model name to null"],
+    )
+    private var unsetBaseModelName: Boolean = false
+
     @Option(
         names = ["--provider-name"],
         description = ["Optional: Name of provider"],
@@ -164,6 +174,8 @@ class ModelInfoUpdateCommand : BaseCommand() {
                     apiType = apiType,
                     apiKeyModel = providerApiKey,
                     modelName = modelName,
+                    baseModelName = baseModelName,
+                    unsetBaseModelName = unsetBaseModelName,
                     textPricing = if (modelPricing != null) TextPricing(
                         input = modelPricing.textInputPrice,
                         output = modelPricing.textOutputPrice

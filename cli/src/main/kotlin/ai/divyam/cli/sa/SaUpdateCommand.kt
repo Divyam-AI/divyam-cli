@@ -26,7 +26,6 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
     @Option(
         names = ["--name"],
         description = ["Optional: new service account name if change desired"],
-        defaultValue = "<null>"
     )
     var name: String? = null
 

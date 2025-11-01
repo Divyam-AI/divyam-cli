@@ -41,10 +41,6 @@ object ObjectAsciiTablePrinter {
         table.addRow(headers)
         table.addRule()
 
-        /*table.context.setGrid(
-            A8_Grids.lineDoubleBlocks()
-        )*/
-
         table.context.setGrid(U8_Grids.borderLight())
         // Print the data rows
         for (obj in objects) {
