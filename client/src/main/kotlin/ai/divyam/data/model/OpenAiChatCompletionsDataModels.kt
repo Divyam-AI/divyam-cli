@@ -26,6 +26,15 @@ enum class ChatRole {
     fun toLowerCase(): String {
         return this.name.lowercase(Locale.getDefault())
     }
+
+    /**
+     * Convert ChatRole → ResponseRole
+     */
+    fun toResponseRole(): ResponseRole = when (this) {
+        SYSTEM -> ResponseRole.SYSTEM
+        USER -> ResponseRole.USER
+        ASSISTANT -> ResponseRole.ASSISTANT
+    }
 }
 
 @Reflectable
@@ -101,6 +110,15 @@ data class ChatCompletionResponse(
 data class ChatCompletionDebugResponse(
     @get:JsonProperty("chat-response")
     val chatResponse: ChatCompletionResponse,
+
+    @get:JsonProperty("response-headers")
+    val responseHeaders: Map<String, Any>,
+)
+
+@Reflectable
+data class ResponsesDebugResponse(
+    @get:JsonProperty("chat-response")
+    val chatResponse: ResponsesResponse,
 
     @get:JsonProperty("response-headers")
     val responseHeaders: Map<String, Any>,

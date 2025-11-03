@@ -8,6 +8,11 @@ import ai.divyam.data.model.ChatCompletionResponse
 import ai.divyam.data.model.ChatRequest
 import ai.divyam.data.model.Choice
 import ai.divyam.data.model.Message
+import ai.divyam.data.model.ResponseCompletedEvent
+import ai.divyam.data.model.ResponseEvent
+import ai.divyam.data.model.ResponseRequest
+import ai.divyam.data.model.ResponsesDebugResponse
+import ai.divyam.data.model.ResponsesResponse
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.MapperFeature
@@ -266,6 +271,132 @@ class DivyamClient(
                 )
             )
         )
+    }
+
+    suspend fun responses(
+        chatRequest: ResponseRequest,
+        customHeaders: Map<String, List<String>> = emptyMap(),
+        mockSelector:
+        Boolean = false,
+        mockModel: Boolean = false
+    ): ResponsesResponse {
+        val response = responsesResponse(
+            customHeaders,
+            mockSelector,
+            mockModel,
+            chatRequest
+        )
+        return responseToResponsesResponse(chatRequest, response)
+    }
+
+    suspend fun responsesDebugMode(
+        chatRequest: ResponseRequest,
+        customHeaders: Map<String, List<String>> = emptyMap(),
+        mockSelector: Boolean = false,
+        mockModel: Boolean = false
+    ): ResponsesDebugResponse {
+        val response = responsesResponse(
+            customHeaders,
+            mockSelector,
+            mockModel,
+            chatRequest
+        )
+        val responsesResponse: ResponsesResponse =
+            responseToResponsesResponse(chatRequest, response)
+        val debugResponse = ResponsesDebugResponse(
+            responsesResponse,
+            response.headers.asMap()
+        )
+        return debugResponse
+    }
+
+    suspend fun responsesPayloadMode(
+        payload: Any, customHeaders: Map<String, List<String>> = emptyMap(),
+        mockSelector: Boolean = false, mockModel: Boolean = false
+    ): HttpResponse {
+        return responsesResponse(
+            customHeaders,
+            mockSelector,
+            mockModel,
+            payload
+        )
+    }
+
+    private suspend fun responsesResponse(
+        customHeaders: Map<String, List<String>>,
+        mockSelector: Boolean,
+        mockModel: Boolean,
+        chatRequest: Any
+    ): HttpResponse {
+        val maxRetries = 3
+        var retries = maxRetries
+        var response: org.openapitools.client.infrastructure.HttpResponse<Any>? =
+            null
+
+        while (retries > 0) {
+            @Suppress("UNCHECKED_CAST")
+            response = responsesWithResponse(
+                requestBody = mapper.readValue(
+                    mapper
+                        .writeValueAsString(chatRequest), Map::class.java
+                ) as
+                        Map<String, Any>,
+                mockModel = mockModel, mockSelector = mockSelector,
+                extraHeaders = customHeaders
+            )
+
+            if (response.status == 200) {
+                return response.response
+            }
+
+            retries--
+            if (retries > 0) {
+                delay(1000) // wait before retrying
+            }
+        }
+
+        error(
+            "Error getting response: ${response!!.status} - ${
+                response.response
+            }"
+        )
+    }
+
+    private suspend fun responseToResponsesResponse(
+        chatRequest: ResponseRequest,
+        response: HttpResponse
+    ): ResponsesResponse {
+        return if (chatRequest.stream != true) {
+            response.body()
+        } else {
+            // For now collect the entire response.
+            streamingToResponsesResponse(response)
+        }
+    }
+
+    suspend fun streamingToResponsesResponse(response: HttpResponse): ResponsesResponse {
+        val channel = response.bodyAsChannel()
+        var response: ResponsesResponse? = null
+
+        while (!channel.isClosedForRead) {
+            val line = channel.readUTF8Line() ?: continue
+            if (line.isBlank()) continue
+            if (line == "data: [DONE]") break
+
+            if (line.startsWith("data: ")) {
+                val payload = line.removePrefix("data: ").trim()
+                val chunk = mapper.readValue(
+                    payload,
+                    ResponseEvent::class.java
+                )
+
+                if (chunk is ResponseCompletedEvent) {
+                    response = chunk.response
+                }
+            }
+        }
+
+        return response ?: error("No chunks received")
     }
 }
 
