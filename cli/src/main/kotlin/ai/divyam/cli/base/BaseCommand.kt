@@ -2,8 +2,12 @@ package ai.divyam.cli.base
 
 import ai.divyam.cli.table.ObjectAsciiTablePrinter
 import ai.divyam.client.DivyamClient
+import ai.divyam.data.model.Input
+import ai.divyam.data.model.InputDeserializer
+import ai.divyam.data.model.InputSerializer
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import kotlinx.coroutines.runBlocking
@@ -155,7 +159,7 @@ abstract class BaseCommand : Callable<Int> {
         }
     }
 
-    private fun getDisplayMessage(e: Throwable?): String {
+    protected fun getDisplayMessage(e: Throwable?): String {
         val messageBuffer = StringBuilder()
         messageBuffer.append(e?.message ?: "")
         e?.cause?.let {
@@ -175,11 +179,21 @@ abstract class BaseCommand : Callable<Int> {
 
     protected fun getJsonMapper(): ObjectMapper {
         val mapper = ObjectMapper()
+        configureMapper(mapper)
+        return mapper
+    }
+
+    private fun configureMapper(mapper: ObjectMapper) {
         mapper.registerKotlinModule()
+        val module = SimpleModule().apply {
+            addDeserializer(Input::class.java, InputDeserializer())
+            addSerializer(Input::class.java, InputSerializer())
+        }
+        mapper.registerModule(module)
+
         // You can configure the Jackson ObjectMapper here
         // For example, to ignore unknown properties in the JSON response
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-        return mapper
     }
 
     protected fun printYaml(objs: Any) {
@@ -190,10 +204,7 @@ abstract class BaseCommand : Callable<Int> {
 
     protected fun getYamlMapper(): YAMLMapper {
         val mapper = YAMLMapper()
-        mapper.registerKotlinModule()
-        // You can configure the Jackson ObjectMapper here
-        // For example, to ignore unknown properties in the JSON response
-        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        configureMapper(mapper)
         return mapper
     }
 

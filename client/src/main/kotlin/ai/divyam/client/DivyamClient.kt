@@ -9,9 +9,14 @@ import ai.divyam.data.model.ChatRequest
 import ai.divyam.data.model.Choice
 import ai.divyam.data.model.Message
 import ai.divyam.data.model.ResponseCompletedEvent
+import ai.divyam.data.model.ResponseCreatedEvent
 import ai.divyam.data.model.ResponseEvent
-import ai.divyam.data.model.ResponseRequest
+import ai.divyam.data.model.ResponseMessageContent
+import ai.divyam.data.model.ResponseOutputItem
+import ai.divyam.data.model.ResponseOutputTextDeltaEvent
+import ai.divyam.data.model.ResponseRole
 import ai.divyam.data.model.ResponsesDebugResponse
+import ai.divyam.data.model.ResponsesRequest
 import ai.divyam.data.model.ResponsesResponse
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -274,7 +279,7 @@ class DivyamClient(
     }
 
     suspend fun responses(
-        chatRequest: ResponseRequest,
+        chatRequest: ResponsesRequest,
         customHeaders: Map<String, List<String>> = emptyMap(),
         mockSelector:
         Boolean = false,
@@ -290,7 +295,7 @@ class DivyamClient(
     }
 
     suspend fun responsesDebugMode(
-        chatRequest: ResponseRequest,
+        chatRequest: ResponsesRequest,
         customHeaders: Map<String, List<String>> = emptyMap(),
         mockSelector: Boolean = false,
         mockModel: Boolean = false
@@ -363,7 +368,7 @@ class DivyamClient(
     }
 
     private suspend fun responseToResponsesResponse(
-        chatRequest: ResponseRequest,
+        chatRequest: ResponsesRequest,
         response: HttpResponse
     ): ResponsesResponse {
         return if (chatRequest.stream != true) {
@@ -376,7 +381,11 @@ class DivyamClient(
 
     suspend fun streamingToResponsesResponse(response: HttpResponse): ResponsesResponse {
         val channel = response.bodyAsChannel()
-        var response: ResponsesResponse? = null
+        var baseResponse: ResponsesResponse? = null
+
+        // Collect partial output by item_id or output_index
+        val outputs =
+            mutableMapOf<String, MutableList<String>>() // item_id → accumulated text
 
         while (!channel.isClosedForRead) {
             val line = channel.readUTF8Line() ?: continue
@@ -385,18 +394,48 @@ class DivyamClient(
 
             if (line.startsWith("data: ")) {
                 val payload = line.removePrefix("data: ").trim()
-                val chunk = mapper.readValue(
-                    payload,
-                    ResponseEvent::class.java
-                )
+                val event = mapper.readValue(payload, ResponseEvent::class.java)
 
-                if (chunk is ResponseCompletedEvent) {
-                    response = chunk.response
+                when (event) {
+                    is ResponseCreatedEvent -> {
+                        baseResponse = event.response
+                    }
+
+                    is ResponseOutputTextDeltaEvent -> {
+                        // Each delta chunk has content_index, item_id, output_index, delta (text)
+                        val itemId = event.itemId
+                        val textDelta = event.delta
+                        outputs.getOrPut(itemId) { mutableListOf() }
+                            .add(textDelta)
+                    }
+
+                    is ResponseCompletedEvent -> {
+                        // The full response with metadata, usage, etc.
+                        baseResponse = event.response
+                    }
+
+                    else -> {
+                        // Handle other event types if needed, e.g., ResponseContentPartAddedEvent
+                    }
                 }
             }
         }
 
-        return response ?: error("No chunks received")
+        val accumulatedOutputs = outputs.map { (_, parts) ->
+            ResponseOutputItem(
+                role = ResponseRole.ASSISTANT,
+                content = listOf(
+                    ResponseMessageContent(
+                        type = "text",
+                        text = parts.joinToString("")
+                    )
+                )
+            )
+        }
+
+        // Return the completed response (baseResponse might have metadata, usage, etc.)
+        return baseResponse?.copy(output = accumulatedOutputs)
+            ?: error("No chunks received")
     }
 }
 

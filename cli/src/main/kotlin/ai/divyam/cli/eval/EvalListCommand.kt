@@ -17,12 +17,19 @@ class EvalListCommand : SaSpecificCommand() {
     )
     private var states: List<EvalState>? = null
 
+    @CommandLine.Option(
+        names = ["--primary-only"],
+        description = [$$"Optional: Lists only primary evals."]
+    )
+    private var primaryOnly = false
+
     override fun execute(): Int {
         runBlocking {
             val evals =
                 divyamClient.listEvals(
                     serviceAccountId = serviceAccountId,
-                    evalState = states
+                    evalState = states,
+                    primaryOnly = primaryOnly
                 )
             printObjs(evals)
         }

@@ -1036,6 +1036,22 @@
               "type": "string",
               "title": "Service Account Id"
             }
+          },
+          {
+            "name": "primary_only",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Primary Only"
+            }
           }
         ],
         "requestBody": {
@@ -1524,6 +1540,10 @@
           "state": {
             "$ref": "#/components/schemas/EvalState"
           },
+          "is_primary": {
+            "type": "boolean",
+            "title": "Is Primary"
+          },
           "created_at": {
             "type": "integer",
             "title": "Created At"
@@ -1538,6 +1558,7 @@
           "granularity",
           "class_name",
           "state",
+          "is_primary",
           "created_at"
         ],
         "title": "Eval"
@@ -1582,6 +1603,11 @@
           },
           "state": {
             "$ref": "#/components/schemas/EvalState"
+          },
+          "is_primary": {
+            "type": "boolean",
+            "title": "Is Primary",
+            "default": true
           }
         },
         "type": "object",
@@ -1667,6 +1693,17 @@
                 "type": "null"
               }
             ]
+          },
+          "is_primary": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Primary"
           },
           "sampling_config": {
             "anyOf": [
@@ -2239,6 +2276,19 @@
             ],
             "title": "Endpoint"
           },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config",
+            "default": {}
+          },
           "created_at": {
             "type": "integer",
             "title": "Created At"
@@ -2275,9 +2325,15 @@
             ],
             "title": "Service Account Id"
           },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config",
+            "default": {}
+          },
           "state": {
             "$ref": "#/components/schemas/ModelSelectorState",
-            "default": "TRAINED"
+            "default": "REQUESTED"
           },
           "endpoint": {
             "anyOf": [
@@ -2301,6 +2357,13 @@
       "ModelSelectorState": {
         "type": "string",
         "enum": [
+          "REQUESTED",
+          "DATA_EXTRACTED",
+          "LLM_RESPONSES_COLLECTED",
+          "COST_METRICS_CALCULATED",
+          "EVALUATIONS_COMPLETED",
+          "DATASET_PREPARED",
+          "FAILED",
           "TRAINED",
           "SHADOW",
           "PROD",
@@ -2320,6 +2383,18 @@
               }
             ],
             "title": "Name"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
           },
           "state": {
             "anyOf": [

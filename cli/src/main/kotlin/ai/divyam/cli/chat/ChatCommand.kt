@@ -6,10 +6,11 @@ import ai.divyam.data.model.ChatCompletionResponse
 import ai.divyam.data.model.ChatMessage
 import ai.divyam.data.model.ChatRequest
 import ai.divyam.data.model.ChatRole
+import ai.divyam.data.model.InputMessages
 import ai.divyam.data.model.ModelApiType
 import ai.divyam.data.model.ResponseContentPart
 import ai.divyam.data.model.ResponseInputItem
-import ai.divyam.data.model.ResponseRequest
+import ai.divyam.data.model.ResponsesRequest
 import ai.divyam.data.model.ResponsesResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -210,7 +211,7 @@ class ChatCommand : BaseCommand(), Callable<Int> {
                     loaderJob.cancelAndJoin()
                     print("\r")
                 }
-                throw e
+                printErrorResponse(e)
             }
         }
 
@@ -225,6 +226,14 @@ class ChatCommand : BaseCommand(), Callable<Int> {
     private fun printDivyamResponse(response: String) {
         print(ansi().fgMagenta().a("Divyam: ").reset())
         println(response)
+    }
+
+    private fun printErrorResponse(e: Throwable) {
+        print(ansi().fgRed().a("Error: ").reset())
+        println(getDisplayMessage(e))
+        if (showStackTrace) {
+            e.printStackTrace()
+        }
     }
 
     private suspend fun generateResponse(
@@ -281,9 +290,9 @@ class ChatCommand : BaseCommand(), Callable<Int> {
         conversationHistory: List<ChatMessage>,
         loaderJob: Job
     ): String {
-        val chatRequest = ResponseRequest(
+        val chatRequest = ResponsesRequest(
             model = model,
-            input = conversationHistory.map { msg ->
+            input = InputMessages(conversationHistory.map { msg ->
                 ResponseInputItem(
                     role = msg.role.toResponseRole(),
                     content = listOf(
@@ -293,7 +302,7 @@ class ChatCommand : BaseCommand(), Callable<Int> {
                         )
                     )
                 )
-            },
+            }),
             stream = stream
         )
 

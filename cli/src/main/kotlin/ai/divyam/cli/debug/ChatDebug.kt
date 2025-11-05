@@ -5,6 +5,7 @@ import ai.divyam.cli.base.OutputFormat
 import ai.divyam.cli.chat.ChatCommand.Companion.parseRawHeaders
 import ai.divyam.client.asMap
 import ai.divyam.client.reflection.Reflectable
+import ai.divyam.data.model.ModelApiType
 import io.ktor.client.call.body
 import kotlinx.coroutines.runBlocking
 import org.fusesource.jansi.Ansi.ansi
@@ -36,6 +37,13 @@ class ChatDebug : BaseCommand(), Callable<Int> {
     private var computeLatency: Boolean = false
 
     @Option(
+        names = ["--api-type"],
+        description = ["Optional: The API type to use for this mode." +
+                $$"Valid values are ${COMPLETION-CANDIDATES}"]
+    )
+    private var apiType: ModelApiType = ModelApiType.COMPLETIONS
+
+    @Option(
         names = ["-H", "--header"],
         description = [
             "Pass custom header(s) to server",
@@ -65,10 +73,18 @@ class ChatDebug : BaseCommand(), Callable<Int> {
             val (httpResponse, measuredLatency) = measureAndDisplayTime(
                 computeLatency
             ) {
-                divyamClient.chatCompletionPayloadMode(
-                    input, customHeaders = customHeaders,
-                    mockSelector = isMockSelector, mockModel = isMockModel
-                )
+                if (apiType == ModelApiType.COMPLETIONS) {
+                    divyamClient.chatCompletionPayloadMode(
+                        input, customHeaders = customHeaders,
+                        mockSelector = isMockSelector, mockModel = isMockModel
+                    )
+                } else {
+                    divyamClient.responsesPayloadMode(
+                        payload = input,
+                        customHeaders = customHeaders, mockSelector =
+                            isMockSelector, mockModel = isMockModel
+                    )
+                }
             }
 
             val bodyStr = httpResponse.body<String>()

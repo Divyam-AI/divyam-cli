@@ -182,7 +182,8 @@ fun Project.configureGraalVmReflectionConfig() {
                 "kotlin.reflect.KTypeProjection",
                 "kotlin.reflect.KType",
                 "kotlin.reflect.KClassifier",
-                "kotlin.reflect.KTypeParameter"
+                "kotlin.reflect.KTypeParameter",
+                "java.lang.Enum\$EnumDesc"
             ).map {
                 loadAndFilterClass(
                     it, classLoader, { true },
