@@ -210,7 +210,7 @@ class ChatCommand : BaseCommand(), Callable<Int> {
                     loaderJob.cancelAndJoin()
                     print("\r")
                 }
-                throw e
+                printErrorResponse(e)
             }
         }
 
@@ -225,6 +225,14 @@ class ChatCommand : BaseCommand(), Callable<Int> {
     private fun printDivyamResponse(response: String) {
         print(ansi().fgMagenta().a("Divyam: ").reset())
         println(response)
+    }
+
+    private fun printErrorResponse(e: Throwable) {
+        print(ansi().fgRed().a("Error: ").reset())
+        println(getDisplayMessage(e))
+        if (showStackTrace) {
+            e.printStackTrace()
+        }
     }
 
     private suspend fun generateResponse(

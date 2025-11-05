@@ -155,7 +155,7 @@ abstract class BaseCommand : Callable<Int> {
         }
     }
 
-    private fun getDisplayMessage(e: Throwable?): String {
+    protected fun getDisplayMessage(e: Throwable?): String {
         val messageBuffer = StringBuilder()
         messageBuffer.append(e?.message ?: "")
         e?.cause?.let {
