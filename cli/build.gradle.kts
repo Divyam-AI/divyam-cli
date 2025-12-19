@@ -14,7 +14,7 @@ plugins {
     id("org.graalvm.buildtools.native")
 
     // TODO: Version set from buildSrc
-    kotlin("plugin.serialization") version "2.2.0"
+    kotlin("plugin.serialization") version "2.2.20"
 }
 
 group = "ai.divyam"

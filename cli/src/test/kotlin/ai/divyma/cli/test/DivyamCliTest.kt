@@ -126,7 +126,7 @@ class DivyamCliTest {
         vararg args: String
     ): Int {
         val cmd = CommandLine(command)
-        cmd.setCaseInsensitiveEnumValuesAllowed(true)
+        cmd.isCaseInsensitiveEnumValuesAllowed = true
         return cmd.execute(*args)
     }
 

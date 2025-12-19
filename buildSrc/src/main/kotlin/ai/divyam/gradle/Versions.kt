@@ -7,7 +7,7 @@ object Versions {
     const val coroutines = "1.7.3"
     const val jansi = "2.4.2"
 
-    const val ktorClient = "3.0.0"
-    const val ktorServer = "3.0.0"
+    const val ktorClient = "3.3.0"
+    const val ktorServer = "3.3.0"
 
 }

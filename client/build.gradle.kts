@@ -59,7 +59,7 @@ kotlin {
 openApiGenerate {
     generatorName.set("kotlin")
     library.set("jvm-ktor")
-    inputSpec.set("$projectDir/specs/openapi.json") // 👈 JSON works fine
+    inputSpec.set("$projectDir/specs/openapi.json")
     outputDir.set("${layout.buildDirectory.get().asFile}/generated")
     apiPackage.set("ai.divyam.api")
     modelPackage.set("ai.divyam.data.model")

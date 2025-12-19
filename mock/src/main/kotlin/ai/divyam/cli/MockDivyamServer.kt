@@ -155,7 +155,7 @@ fun Application.configureRouting(password: String) {
         // Normalize URLs
         intercept(ApplicationCallPipeline.Call) {
             val uri = context.request.uri
-            if (uri.endsWith("/") && uri != "") {
+            if (uri.replace(Regex("\\?.*"), "").endsWith("/")) {
                 context.respondRedirect {
                     pathSegments = pathSegments.normalizePathComponents()
                 }
@@ -363,7 +363,8 @@ fun Application.configureRouting(password: String) {
                         currency = request.currency,
                         perNTokens = request.perNTokens,
                         isActive = true,
-                        isSelectionEnabled = true
+                        isSelectionEnabled = true,
+                        baseModelName = null
                     )
 
                     MockDataStore.modelInfos[id] = modelInfo
@@ -575,7 +576,8 @@ fun Application.configureRouting(password: String) {
                         classInitConfig = createRequest.classInitConfig,
                         samplingConfig = createRequest.samplingConfig,
                         state = createRequest.state,
-                        createdAt = (System.currentTimeMillis() / 1000).toInt()
+                        createdAt = (System.currentTimeMillis() / 1000).toInt(),
+                        isPrimary = false
                     )
 
                     MockDataStore.evals.computeIfAbsent(serviceAccountId) { mutableMapOf() }[evalId] =
@@ -634,7 +636,7 @@ fun Application.configureRouting(password: String) {
             // Model selectors (top-level)
             // -----------------------
             route("/model_selectors") {
-                get("/") {
+                get("") {
                     val orgId =
                         call.request.queryParameters["org_id"]?.toIntOrNull()
                     val serviceAccountId =

@@ -75,12 +75,14 @@ class ChatDebug : BaseCommand(), Callable<Int> {
             ) {
                 if (apiType == ModelApiType.COMPLETIONS) {
                     divyamClient.chatCompletionPayloadMode(
-                        input, customHeaders = customHeaders,
-                        mockSelector = isMockSelector, mockModel = isMockModel
+                        payload = strToPayload(input),
+                        customHeaders = customHeaders,
+                        mockSelector = isMockSelector,
+                        mockModel = isMockModel
                     )
                 } else {
                     divyamClient.responsesPayloadMode(
-                        payload = input,
+                        payload = strToPayload(input),
                         customHeaders = customHeaders, mockSelector =
                             isMockSelector, mockModel = isMockModel
                     )
@@ -90,7 +92,7 @@ class ChatDebug : BaseCommand(), Callable<Int> {
             val bodyStr = httpResponse.body<String>()
 
             val body = try {
-                getJsonMapper().readValue(bodyStr, Object::class.java)
+                getJsonMapper().readValue(bodyStr, Any::class.java)
             } catch (_: Exception) {
                 // Response is not valid json.
                 bodyStr
@@ -116,6 +118,14 @@ class ChatDebug : BaseCommand(), Callable<Int> {
         }
 
         return 0
+    }
+
+    private fun strToPayload(input: String): Map<*, *> {
+        return try {
+            getJsonMapper().readValue(input, Map::class.java)
+        } catch (_: Exception) {
+            getYamlMapper().readValue(input, Map::class.java)
+        }
     }
 }
 
