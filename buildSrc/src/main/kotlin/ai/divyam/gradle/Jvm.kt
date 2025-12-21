@@ -5,6 +5,7 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.kotlin.dsl.withType
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 /**
@@ -30,11 +31,13 @@ fun Project.configureKotlin(
     tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
         compilerOptions {
             allWarningsAsErrors.set(true)
+            jvmTarget.set(JvmTarget.fromTarget(javaVersion.toString()))
         }
     }
 
     tasks.withType<JavaCompile> {
         options.compilerArgs.add("-Werror")  // treat warnings as errors
         options.compilerArgs.add("-Xlint:all") // enable all lint warnings
+        options.release.set(javaVersion)
     }
 }
