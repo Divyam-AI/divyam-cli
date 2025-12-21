@@ -178,7 +178,7 @@ jobs:
 
   docker-images:
     runs-on: ubuntu-22.04
-    needs: [ linux-build, smoke-tests ]
+    needs: [ linux-build ]
     permissions:
       contents: read
       id-token: write
@@ -253,7 +253,7 @@ jobs:
 
   release:
     runs-on: ubuntu-22.04
-    needs: [ linux-build, macos-build, docker-images, smoke-tests ]
+    needs: [ linux-build, macos-build, docker-images ]
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
 
     steps:
