@@ -2,10 +2,11 @@ package ai.divyam.cli.model
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.model.ModelPricingStore.Companion.pricingStore
-import ai.divyam.client.data.models.Modality
-import ai.divyam.client.data.models.ModelProviderInfo
-import ai.divyam.client.data.models.ModelProviderInfoCreation
-import ai.divyam.client.data.models.TextPricing
+import ai.divyam.data.model.Modality
+import ai.divyam.data.model.ModelApiType
+import ai.divyam.data.model.ModelProviderInfo
+import ai.divyam.data.model.ModelProviderInfoCreation
+import ai.divyam.data.model.TextPricing
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -51,8 +52,18 @@ class ModelInfoCreateCommand : BaseCommand() {
     private lateinit var providerBaseUrl: String
 
     @Option(
+        names = ["--api-type"],
+        description = ["Optional: The API type to use for this mode." +
+                $$"Valid values are ${COMPLETION-CANDIDATES}"]
+    )
+    private var apiType: ModelApiType? = null
+
+    @Option(
         names = ["--model-names"],
-        description = ["Required: Comma-separated list of model names which are to be allowed for the sepcified service account id(sa_id)"],
+        description = ["Required: Comma-separated list of model names which " +
+                "are to be allowed for the specified service account id" +
+                "(sa_id). Use model_name:base_model_name to specify a base " +
+                "model."],
         split = ",",
         required = true
     )
@@ -80,7 +91,7 @@ class ModelInfoCreateCommand : BaseCommand() {
                 $$"Valid values are ${COMPLETION-CANDIDATES}"],
         split = ","
     )
-    var supportedModalities: List<Modality> = listOf(Modality.TEXT)
+    var supportedModalities: List<Modality> = listOf(Modality.text)
 
     @Option(
         names = ["--is-selection-enabled"],
@@ -102,7 +113,15 @@ class ModelInfoCreateCommand : BaseCommand() {
             val pricingErrorModelList = mutableListOf<Map<String, Any?>>()
 
             val mInfos = mutableListOf<ModelProviderInfo>()
-            for (modelName in modelNames) {
+            for (modelNameInput in modelNames) {
+                val parts = modelNameInput.trim().split(":")
+                val modelName = parts.first().trim()
+                val baseModelName = if (parts.size > 1) {
+                    parts[1].trim()
+                } else {
+                    null
+                }
+
                 val modelPricing = try {
                     pricingStore.getModelPricing(
                         provider = providerName,
@@ -131,12 +150,14 @@ class ModelInfoCreateCommand : BaseCommand() {
 
                 val mInfo = divyamClient.createModelInfo(
                     orgId = orgId,
-                    providerInfoCreation = ModelProviderInfoCreation(
+                    modelProviderInfoCreation = ModelProviderInfoCreation(
                         serviceAccountId = serviceAccountId,
                         nameProvider = providerName,
                         endpoint = providerBaseUrl,
+                        apiType = apiType,
                         apiKeyModel = providerApiKey!!,
                         nameModel = modelName,
+                        baseModelName = baseModelName,
                         textPricing = TextPricing(
                             input = modelPricing.textInputPrice,
                             output = modelPricing.textOutputPrice

@@ -1,9 +1,10 @@
 package ai.divyam.cli.eval
 
 import ai.divyam.cli.base.SaSpecificCommand
-import ai.divyam.client.data.models.EvalGranularity
-import ai.divyam.client.data.models.EvalState
-import ai.divyam.client.data.models.EvalUpdateRequest
+import ai.divyam.data.model.EvalGranularity
+import ai.divyam.data.model.EvalState
+import ai.divyam.data.model.EvalUpdateRequest
+
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -64,7 +65,7 @@ class EvalUpdateCommand : SaSpecificCommand() {
             divyamClient.updateEval(
                 serviceAccountId = serviceAccountId,
                 evalId = evalId,
-                updateRequest = EvalUpdateRequest(
+                evalUpdateRequest = EvalUpdateRequest(
                     name = name,
                     granularity = granularity,
                     className = className,

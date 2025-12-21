@@ -1,11 +1,11 @@
 @file:Suppress("unused")
 
-package ai.divyam.client.data.models
+package ai.divyam.data.model
 
+import ai.divyam.client.reflection.Reflectable
 import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.annotation.JsonValue
-import com.formkiq.graalvm.annotations.Reflectable
 import java.util.Locale
 
 @Reflectable
@@ -19,12 +19,21 @@ enum class ChatRole {
         if (value == null) {
             return null
         }
-        return ChatRole.valueOf(value.uppercase(Locale.getDefault()))
+        return valueOf(value.uppercase(Locale.getDefault()))
     }
 
     @JsonValue
     fun toLowerCase(): String {
         return this.name.lowercase(Locale.getDefault())
+    }
+
+    /**
+     * Convert ChatRole → ResponseRole
+     */
+    fun toResponseRole(): ResponseRole = when (this) {
+        SYSTEM -> ResponseRole.SYSTEM
+        USER -> ResponseRole.USER
+        ASSISTANT -> ResponseRole.ASSISTANT
     }
 }
 
@@ -101,6 +110,15 @@ data class ChatCompletionResponse(
 data class ChatCompletionDebugResponse(
     @get:JsonProperty("chat-response")
     val chatResponse: ChatCompletionResponse,
+
+    @get:JsonProperty("response-headers")
+    val responseHeaders: Map<String, Any>,
+)
+
+@Reflectable
+data class ResponsesDebugResponse(
+    @get:JsonProperty("chat-response")
+    val chatResponse: ResponsesResponse,
 
     @get:JsonProperty("response-headers")
     val responseHeaders: Map<String, Any>,

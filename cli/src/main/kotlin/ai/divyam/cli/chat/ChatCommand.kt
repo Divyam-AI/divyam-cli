@@ -2,9 +2,16 @@ package ai.divyam.cli.chat
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.OutputFormat
-import ai.divyam.client.data.models.ChatMessage
-import ai.divyam.client.data.models.ChatRequest
-import ai.divyam.client.data.models.ChatRole
+import ai.divyam.data.model.ChatCompletionResponse
+import ai.divyam.data.model.ChatMessage
+import ai.divyam.data.model.ChatRequest
+import ai.divyam.data.model.ChatRole
+import ai.divyam.data.model.InputMessages
+import ai.divyam.data.model.ModelApiType
+import ai.divyam.data.model.ResponseContentPart
+import ai.divyam.data.model.ResponseInputItem
+import ai.divyam.data.model.ResponsesRequest
+import ai.divyam.data.model.ResponsesResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -87,6 +94,13 @@ class ChatCommand : BaseCommand(), Callable<Int> {
                 "streaming"],
     )
     private var stream: Boolean = false
+
+    @Option(
+        names = ["--api-type"],
+        description = ["Optional: The API type to use for this mode." +
+                $$"Valid values are ${COMPLETION-CANDIDATES}"]
+    )
+    private var apiType: ModelApiType = ModelApiType.COMPLETIONS
 
     @Option(
         names = ["-H", "--header"],
@@ -197,7 +211,7 @@ class ChatCommand : BaseCommand(), Callable<Int> {
                     loaderJob.cancelAndJoin()
                     print("\r")
                 }
-                throw e
+                printErrorResponse(e)
             }
         }
 
@@ -214,7 +228,26 @@ class ChatCommand : BaseCommand(), Callable<Int> {
         println(response)
     }
 
+    private fun printErrorResponse(e: Throwable) {
+        print(ansi().fgRed().a("Error: ").reset())
+        println(getDisplayMessage(e))
+        if (showStackTrace) {
+            e.printStackTrace()
+        }
+    }
+
     private suspend fun generateResponse(
+        conversationHistory: List<ChatMessage>,
+        loaderJob: Job
+    ): String {
+        return if (apiType == ModelApiType.COMPLETIONS) {
+            generateCompletionsResponse(conversationHistory, loaderJob)
+        } else {
+            generateResponsesResponse(conversationHistory, loaderJob)
+        }
+    }
+
+    private suspend fun generateCompletionsResponse(
         conversationHistory: List<ChatMessage>,
         loaderJob: Job
     ): String {
@@ -228,7 +261,7 @@ class ChatCommand : BaseCommand(), Callable<Int> {
                 chatRequest = chatRequest, customHeaders = customHeaders,
                 mockSelector = isMockSelector, mockModel = isMockModel
             )
-            return response.choices.first().message.content
+            return completionsResponseToString(response)
         } else {
             val response = divyamClient.chatCompletionDebugMode(
                 chatRequest = chatRequest, customHeaders = customHeaders,
@@ -246,7 +279,62 @@ class ChatCommand : BaseCommand(), Callable<Int> {
                 printYaml(response)
             }
 
-            return response.chatResponse.choices.first().message.content
+            return completionsResponseToString(response.chatResponse)
         }
     }
+
+    private fun completionsResponseToString(response: ChatCompletionResponse): String =
+        response.choices.first().message.content
+
+    private suspend fun generateResponsesResponse(
+        conversationHistory: List<ChatMessage>,
+        loaderJob: Job
+    ): String {
+        val chatRequest = ResponsesRequest(
+            model = model,
+            input = InputMessages(conversationHistory.map { msg ->
+                ResponseInputItem(
+                    role = msg.role.toResponseRole(),
+                    content = listOf(
+                        ResponseContentPart(
+                            type = "input_text",
+                            text = msg.content
+                        )
+                    )
+                )
+            }),
+            stream = stream
+        )
+
+        if (!debug) {
+            val response = divyamClient.responses(
+                chatRequest = chatRequest, customHeaders = customHeaders,
+                mockSelector = isMockSelector, mockModel = isMockModel
+            )
+            return responsesToString(response)
+        } else {
+            val response = divyamClient.responsesDebugMode(
+                chatRequest = chatRequest, customHeaders = customHeaders,
+                mockSelector = isMockSelector, mockModel = isMockModel
+            )
+
+            // FIXME: Kludge to stop loader before print.
+            loaderJob.cancelAndJoin()
+
+            print("\r")
+            print(ansi().fgGreen().a("Debug: ").reset())
+            if (outputFormat == OutputFormat.JSON) {
+                printJson(response)
+            } else {
+                printYaml(response)
+            }
+
+            return responsesToString(response.chatResponse)
+        }
+    }
+
+    private fun responsesToString(response: ResponsesResponse): String =
+        response.output.first().content.joinToString("") { content ->
+            content.text
+        }
 }

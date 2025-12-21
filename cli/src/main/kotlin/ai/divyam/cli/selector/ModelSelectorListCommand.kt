@@ -1,7 +1,7 @@
 package ai.divyam.cli.selector
 
 import ai.divyam.cli.base.BaseCommand
-import ai.divyam.client.data.models.ModelSelectorState
+import ai.divyam.data.model.ModelSelectorState
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 
@@ -12,7 +12,13 @@ class ModelSelectorListCommand : BaseCommand() {
         description = ["Required: organization id to get model selectors for"],
         required = true
     )
-    protected var orgId: Int = 0
+    private var orgId: Int = 0
+
+    @CommandLine.Option(
+        names = ["-s", "--sa-id", "--service-account-id"],
+        description = ["Optional: service account id to query for"],
+    )
+    private var serviceAccountId: String? = null
 
     @CommandLine.Option(
         names = ["--states"],
@@ -24,7 +30,11 @@ class ModelSelectorListCommand : BaseCommand() {
     override fun execute(): Int {
         runBlocking {
             val selectors =
-                divyamClient.getModelSelectors(orgId = orgId, states = states)
+                divyamClient.listModelSelectors(
+                    orgId = orgId,
+                    serviceAccountId = serviceAccountId,
+                    modelSelectorState = states
+                )
             printObjs(selectors)
         }
         return 0

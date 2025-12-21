@@ -1,8 +1,8 @@
 package ai.divyam.cli.selector
 
 import ai.divyam.cli.base.BaseCommand
-import ai.divyam.client.data.models.ModelSelectorCreateRequest
-import ai.divyam.client.data.models.ModelSelectorState
+import ai.divyam.data.model.ModelSelectorCreateRequest
+import ai.divyam.data.model.ModelSelectorState
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -49,7 +49,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
             // TODO: Should remove selector endpoint from the db. Maybe store
             //  a version instead.
             divyamClient.createModelSelector(
-                selectorCreateRequest = ModelSelectorCreateRequest(
+                modelSelectorCreateRequest = ModelSelectorCreateRequest(
                     orgId = orgId,
                     serviceAccountId = serviceAccountId,
                     name = name,

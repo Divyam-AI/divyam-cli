@@ -2,8 +2,9 @@ package ai.divyam.cli.model
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.model.ModelPricingStore.Companion.pricingStore
-import ai.divyam.client.data.models.ModelProviderInfoUpdation
-import ai.divyam.client.data.models.TextPricing
+import ai.divyam.data.model.ModelApiType
+import ai.divyam.data.model.ModelProviderInfoUpdation
+import ai.divyam.data.model.TextPricing
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -42,8 +43,18 @@ class ModelInfoUpdateCommand : BaseCommand() {
     )
     private var modelName: String? = null
 
-    // TODO: Does it make sense to allow model name update? Is it changing
-    //  the model fundamentally?
+    @Option(
+        names = ["--base-model-name"],
+        description = ["Optional: New of the base model for this model"],
+    )
+    private var baseModelName: String? = null
+
+    @Option(
+        names = ["--unset-base-model-name"],
+        description = ["Optional: Unset/resets the base model name to null"],
+    )
+    private var unsetBaseModelName: Boolean = false
+
     @Option(
         names = ["--provider-name"],
         description = ["Optional: Name of provider"],
@@ -65,6 +76,13 @@ class ModelInfoUpdateCommand : BaseCommand() {
         description = ["Optional: Base URL to use for provider"],
     )
     private var providerBaseUrl: String? = null
+
+    @Option(
+        names = ["--api-type"],
+        description = ["Optional: The API type to use for this mode." +
+                $$"Valid values are ${COMPLETION-CANDIDATES}"]
+    )
+    private var apiType: ModelApiType? = null
 
     // TODO: Any better way of getting pricing done.
     @Option(
@@ -107,7 +125,7 @@ class ModelInfoUpdateCommand : BaseCommand() {
         runBlocking {
             val modelPricing = if (!skipPricing) {
                 val pricingStore = pricingStore(modelPricingYaml)
-                val existingModelInfo = divyamClient.getModelInfo(
+                val existingModelInfo = divyamClient.getModelInfoById(
                     orgId = orgId,
                     modelInfoId = id
                 )
@@ -149,12 +167,15 @@ class ModelInfoUpdateCommand : BaseCommand() {
             val updated = divyamClient.updateModelInfo(
                 orgId = orgId,
                 modelInfoId = id,
-                providerInfoUpdation = ModelProviderInfoUpdation(
+                modelProviderInfoUpdation = ModelProviderInfoUpdation(
                     serviceAccountId = serviceAccountId,
                     providerName = providerName,
                     endpoint = providerBaseUrl,
+                    apiType = apiType,
                     apiKeyModel = providerApiKey,
                     modelName = modelName,
+                    baseModelName = baseModelName,
+                    unsetBaseModelName = unsetBaseModelName,
                     textPricing = if (modelPricing != null) TextPricing(
                         input = modelPricing.textInputPrice,
                         output = modelPricing.textOutputPrice

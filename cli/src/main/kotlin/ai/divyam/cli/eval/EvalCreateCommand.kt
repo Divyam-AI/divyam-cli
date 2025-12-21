@@ -1,9 +1,9 @@
 package ai.divyam.cli.eval
 
 import ai.divyam.cli.base.SaSpecificCommand
-import ai.divyam.client.data.models.EvalCreateRequest
-import ai.divyam.client.data.models.EvalGranularity
-import ai.divyam.client.data.models.EvalState
+import ai.divyam.data.model.EvalCreateRequest
+import ai.divyam.data.model.EvalGranularity
+import ai.divyam.data.model.EvalState
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -60,7 +60,7 @@ class EvalCreateCommand : SaSpecificCommand() {
             val sa = getServiceAccount()
             divyamClient.createEval(
                 serviceAccountId = serviceAccountId,
-                createRequest = EvalCreateRequest(
+                evalCreateRequest = EvalCreateRequest(
                     orgId = sa.orgId,
                     serviceAccountId = sa.id,
                     name = name,

@@ -178,7 +178,12 @@ fun Project.configureGraalVmReflectionConfig() {
             listOf(
                 "kotlin.collections.EmptyList",
                 "kotlin.collections.EmptyMap",
-                "kotlin.collections.EmptySet"
+                "kotlin.collections.EmptySet",
+                "kotlin.reflect.KTypeProjection",
+                "kotlin.reflect.KType",
+                "kotlin.reflect.KClassifier",
+                "kotlin.reflect.KTypeParameter",
+                "java.lang.Enum\$EnumDesc"
             ).map {
                 loadAndFilterClass(
                     it, classLoader, { true },
@@ -209,6 +214,13 @@ fun Project.configureGraalVmReflectionConfig() {
                 // Jansi related
                 appendLine(
                     """
+                      {
+                        "name": "[Lkotlin.reflect.KTypeProjection;",
+                        "allDeclaredConstructors": true,
+                        "allPublicConstructors": true,
+                        "allDeclaredMethods": true,
+                        "allPublicMethods": true
+                      },
                       {
                         "name": "org.fusesource.jansi.internal.CLibrary",
                         "allDeclaredConstructors": true,

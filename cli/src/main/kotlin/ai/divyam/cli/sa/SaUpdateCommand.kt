@@ -2,11 +2,11 @@ package ai.divyam.cli.sa
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.cli.base.HasSecurityPolicy
-import ai.divyam.client.data.models.IpVerificationStrategy
-import ai.divyam.client.data.models.ModelAPIAuthMode
-import ai.divyam.client.data.models.OptimizationGoal
-import ai.divyam.client.data.models.ServiceAccount
-import ai.divyam.client.data.models.ServiceAccountUpdateRequest
+import ai.divyam.data.model.IpVerificationStrategy
+import ai.divyam.data.model.ModelAPIAuthMode
+import ai.divyam.data.model.OptimizationGoal
+import ai.divyam.data.model.ServiceAccount
+import ai.divyam.data.model.ServiceAccountUpdateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -26,7 +26,6 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
     @Option(
         names = ["--name"],
         description = ["Optional: new service account name if change desired"],
-        defaultValue = "<null>"
     )
     var name: String? = null
 
@@ -105,7 +104,7 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
         val updated = runBlocking {
             divyamClient.updateServiceAccount(
                 serviceAccountId = sa.id,
-                req = ServiceAccountUpdateRequest(
+                serviceAccountUpdateRequest = ServiceAccountUpdateRequest(
                     name = sa.name,
                     trafficAllocationConfig = sa.trafficAllocationConfig,
                     optimizationGoal = sa.optimizationGoal,

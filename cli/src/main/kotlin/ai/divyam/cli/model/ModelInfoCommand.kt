@@ -3,7 +3,6 @@ package ai.divyam.cli.model
 import ai.divyam.cli.base.BaseSubCommand
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import picocli.CommandLine
 import java.util.concurrent.Callable
 
@@ -11,13 +10,12 @@ import java.util.concurrent.Callable
     name = "model-info",
     description = ["Manage model info."],
     subcommands = [ModelInfoListCommand::class, ModelInfoCreateCommand::class,
-        ModelInfoUpdateCommand::class, ModelInfoGetCommand::class]
+        ModelInfoUpdateCommand::class, ModelInfoGetCommand::class, ModelInfoDeleteCommand::class]
 )
 class ModelInfoCommand : BaseSubCommand(), Callable<Int> {
     companion object {
         fun parseJson(json: String, mapper: ObjectMapper): Any? {
-            val objectMapper = ObjectMapper().registerKotlinModule()
-            val rootNode: JsonNode = objectMapper.readTree(json)
+            val rootNode: JsonNode = mapper.readTree(json)
 
             return processNode(rootNode)
         }
@@ -27,7 +25,7 @@ class ModelInfoCommand : BaseSubCommand(), Callable<Int> {
                 node.isObject -> {
                     val result = mutableMapOf<Any, Any?>()
                     // Iterate over the key-value pairs of the object
-                    node.fields().forEach { (key, value) ->
+                    node.properties().forEach { (key, value) ->
                         result[key] = processNode(value)
                     }
                     result

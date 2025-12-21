@@ -1,10 +1,10 @@
 package ai.divyam.cli.base
 
-import ai.divyam.client.data.models.IpVerificationStrategy
-import ai.divyam.client.data.models.SecurityPolicy
+import ai.divyam.data.model.IpVerificationStrategy
+import ai.divyam.data.model.SecurityPolicy
 
 /**
- * A command that has an optional [ai.divyam.client.data.models.SecurityPolicy]
+ * A command that has an optional [SecurityPolicy]
  */
 interface HasSecurityPolicy {
     var allowedIpNetworks: List<String>?

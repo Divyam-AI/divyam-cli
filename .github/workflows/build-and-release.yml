@@ -2,6 +2,7 @@ name: Build and Release
 
 permissions:
   contents: write
+  checks: write
 
 on:
   workflow_dispatch:
@@ -40,7 +41,12 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 24
+          java-version: 21
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
 
       - name: JDK version
         run: java --version
@@ -48,12 +54,34 @@ jobs:
       - name: Grant execute permissions
         run: chmod +x gradlew
 
+      - name: Run unit tests
+        run: ./gradlew test
+
+      - name: Publish JUnit test report
+        if: always()
+        uses: dorny/test-reporter@v1
+        with:
+          name: Gradle Tests (${{ matrix.arch }})
+          path: '**/build/test-results/test/*.xml'
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: Upload Gradle test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-test-results-${{ matrix.arch }}
+          path: |
+            **/build/test-results/test
+            **/build/reports/tests/test
+
       - name: Build deb and rpm
         run: |
           ./gradlew clean deb rpm
 
-      - name: Smoke tests
+      - name: Run cross-distro smoke tests
         run: |
+          chmod +x cli/src/test/scripts/test-binary-across-distros.sh
           cli/src/test/scripts/test-binary-across-distros.sh
 
       - name: Prepare Linux artifacts
@@ -75,7 +103,7 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: macos-13
+            runner: macos-15-intel
           - arch: arm64
             runner: macos-latest
 
@@ -90,6 +118,11 @@ jobs:
         with:
           distribution: temurin
           java-version: 24
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
 
       - name: Build the pkg
         run: |
@@ -106,6 +139,39 @@ jobs:
         with:
           name: macos-packages-${{ matrix.arch }}
           path: temp-artifacts/
+
+  macos-smoke-tests:
+    name: Smoke Tests (macOS)
+    runs-on: ${{ matrix.runner }}
+    needs: [ macos-build ]
+
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-packages-${{ matrix.arch }}
+          path: dist/
+
+      - name: Smoke test divyam CLI
+        run: |
+          set -euo pipefail
+          PKG_DIR="dist/macos-packages-${{ matrix.arch }}"
+          PKG=$(ls "$PKG_DIR"/*.pkg)
+          echo "Installing $PKG"
+          sudo installer -pkg "$PKG" -target /
+          echo "Running divyam"
+          divyam --help
+
 
   docker-images:
     runs-on: ubuntu-22.04
@@ -126,7 +192,6 @@ jobs:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
       - name: Set repository name
-        id: set-repo
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.ref }}" == refs/tags/* ]]; then
             echo "REPOSITORY=divyam-router-docker-as1" >> $GITHUB_ENV
@@ -145,13 +210,11 @@ jobs:
         run: |
           VERSION=$(grep '^version=' cli/gradle.properties | cut -d'=' -f2)
           if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.ref }}" == refs/tags/* ]]; then
-            # Remove -SNAPSHOT
             VERSION="${VERSION%-SNAPSHOT}"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Authenticate to Google Cloud
-        id: auth
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: 'projects/244819244005/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
@@ -168,9 +231,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Debug
-        run: ls -R cli
 
       - name: Build and push multi-arch image
         uses: docker/build-push-action@v6
@@ -191,7 +251,6 @@ jobs:
   release:
     runs-on: ubuntu-22.04
     needs: [ linux-build, macos-build, docker-images ]
-
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
 
     steps:
@@ -208,31 +267,19 @@ jobs:
           else
             VERSION="${GITHUB_REF#refs/tags/}"
           fi
-
-          CLEAN_VERSION="${VERSION/-SNAPSHOT/}"   # strip -SNAPSHOT if present
+          CLEAN_VERSION="${VERSION/-SNAPSHOT/}"
           echo "version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
           sed -i "s/^version=.*/version=$CLEAN_VERSION/" cli/gradle.properties
 
-      - name: Download Linux artifacts
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           path: release-artifacts/
-          pattern: linux-packages-*
-
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release-artifacts/
-          pattern: macos-packages-*
 
       - name: Prepare release files
         run: |
           mkdir -p release-files
-          # Only copy files with extensions (.deb, .rpm, .pkg)
           find release-artifacts -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.pkg" \) -exec cp {} release-files/ \;
-
-      - name: Show release files
-        run: ls -la release-files/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
