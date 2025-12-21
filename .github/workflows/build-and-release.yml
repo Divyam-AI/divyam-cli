@@ -79,6 +79,14 @@ jobs:
         run: |
           ./gradlew clean deb rpm
 
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Run cross-distro smoke tests
+        run: |
+          chmod +x cli/src/test/scripts/test-binary-across-distros.sh
+          cli/src/test/scripts/test-binary-across-distros.sh
+
       - name: Prepare Linux artifacts
         run: |
           mkdir -p temp-artifacts/linux-packages-${{ matrix.arch }}
@@ -91,30 +99,6 @@ jobs:
         with:
           name: linux-packages-${{ matrix.arch }}
           path: temp-artifacts/
-
-  smoke-tests:
-    name: Smoke Tests (cross-distro)
-    runs-on: ubuntu-24.04
-    needs: [ linux-build ]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download amd64 binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: linux-packages-amd64
-          path: dist/
-
-      - name: Set up Docker
-        uses: docker/setup-buildx-action@v3
-
-      - name: Run cross-distro smoke tests
-        run: |
-          chmod +x cli/src/test/scripts/test-binary-across-distros.sh
-          cli/src/test/scripts/test-binary-across-distros.sh
-        env:
-          BINARY_PATH: dist/linux-packages-amd64/divyam
 
   macos-build:
     runs-on: ${{ matrix.runner }}
