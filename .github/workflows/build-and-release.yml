@@ -40,7 +40,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 24
+          java-version: 21
 
       - name: Set up Gradle cache
         uses: gradle/actions/setup-gradle@v4
@@ -155,6 +155,39 @@ jobs:
         with:
           name: macos-packages-${{ matrix.arch }}
           path: temp-artifacts/
+
+  macos-smoke-tests:
+    name: Smoke Tests (macOS)
+    runs-on: ${{ matrix.runner }}
+    needs: [ macos-build ]
+
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-packages-${{ matrix.arch }}
+          path: dist/
+
+      - name: Smoke test divyam CLI
+        run: |
+          set -euo pipefail
+          PKG_DIR="dist/macos-packages-${{ matrix.arch }}"
+          PKG=$(ls "$PKG_DIR"/*.pkg)
+          echo "Installing $PKG"
+          sudo installer -pkg "$PKG" -target /
+          echo "Running divyam"
+          divyam --help
+
 
   docker-images:
     runs-on: ubuntu-22.04
