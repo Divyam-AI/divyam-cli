@@ -113,6 +113,8 @@ jobs:
         run: |
           chmod +x cli/src/test/scripts/test-binary-across-distros.sh
           cli/src/test/scripts/test-binary-across-distros.sh
+        env:
+          BINARY_PATH: dist/linux-packages-amd64/divyam
 
   macos-build:
     runs-on: ${{ matrix.runner }}

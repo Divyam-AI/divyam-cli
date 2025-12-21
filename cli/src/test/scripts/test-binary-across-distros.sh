@@ -13,7 +13,7 @@ trap 'kill $(jobs -p) 2>/dev/null || true' EXIT
 # Configuration
 PORT=8484
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BINARY_PATH="$SCRIPT_DIR/../../../build/native/nativeCompile/divyam"
+BINARY_PATH="${BINARY_PATH:-$SCRIPT_DIR/../../../build/native/nativeCompile/divyam}"
 ENDPOINT="http://localhost:$PORT"
 USER="admin@dashboard.divyam.ai"
 PASSWORD="divyam123"
