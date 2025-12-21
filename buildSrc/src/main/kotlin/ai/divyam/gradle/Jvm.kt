@@ -39,5 +39,6 @@ fun Project.configureKotlin(
         options.compilerArgs.add("-Werror")  // treat warnings as errors
         options.compilerArgs.add("-Xlint:all") // enable all lint warnings
         options.release.set(javaVersion)
+        targetCompatibility = javaVersion.toString()
     }
 }
