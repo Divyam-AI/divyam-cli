@@ -10,6 +10,7 @@ import ai.divyam.data.model.ServiceAccountUpdateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
+import java.math.BigDecimal
 
 @CommandLine.Command(
     name = "update",
@@ -138,7 +139,7 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
                 trafficAllocationConfig = mapper.readValue(
                     it,
                     Map::class.java
-                ) as Map<String, Double>
+                ) as Map<String, BigDecimal>
             )
         }
 
