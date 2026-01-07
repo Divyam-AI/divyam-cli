@@ -9,7 +9,6 @@ import ai.divyam.data.model.ServiceAccountCreateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
-import java.math.BigDecimal
 
 @CommandLine.Command(
     name = "create",
@@ -92,14 +91,14 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
     override var xffIndices: List<Int>? = null
 
     override fun execute(): Int {
-        var trafficAllocationConfigObj: Map<String, BigDecimal>? = null
+        var trafficAllocationConfigObj: Map<String, Double>? = null
         if (trafficAllocationConfig != null) {
             val mapper = getJsonMapper()
             @Suppress("UNCHECKED_CAST")
             trafficAllocationConfigObj = mapper.readValue(
                 trafficAllocationConfig,
                 Map::class.java
-            ) as Map<String, BigDecimal>
+            ) as Map<String, Double>
         }
         val created = runBlocking {
             divyamClient.createServiceAccount(

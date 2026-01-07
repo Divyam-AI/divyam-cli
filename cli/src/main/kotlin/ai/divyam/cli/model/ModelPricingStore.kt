@@ -12,7 +12,6 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.InputStream
 import java.time.LocalDate
-import java.math.BigDecimal
 
 @Reflectable
 data class ModelPricing(
@@ -21,10 +20,10 @@ data class ModelPricing(
     val currency: String,
 
     @param:JsonProperty("text_input_price")
-    val textInputPrice: BigDecimal,
+    val textInputPrice: Double,
 
     @param:JsonProperty("text_output_price")
-    val textOutputPrice: BigDecimal,
+    val textOutputPrice: Double,
 
     @param:JsonProperty("per_n_tokens")
     val perNTokens: Int,

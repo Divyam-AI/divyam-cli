@@ -65,7 +65,15 @@ openApiGenerate {
     modelPackage.set("ai.divyam.data.model")
     invokerPackage.set("ai.divyam.invoker")
     templateDir.set("$projectDir/openapi-templates/ktor")
-    // typeMappings.set(mapOf("number" to "kotlin.Double"))
+
+    typeMappings.set(
+        mapOf(
+            "number" to "kotlin.Double",
+            "decimal" to "java.math.BigDecimal",
+            "integer" to "kotlin.Int"
+        )
+    )
+
     configOptions.set(
         mapOf(
             "dateLibrary" to "java8",
