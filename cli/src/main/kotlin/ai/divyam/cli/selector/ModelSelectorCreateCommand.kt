@@ -3,9 +3,12 @@ package ai.divyam.cli.selector
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.data.model.ModelSelectorCreateRequest
 import ai.divyam.data.model.ModelSelectorState
+import ai.divyam.data.model.SelectorTrainingConfigurationInput
+import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
+import java.io.File
 
 @CommandLine.Command(name = "create", description = ["Create a selector"])
 class ModelSelectorCreateCommand : BaseCommand() {
@@ -44,18 +47,56 @@ class ModelSelectorCreateCommand : BaseCommand() {
     )
     private lateinit var state: ModelSelectorState
 
+    @Option(
+        names = ["-c", "--config-file"],
+        description = ["Optional: Config file (YAML or JSON) to use for the selector"],
+    )
+    private var configFile: File? = null
+
+    private fun readConfigFile(): SelectorTrainingConfigurationInput? {
+        val file = configFile ?: return null
+        
+        if (!file.exists()) {
+            throw IllegalArgumentException("Config file does not exist: ${file.absolutePath}")
+        }
+        
+        val extension = file.extension.lowercase()
+        return when (extension) {
+            "yaml", "yml" -> getYamlMapper().readValue<SelectorTrainingConfigurationInput>(file)
+            "json" -> getJsonMapper().readValue<SelectorTrainingConfigurationInput>(file)
+            else -> throw IllegalArgumentException(
+                "Unsupported config file format: $extension. Use .yaml, .yml, or .json"
+            )
+        }
+    }
+
+    @Option(
+        names = [ "-x","--extractor-strategy","--extractor"],
+        description = ["Optional: Extractor strategy to use for the selector"],
+    )
+    private var extractorStrategy: String? = null
+
     override fun execute(): Int {
+        val trainingConfig: SelectorTrainingConfigurationInput? = readConfigFile()
+        // val configMap = getJsonMapper().convertValue(trainingConfig,
+        //     object : TypeReference<Map<String, Any?>>() {}
+        // )
+
         val newModelSelector = runBlocking {
             // TODO: Should remove selector endpoint from the db. Maybe store
             //  a version instead.
-            divyamClient.createModelSelector(
-                modelSelectorCreateRequest = ModelSelectorCreateRequest(
+            val modelSelectorCreateRequestbody = ModelSelectorCreateRequest(
                     orgId = orgId,
                     serviceAccountId = serviceAccountId,
                     name = name,
                     state = state,
-                    endpoint = selectorEndpoint
+                    endpoint = selectorEndpoint,
+                    config = trainingConfig,
+                    extractorStrategy = extractorStrategy
                 )
+            println("modelSelectorCreateRequest: $modelSelectorCreateRequestbody")
+            divyamClient.createModelSelector( 
+                modelSelectorCreateRequest = modelSelectorCreateRequestbody
             )
         }
         printObjs(newModelSelector)

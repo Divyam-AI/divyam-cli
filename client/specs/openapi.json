@@ -3665,14 +3665,8 @@
       "SourceSpec": {
         "properties": {
           "flowid": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "nullable": true,
+            "type": "string",
             "title": "Flowid"
           },
           "start_date": {
@@ -3684,14 +3678,8 @@
             "title": "End Date"
           },
           "file_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
+            "nullable": true,
             "title": "File Path"
           },
           "ignore_control_bucket": {
