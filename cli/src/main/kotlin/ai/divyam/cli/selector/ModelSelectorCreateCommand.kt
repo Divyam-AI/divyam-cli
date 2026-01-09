@@ -53,28 +53,6 @@ class ModelSelectorCreateCommand : BaseCommand() {
     )
     private var configFile: File? = null
 
-    private fun readConfigFile(): SelectorTrainingConfigurationInput? {
-        val file = configFile ?: return null
-
-        if (!file.exists()) {
-            throw IllegalArgumentException("Config file does not exist: ${file.absolutePath}")
-        }
-
-        return when (val extension = file.extension.lowercase()) {
-            "yaml", "yml" -> getYamlMapper().readValue<SelectorTrainingConfigurationInput>(
-                file
-            )
-
-            "json" -> getJsonMapper().readValue<SelectorTrainingConfigurationInput>(
-                file
-            )
-
-            else -> throw IllegalArgumentException(
-                "Unsupported config file format: $extension. Use .yaml, .yml, or .json"
-            )
-        }
-    }
-
     @Option(
         names = ["-x", "--extractor-strategy", "--extractor"],
         description = ["Optional: Extractor strategy to use for the selector"],
@@ -103,4 +81,25 @@ class ModelSelectorCreateCommand : BaseCommand() {
         return 0
     }
 
+    private fun readConfigFile(): SelectorTrainingConfigurationInput? {
+        val file = configFile ?: return null
+
+        if (!file.exists()) {
+            throw IllegalArgumentException("Config file does not exist: ${file.absolutePath}")
+        }
+
+        return when (val extension = file.extension.lowercase()) {
+            "yaml", "yml" -> getYamlMapper().readValue<SelectorTrainingConfigurationInput>(
+                file
+            )
+
+            "json" -> getJsonMapper().readValue<SelectorTrainingConfigurationInput>(
+                file
+            )
+
+            else -> throw IllegalArgumentException(
+                "Unsupported config file format: $extension. Use .yaml, .yml, or .json"
+            )
+        }
+    }
 }
