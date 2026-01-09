@@ -183,7 +183,12 @@ fun Project.configureGraalVmReflectionConfig() {
                 "kotlin.reflect.KType",
                 "kotlin.reflect.KClassifier",
                 "kotlin.reflect.KTypeParameter",
-                "java.lang.Enum\$EnumDesc"
+                "java.lang.Enum\$EnumDesc",
+                "java.util.HashMap",
+                "java.util.HashMap\$Node",
+                "java.util.HashMap\$TreeNode",
+                "kotlin.collections.MutableSet",
+                "kotlin.collections.MutableMap.MutableEntry"
             ).map {
                 loadAndFilterClass(
                     it, classLoader, { true },

@@ -55,15 +55,20 @@ class ModelSelectorCreateCommand : BaseCommand() {
 
     private fun readConfigFile(): SelectorTrainingConfigurationInput? {
         val file = configFile ?: return null
-        
+
         if (!file.exists()) {
             throw IllegalArgumentException("Config file does not exist: ${file.absolutePath}")
         }
-        
-        val extension = file.extension.lowercase()
-        return when (extension) {
-            "yaml", "yml" -> getYamlMapper().readValue<SelectorTrainingConfigurationInput>(file)
-            "json" -> getJsonMapper().readValue<SelectorTrainingConfigurationInput>(file)
+
+        return when (val extension = file.extension.lowercase()) {
+            "yaml", "yml" -> getYamlMapper().readValue<SelectorTrainingConfigurationInput>(
+                file
+            )
+
+            "json" -> getJsonMapper().readValue<SelectorTrainingConfigurationInput>(
+                file
+            )
+
             else -> throw IllegalArgumentException(
                 "Unsupported config file format: $extension. Use .yaml, .yml, or .json"
             )
@@ -71,32 +76,30 @@ class ModelSelectorCreateCommand : BaseCommand() {
     }
 
     @Option(
-        names = [ "-x","--extractor-strategy","--extractor"],
+        names = ["-x", "--extractor-strategy", "--extractor"],
         description = ["Optional: Extractor strategy to use for the selector"],
     )
     private var extractorStrategy: String? = null
 
     override fun execute(): Int {
-        val trainingConfig: SelectorTrainingConfigurationInput? = readConfigFile()
+        val trainingConfig: SelectorTrainingConfigurationInput? =
+            readConfigFile()
         // val configMap = getJsonMapper().convertValue(trainingConfig,
         //     object : TypeReference<Map<String, Any?>>() {}
         // )
 
         val newModelSelector = runBlocking {
-            // TODO: Should remove selector endpoint from the db. Maybe store
-            //  a version instead.
-            val modelSelectorCreateRequestbody = ModelSelectorCreateRequest(
-                    orgId = orgId,
-                    serviceAccountId = serviceAccountId,
-                    name = name,
-                    state = state,
-                    endpoint = selectorEndpoint,
-                    config = trainingConfig,
-                    extractorStrategy = extractorStrategy
-                )
-            println("modelSelectorCreateRequest: $modelSelectorCreateRequestbody")
-            divyamClient.createModelSelector( 
-                modelSelectorCreateRequest = modelSelectorCreateRequestbody
+            val modelSelectorCreateRequest = ModelSelectorCreateRequest(
+                orgId = orgId,
+                serviceAccountId = serviceAccountId,
+                name = name,
+                state = state,
+                endpoint = selectorEndpoint,
+                config = trainingConfig,
+                extractorStrategy = extractorStrategy
+            )
+            divyamClient.createModelSelector(
+                modelSelectorCreateRequest = modelSelectorCreateRequest
             )
         }
         printObjs(newModelSelector)
