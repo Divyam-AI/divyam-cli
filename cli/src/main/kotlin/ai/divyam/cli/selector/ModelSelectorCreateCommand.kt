@@ -102,4 +102,5 @@ class ModelSelectorCreateCommand : BaseCommand() {
         printObjs(newModelSelector)
         return 0
     }
+
 }
