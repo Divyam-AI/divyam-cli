@@ -52,6 +52,12 @@ kotlin {
                         .asFile.absolutePath
                 }/generated/src/main/kotlin"
             )
+            resources.srcDir(
+                "${
+                    layout.buildDirectory.get()
+                        .asFile.absolutePath
+                }/generated/src/main/resources"
+            )
         }
     }
 }
@@ -81,5 +87,50 @@ openApiGenerate {
         )
     )
 }
+
+tasks.register("generateModelIndex") {
+    // Ensure we run after the generator but before resources are processed
+    dependsOn("openApiGenerate", "compileJava")
+
+    val modelDir =
+        file(
+            "${
+                layout.buildDirectory.get()
+                    .asFile
+            }/generated/src/main/kotlin"
+        )
+    val outputFile = file(
+        "${
+            layout.buildDirectory.get()
+                .asFile
+        }/generated/src/main/resources/model-index.txt"
+    )
+
+    inputs.dir(modelDir)
+    outputs.file(outputFile)
+
+    doLast {
+        val classes = mutableListOf<String>()
+        // Use walk() to go into every subdirectory
+        modelDir.walk().forEach { file ->
+            val className =
+                file.toRelativeString(modelDir).replace(".kt", "").replace(
+                    File
+                        .separatorChar,
+                    '.'
+                )
+            if (file.isFile && file.extension == "kt") {
+                classes.add(className)
+            }
+        }
+        outputFile.writeText(classes.distinct().joinToString("\n"))
+        println("Generated index with ${classes.size} classes for GraalVM reflection.")
+    }
+}
+
+tasks.named("processResources") {
+    dependsOn("generateModelIndex")
+}
+
 
 tasks.named("compileKotlin").get().dependsOn("openApiGenerate")
