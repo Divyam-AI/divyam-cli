@@ -816,6 +816,41 @@ class DivyamCliTest {
     @Test
     @Order(36)
     fun `selector update with candidate models`() {
+
+        val modelInfo1ExitCode = executeCommand(
+            ModelInfoCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--provider-name", "openai",
+            "--model-names", "gpt-4.1-mini",
+            "--provider-base-url", "https://api.openai.com/v1",
+            "--provider-api-key", "test-key",
+            "--service-account-id", testServiceAccountId
+        )
+
+        assertEquals(0, modelInfo1ExitCode)
+
+        val modelInfo2ExitCode = executeCommand(
+            ModelInfoCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--provider-name", "anthropic",
+            "--model-names", "claude-3-opus",
+            "--provider-base-url", "https://api.openai.com/v1",
+            "--provider-api-key", "test-key",
+            "--service-account-id", testServiceAccountId
+        )
+
+        assertEquals(0, modelInfo2ExitCode)
+
         val createExitCode = executeCommand(
             ModelSelectorCommand(),
             "create",
