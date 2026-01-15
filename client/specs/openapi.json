@@ -1629,6 +1629,7 @@
             "default": true
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "EnrichmentParams"
       },
@@ -1914,8 +1915,7 @@
           },
           "extractor_strategy": {
             "type": "string",
-            "title": "Extractor Strategy",
-            "default": "message_history"
+            "title": "Extractor Strategy"
           },
           "k": {
             "type": "integer",
@@ -1964,7 +1964,11 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
+        "required": [
+          "extractor_strategy"
+        ],
         "title": "EvaluationParams"
       },
       "EvaluationParams-Output": {
@@ -2023,8 +2027,7 @@
           },
           "extractor_strategy": {
             "type": "string",
-            "title": "Extractor Strategy",
-            "default": "message_history"
+            "title": "Extractor Strategy"
           },
           "k": {
             "type": "integer",
@@ -2073,7 +2076,11 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
+        "required": [
+          "extractor_strategy"
+        ],
         "title": "EvaluationParams"
       },
       "ExperimentDatasetInfo": {
@@ -2127,6 +2134,7 @@
             "default": true
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "name",
@@ -2147,12 +2155,13 @@
             "default": false
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "ExperimentDatasetSplitConfig"
       },
       "ExperimentDatasets-Input": {
         "properties": {
-          "train": {
+          "train_ds": {
             "$ref": "#/components/schemas/ExperimentDatasetInfo"
           },
           "eval_ds": {
@@ -2190,9 +2199,10 @@
             }
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "train"
+          "train_ds"
         ],
         "title": "ExperimentDatasets"
       },
@@ -2236,6 +2246,7 @@
             }
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "train_ds"
@@ -2875,6 +2886,7 @@
             "title": "Model"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "model"
@@ -3199,6 +3211,7 @@
             "title": "Cost Efficient Lambda"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "PromoteArtifactsParams"
       },
@@ -3299,48 +3312,14 @@
             "default": []
           },
           "stages": {
-            "$ref": "#/components/schemas/StageWiseParams-Input",
-            "default": {
-              "enrichment": {
-                "mock_model": false,
-                "reuse_existing": true,
-                "skip_cost_calculation": false,
-                "skip_evaluation": false,
-                "skip_response_collection": false
-              },
-              "selector_training": {
-                "candidate_model_ids": [],
-                "device": "cpu",
-                "epochs": 2000,
-                "model_params": {},
-                "run": true,
-                "train_calibration_model": true
-              },
-              "selector_evaluation": {
-                "anchor_point_count": 100,
-                "candidate_model_ids": [],
-                "device": "cpu",
-                "embedder_model": "all-MiniLM-L6-v2",
-                "extractor_strategy": "message_history",
-                "generate_artifacts": true,
-                "k": 50,
-                "lambda_count": 150,
-                "lambda_max": 1e-05,
-                "lambda_min": 0.01,
-                "lambda_vals": [],
-                "run": true,
-                "skip_cost_quality_tradeoff_analysis": false
-              },
-              "promote_artifacts": {
-                "run": true
-              }
-            }
+            "$ref": "#/components/schemas/StageWiseParams-Input"
           }
         },
-        "additionalProperties": true,
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "datasets"
+          "datasets",
+          "stages"
         ],
         "title": "SelectorTrainingConfiguration"
       },
@@ -3368,48 +3347,14 @@
             "default": []
           },
           "stages": {
-            "$ref": "#/components/schemas/StageWiseParams-Output",
-            "default": {
-              "enrichment": {
-                "mock_model": false,
-                "reuse_existing": true,
-                "skip_cost_calculation": false,
-                "skip_evaluation": false,
-                "skip_response_collection": false
-              },
-              "selector_training": {
-                "candidate_model_ids": [],
-                "device": "cpu",
-                "epochs": 2000,
-                "model_params": {},
-                "run": true,
-                "train_calibration_model": true
-              },
-              "selector_evaluation": {
-                "anchor_point_count": 100,
-                "candidate_model_ids": [],
-                "device": "cpu",
-                "embedder_model": "all-MiniLM-L6-v2",
-                "extractor_strategy": "message_history",
-                "generate_artifacts": true,
-                "k": 50,
-                "lambda_count": 150,
-                "lambda_max": 1e-05,
-                "lambda_min": 0.01,
-                "lambda_vals": [],
-                "run": true,
-                "skip_cost_quality_tradeoff_analysis": false
-              },
-              "promote_artifacts": {
-                "run": true
-              }
-            }
+            "$ref": "#/components/schemas/StageWiseParams-Output"
           }
         },
-        "additionalProperties": true,
+        "additionalProperties": false,
         "type": "object",
         "required": [
-          "datasets"
+          "datasets",
+          "stages"
         ],
         "title": "SelectorTrainingConfiguration"
       },
@@ -3665,8 +3610,14 @@
       "SourceSpec": {
         "properties": {
           "flowid": {
-            "nullable": true,
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Flowid"
           },
           "start_date": {
@@ -3678,8 +3629,14 @@
             "title": "End Date"
           },
           "file_path": {
-            "type": "string",
-            "nullable": true,
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "File Path"
           },
           "ignore_control_bucket": {
@@ -3688,7 +3645,7 @@
             "default": true
           }
         },
-        "additionalProperties": true,
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "start_date",
@@ -3720,22 +3677,7 @@
             }
           },
           "selector_evaluation": {
-            "$ref": "#/components/schemas/EvaluationParams-Input",
-            "default": {
-              "generate_artifacts": true,
-              "run": true,
-              "embedder_model": "all-MiniLM-L6-v2",
-              "device": "cpu",
-              "anchor_point_count": 100,
-              "candidate_model_ids": [],
-              "lambda_vals": [],
-              "extractor_strategy": "message_history",
-              "k": 50,
-              "lambda_min": 0.01,
-              "lambda_max": 1e-05,
-              "lambda_count": 150,
-              "skip_cost_quality_tradeoff_analysis": false
-            }
+            "$ref": "#/components/schemas/EvaluationParams-Input"
           },
           "promote_artifacts": {
             "$ref": "#/components/schemas/PromoteArtifactsParams",
@@ -3744,7 +3686,11 @@
             }
           }
         },
+        "additionalProperties": false,
         "type": "object",
+        "required": [
+          "selector_evaluation"
+        ],
         "title": "StageWiseParams"
       },
       "StageWiseParams-Output": {
@@ -3771,22 +3717,7 @@
             }
           },
           "selector_evaluation": {
-            "$ref": "#/components/schemas/EvaluationParams-Output",
-            "default": {
-              "generate_artifacts": true,
-              "run": true,
-              "embedder_model": "all-MiniLM-L6-v2",
-              "device": "cpu",
-              "anchor_point_count": 100,
-              "candidate_model_ids": [],
-              "lambda_vals": [],
-              "extractor_strategy": "message_history",
-              "k": 50,
-              "lambda_min": 0.01,
-              "lambda_max": 1e-05,
-              "lambda_count": 150,
-              "skip_cost_quality_tradeoff_analysis": false
-            }
+            "$ref": "#/components/schemas/EvaluationParams-Output"
           },
           "promote_artifacts": {
             "$ref": "#/components/schemas/PromoteArtifactsParams",
@@ -3795,7 +3726,11 @@
             }
           }
         },
+        "additionalProperties": false,
         "type": "object",
+        "required": [
+          "selector_evaluation"
+        ],
         "title": "StageWiseParams"
       },
       "TextPricing": {
@@ -3853,6 +3788,7 @@
             "default": true
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "title": "TrainingParams"
       },

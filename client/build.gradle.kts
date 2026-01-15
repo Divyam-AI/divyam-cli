@@ -1,5 +1,12 @@
 import ai.divyam.gradle.Versions
 import ai.divyam.gradle.configureKotlin
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
+import com.fasterxml.jackson.databind.node.ArrayNode
+import java.nio.file.Files
+import java.nio.file.Path
+import java.io.File
 
 plugins {
     java
@@ -62,10 +69,78 @@ kotlin {
     }
 }
 
+private val PRIMITIVE_TYPES = setOf(
+    "string",
+    "integer",
+    "number",
+    "boolean"
+)
+
+fun preprocessOpenApiNullableAnyOf(
+    inputSpec: Path,
+    outputSpec: Path
+) {
+    val mapper = ObjectMapper()
+    val root = mapper.readTree(inputSpec.toFile())
+
+    fun rewrite(node: JsonNode) {
+        when {
+            node.isObject -> {
+                val obj = node as ObjectNode
+
+                val anyOf = obj.get("anyOf")
+                if (anyOf is ArrayNode && anyOf.size() == 2) {
+                    val types = anyOf.mapNotNull { it.get("type")?.asText() }.toSet()
+
+                    if ("null" in types && types.size == 2) {
+                        val primitive = (types - "null").firstOrNull()
+                        if (primitive in PRIMITIVE_TYPES) {
+                            obj.remove("anyOf")
+                            obj.put("type", primitive)
+                            obj.put("nullable", true)
+                        }
+                    }
+                }
+
+                obj.elements().forEachRemaining { value ->
+                    rewrite(value)
+                }
+            }
+
+            node.isArray -> node.forEach { rewrite(it) }
+        }
+    }
+
+    rewrite(root)
+
+    Files.createDirectories(outputSpec.parent)
+    mapper.writerWithDefaultPrettyPrinter()
+        .writeValue(outputSpec.toFile(), root)
+}
+
+/* ============================================================
+   Preprocess task
+   ============================================================ */
+
+val fixedOpenApiSpec =
+    layout.buildDirectory.file("openapi/openapi.fixed.json")
+
+tasks.register("preprocessOpenApi") {
+    inputs.file("$projectDir/specs/openapi.json")
+    outputs.file(fixedOpenApiSpec)
+
+    doLast {
+        preprocessOpenApiNullableAnyOf(
+            inputSpec = file("$projectDir/specs/openapi.json").toPath(),
+            outputSpec = fixedOpenApiSpec.get().asFile.toPath()
+        )
+    }
+}
+
 openApiGenerate {
     generatorName.set("kotlin")
     library.set("jvm-ktor")
-    inputSpec.set("$projectDir/specs/openapi.json")
+    inputSpec.set(fixedOpenApiSpec.get().asFile.absolutePath)
     outputDir.set("${layout.buildDirectory.get().asFile}/generated")
     apiPackage.set("ai.divyam.api")
     modelPackage.set("ai.divyam.data.model")
@@ -132,5 +207,8 @@ tasks.named("processResources") {
     dependsOn("generateModelIndex")
 }
 
+tasks.named("openApiGenerate") {
+    dependsOn("preprocessOpenApi")
+}
 
 tasks.named("compileKotlin").get().dependsOn("openApiGenerate")

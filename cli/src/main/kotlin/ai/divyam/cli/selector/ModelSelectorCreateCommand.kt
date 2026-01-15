@@ -43,9 +43,9 @@ class ModelSelectorCreateCommand : BaseCommand() {
     @Option(
         names = ["--state"],
         description = [$$"Required: Selector state. ${COMPLETION-CANDIDATES}"],
-        required = true
+        required = false
     )
-    private lateinit var state: ModelSelectorState
+    private var state: ModelSelectorState? = ModelSelectorState.INACTIVE
 
     @Option(
         names = ["-c", "--config-file"],
@@ -60,9 +60,6 @@ class ModelSelectorCreateCommand : BaseCommand() {
     private var extractorStrategy: String? = null
 
     override fun execute(): Int {
-        val trainingConfig: SelectorTrainingConfigurationInput? =
-            readConfigFile()
-
         val newModelSelector = runBlocking {
             val modelSelectorCreateRequest = ModelSelectorCreateRequest(
                 orgId = orgId,
@@ -70,7 +67,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
                 name = name,
                 state = state,
                 endpoint = selectorEndpoint,
-                config = trainingConfig,
+                config = readConfigFile(configFile),
                 extractorStrategy = extractorStrategy
             )
             divyamClient.createModelSelector(
@@ -81,7 +78,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
         return 0
     }
 
-    private fun readConfigFile(): SelectorTrainingConfigurationInput? {
+    private fun readConfigFile(configFile: File?): SelectorTrainingConfigurationInput? {
         val file = configFile ?: return null
 
         if (!file.exists()) {
