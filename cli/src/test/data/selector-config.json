@@ -2,7 +2,7 @@
     "evaluator": {
         "eval_id": 1,
         "name": "test_evaluator",
-        "class_name": "TestEvaluator",
+        "eval_class_path": "TestEvaluator",
         "eval_class_init_config": {"key1": "value1"},
         "eval_sampling_config": {"sampling_key": "sampling_value"}
     },

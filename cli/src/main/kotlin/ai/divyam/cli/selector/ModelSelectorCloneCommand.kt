@@ -190,7 +190,6 @@ class ModelSelectorCloneCommand : BaseCommand() {
             )
         }
 
-        println("Successfully cloned selector (source ID: $fromSelectorId)")
         printObjs(clonedSelector)
         return 0
     }

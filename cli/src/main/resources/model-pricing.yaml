@@ -214,3 +214,10 @@ google:
       text_output_price: 0.30
       per_n_tokens: 1000000
       effective_start_date: 2025-01-01
+anthropic:
+  claude-4-opus:
+    - currency: usd
+      text_input_price: 15
+      text_output_price: 75
+      per_n_tokens: 1000000
+      effective_start_date: 2025-01-01
