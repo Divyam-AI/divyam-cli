@@ -21,6 +21,18 @@ on:
       - main
 
 jobs:
+  header-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Check Headers
+        run: ./gradlew spotlessCheck
+
   linux-build:
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -29,7 +41,7 @@ jobs:
           - arch: amd64
             runner: ubuntu-24.04
           - arch: arm64
-            runner: github-actions-linux-arm64-runner
+            runner: ubuntu-24.04-arm64
 
     steps:
       - uses: actions/checkout@v4
