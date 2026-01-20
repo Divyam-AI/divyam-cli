@@ -1,3 +1,7 @@
+/**
+ * Copyright 2025 Divyam.ai
+ * SPDX-License-Identifier: Apache-2.0
+ */
 @file:Suppress("unused")
 
 package ai.divyam.data.model

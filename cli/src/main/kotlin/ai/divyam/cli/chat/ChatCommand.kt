@@ -1,3 +1,7 @@
+/**
+ * Copyright 2025 Divyam.ai
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package ai.divyam.cli.chat
 
 import ai.divyam.cli.base.BaseCommand
@@ -186,6 +190,7 @@ class ChatCommand : BaseCommand(), Callable<Int> {
                     val (response, measuredLatency) = measureAndDisplayTime(
                         computeLatency
                     ) {
+                        @Suppress("RunBlockingInSuspendFunction")
                         runBlocking {
                             generateResponse(conversationHistory, loaderJob)
                         }

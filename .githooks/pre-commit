@@ -1,0 +1,14 @@
+#!/bin/bash
+echo "Checking copyright headers..."
+
+# Run spotlessCheck to see if any headers are missing
+./gradlew spotlessCheck
+
+if [ $? -ne 0 ]; then
+    echo "Copyright headers missing or incorrect!"
+    echo "Run './gradlew spotlessApply' to fix them automatically."
+    exit 1
+fi
+
+echo "All headers are correct."
+exit 0

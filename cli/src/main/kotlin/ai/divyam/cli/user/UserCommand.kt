@@ -1,3 +1,7 @@
+/**
+ * Copyright 2025 Divyam.ai
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package ai.divyam.cli.user
 
 import ai.divyam.cli.base.BaseSubCommand
