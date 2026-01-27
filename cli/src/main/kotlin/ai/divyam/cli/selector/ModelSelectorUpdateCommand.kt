@@ -1,20 +1,16 @@
-/**
- * Copyright 2025 Divyam.ai
- * SPDX-License-Identifier: Apache-2.0
- */
 package ai.divyam.cli.selector
 
 import ai.divyam.cli.base.BaseCommand
+import ai.divyam.data.model.LambdaConfig
 import ai.divyam.data.model.ModelSelectorState
 import ai.divyam.data.model.ModelSelectorUpdateRequest
-import ai.divyam.data.model.ModelSelectorCandidateModel
+import ai.divyam.data.model.WTPConfig
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 
 @CommandLine.Command(name = "update", description = ["Update a selector"])
 class ModelSelectorUpdateCommand : BaseCommand() {
-    // TODO: Service account id not updatable?. Model info allows update.
     @Option(
         names = ["--id"],
         description = ["The model selector id to update"],
@@ -36,66 +32,90 @@ class ModelSelectorUpdateCommand : BaseCommand() {
     private var selectorEndpoint: String? = null
 
     @Option(
-        names = ["--eval-id"],
-        description = ["Optional: Eval id to use for the selector"],
+        names = ["--retire"],
+        description = ["Set selector state to INACTIVE"],
     )
-    private var evalId: Int? = null
+    private var retire: Boolean = false
 
     @Option(
-        names = ["--candidate-models", "--candidates","-m"],
-        description = ["Optional: Candidate models to use for the selector as a comma separated list of provider:model pairs"],
+        names = ["--to-prod"],
+        description = ["Set selector state to PROD"],
     )
-    private var candidateModels: String? = null
+    private var toProd: Boolean = false
 
     @Option(
-        names = ["--state"],
-        description = [$$"Optional: New model selector state.  ${COMPLETION-CANDIDATES}"]
+        names = ["--lambda"],
+        description = ["Lambda value to use for both high quality and cost efficient lambda in wtp_config"],
     )
-    private var state: ModelSelectorState? = null
+    private var lambda: Double? = null
 
-    private fun parseCandidateModels(candidateModelString: String?): List<ModelSelectorCandidateModel>? {
-    return candidateModelString?.split(",")
-        ?.map { it.trim() }
-        ?.also { tokens ->
-            require(tokens.none { it.isEmpty() }) {
-                "Candidate models list contains empty entries"
-            }
+    @Option(
+        names = ["--high-quality-lambda"],
+        description = ["High quality lambda value for wtp_config. Must be used together with --cost-savings-lambda and without --lambda"],
+    )
+    private var highQualityLambda: Double? = null
+
+    @Option(
+        names = ["--cost-savings-lambda"],
+        description = ["Cost savings (efficient) lambda value for wtp_config. Must be used together with --high-quality-lambda and without --lambda"],
+    )
+    private var costSavingsLambda: Double? = null
+
+    private fun validateAndBuildState(): ModelSelectorState? {
+        require(!(retire && toProd)) {
+            "Cannot specify both --retire and --to-prod flags"
         }
-        ?.map { token ->
-            val parts = token.split(":", limit = 2)
-
-            when (parts.size) {
-                1 -> {
-                    require(parts[0].isNotBlank()) {
-                        "Model name cannot be blank"
-                    }
-                    ModelSelectorCandidateModel(
-                        model = parts[0],
-                        provider = null
-                    )
-                }
-                2 -> {
-                    val provider = parts[0]
-                    val model = parts[1]
-
-                    require(provider.isNotBlank()) {
-                        "Provider cannot be empty in '$token'"
-                    }
-                    require(model.isNotBlank()) {
-                        "Model cannot be empty in '$token'"
-                    }
-
-                    ModelSelectorCandidateModel(
-                        model = model,
-                        provider = provider
-                    )
-                }
-                else -> error("Invalid candidate model format: '$token'")
-            }
+        return when {
+            retire -> ModelSelectorState.INACTIVE
+            toProd -> ModelSelectorState.PROD
+            else -> null
         }
     }
 
+    private fun validateAndBuildWtpConfig(): WTPConfig? {
+        val hasLambda = lambda != null
+        val hasHighQuality = highQualityLambda != null
+        val hasCostSavings = costSavingsLambda != null
+
+        // No lambda params provided
+        if (!hasLambda && !hasHighQuality && !hasCostSavings) {
+            return null
+        }
+
+        // Validate mutual exclusivity
+        if (hasLambda && (hasHighQuality || hasCostSavings)) {
+            throw IllegalArgumentException(
+                "--lambda cannot be used together with --high-quality-lambda or --cost-savings-lambda. " +
+                "Use either --lambda alone, or both --high-quality-lambda and --cost-savings-lambda together."
+            )
+        }
+
+        // If using separate lambdas, both must be provided
+        if ((hasHighQuality || hasCostSavings) && !(hasHighQuality && hasCostSavings)) {
+            throw IllegalArgumentException(
+                "Both --high-quality-lambda and --cost-savings-lambda must be provided together."
+            )
+        }
+
+        val lambdaConfig = if (hasLambda) {
+            LambdaConfig(
+                highQualityLambda = lambda!!,
+                costEfficientLambda = lambda!!
+            )
+        } else {
+            LambdaConfig(
+                highQualityLambda = highQualityLambda!!,
+                costEfficientLambda = costSavingsLambda!!
+            )
+        }
+
+        return WTPConfig(lambdaCfg = lambdaConfig)
+    }
+
     override fun execute(): Int {
+        val state = validateAndBuildState()
+        val wtpConfig = validateAndBuildWtpConfig()
+
         val updatedSelector = runBlocking {
             divyamClient.updateModelSelector(
                 modelSelectorId = id,
@@ -103,12 +123,11 @@ class ModelSelectorUpdateCommand : BaseCommand() {
                     name = name,
                     state = state,
                     endpoint = selectorEndpoint,
-                    evalId = evalId,
-                    candidateModels = parseCandidateModels(candidateModels)
+                    wtpConfig = wtpConfig
                 ),
             )
         }
-        printObjs(updatedSelector)
+        printObjs(updatedSelector, skipKeys = setOf("config"))
         return 0
     }
 }

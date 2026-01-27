@@ -103,11 +103,6 @@
             "lambda_count": 200,
             "requests_data_path": "/path/to/requests",
             "skip_cost_quality_tradeoff_analysis": true
-        },
-        "promote_artifacts": {
-            "run": false,
-            "high_quality_lambda": 0.5,
-            "cost_efficient_lambda": 0.1
         }
     }
 }

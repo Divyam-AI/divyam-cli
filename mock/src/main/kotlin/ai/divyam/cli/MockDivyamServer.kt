@@ -453,6 +453,23 @@ fun Application.configureRouting(password: String) {
                     MockDataStore.modelInfos[modelInfoId] = updatedInfo
                     call.respond(updatedInfo)
                 }
+
+                // -----------------------
+                // Model selectors under org (GET by ID)
+                // -----------------------
+                get("/{orgId}/model_selectors/{modelSelectorId}") {
+                    val orgId = call.parameters["orgId"]?.toIntOrNull()
+                        ?: return@get call.respond(HttpStatusCode.BadRequest)
+                    val modelSelectorId = call.parameters["modelSelectorId"]?.toIntOrNull()
+                        ?: return@get call.respond(HttpStatusCode.BadRequest)
+                    
+                    val selector = MockDataStore.modelSelectors[modelSelectorId]
+                    if (selector != null && selector.orgId == orgId) {
+                        call.respond(selector)
+                    } else {
+                        call.respond(HttpStatusCode.NotFound, "Model selector not found")
+                    }
+                }
             }
 
             // -----------------------
@@ -669,13 +686,15 @@ fun Application.configureRouting(password: String) {
                         MockDataStore.modelSelectorIdCounter.getAndIncrement()
                     val createdAtInt =
                         (System.currentTimeMillis() / 1000).toInt()
+                    // Note: config, evalId, candidateModels, extractorStrategy are accepted 
+                    // but the mock doesn't fully persist them (config types differ between Input/Output)
+                    // State is not part of create request per API spec - always defaults to REQUESTED
                     val selector = ModelSelector(
                         id = id,
                         name = createRequest.name,
                         orgId = createRequest.orgId,
                         serviceAccountId = createRequest.serviceAccountId,
-                        state = createRequest.state
-                            ?: ModelSelectorState.INACTIVE,
+                        state = ModelSelectorState.REQUESTED,
                         endpoint = createRequest.endpoint,
                         createdAt = createdAtInt
                     )
@@ -714,7 +733,9 @@ fun Application.configureRouting(password: String) {
                             state = updateRequest.state
                                 ?: existingSelector.state,
                             endpoint = updateRequest.endpoint
-                                ?: existingSelector.endpoint
+                                ?: existingSelector.endpoint,
+                            wtpConfig = updateRequest.wtpConfig
+                                ?: existingSelector.wtpConfig
                             // createdAt remains unchanged (model uses createdAt)
                         )
                         MockDataStore.modelSelectors[id] = updatedSelector

@@ -9,8 +9,10 @@ import ai.divyam.client.DivyamClient
 import ai.divyam.data.model.Input
 import ai.divyam.data.model.InputDeserializer
 import ai.divyam.data.model.InputSerializer
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import kotlinx.coroutines.runBlocking
@@ -117,19 +119,47 @@ abstract class BaseCommand : Callable<Int> {
         )
     }
 
-    protected fun printObjs(objs: Any) {
+    protected fun printObjs(objs: Any, skipKeys: Set<String> = emptySet()) {
+        val sanitizedObjs = if (skipKeys.isEmpty()) {
+            objs
+        } else {
+            removeRootKeys(objs, skipKeys)
+        }
+
         when (outputFormat) {
             OutputFormat.TEXT -> ObjectAsciiTablePrinter.printTable(
-                if (objs is List<*>) {
+                if (sanitizedObjs is List<*>) {
                     @Suppress("UNCHECKED_CAST")
-                    objs as List<Any>
+                    sanitizedObjs as List<Any>
                 } else {
-                    listOf(objs)
+                    listOf(sanitizedObjs)
                 }
             )
 
-            OutputFormat.JSON -> printJson(objs)
-            OutputFormat.YAML -> printYaml(objs)
+            OutputFormat.JSON -> printJson(sanitizedObjs)
+            OutputFormat.YAML -> printYaml(sanitizedObjs)
+        }
+    }
+
+    private fun removeRootKeys(objs: Any, skipKeys: Set<String>): Any {
+        val mapper = getJsonMapper()
+
+        fun sanitize(node: JsonNode): JsonNode {
+            if (!node.isObject) return node
+            val objectNode = node.deepCopy<ObjectNode>()
+            skipKeys.forEach { objectNode.remove(it) }
+            return objectNode
+        }
+
+        return when (objs) {
+            is List<*> -> objs.map {
+                val node = mapper.valueToTree<JsonNode>(it)
+                sanitize(node)
+            }
+            else -> {
+                val node = mapper.valueToTree<JsonNode>(objs)
+                sanitize(node)
+            }
         }
     }
 
