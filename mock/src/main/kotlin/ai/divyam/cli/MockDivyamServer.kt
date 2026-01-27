@@ -296,13 +296,13 @@ fun Application.configureRouting(password: String) {
                         name = request.name,
                         orgId = request.orgId,
                         orgName = org.name,
-                        apiKey = null,
+                        apiKey = randomString(32),
                         divyamAuthKeyHashed = sha256Hex(randomString(32)),
                         optimizationGoal = request.optimizationGoal,
                         authmodeModelApi = request.authmodeModelApi,
                         trafficAllocationConfig = request.trafficAllocationConfig,
                         isOrgAdmin = request.isOrgAdmin,
-                        isAdmin = request.isAdmin,
+                        isAdmin = request.isAdmin ?: false,
                         securityPolicy = request.securityPolicy
                     )
 
@@ -368,7 +368,7 @@ fun Application.configureRouting(password: String) {
                         perNTokens = request.perNTokens,
                         isActive = true,
                         isSelectionEnabled = true,
-                        baseModelName = null
+                        baseModelName = request.baseModelName ?: request.nameModel
                     )
 
                     MockDataStore.modelInfos[id] = modelInfo

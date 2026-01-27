@@ -9,7 +9,6 @@ import ai.divyam.client.DivyamClient
 import ai.divyam.data.model.Input
 import ai.divyam.data.model.InputDeserializer
 import ai.divyam.data.model.InputSerializer
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
@@ -195,9 +194,7 @@ abstract class BaseCommand : Callable<Int> {
         }
         mapper.registerModule(module)
 
-        // You can configure the Jackson ObjectMapper here
-        // For example, to ignore unknown properties in the JSON response
-        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+        mapper.apply { DivyamClient.configureObjectMapper()() }
     }
 
     protected fun printYaml(objs: Any) {

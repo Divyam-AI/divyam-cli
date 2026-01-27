@@ -7,9 +7,12 @@ package ai.divyam.cli.selector
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.data.model.ModelSelectorCreateRequest
 import ai.divyam.data.model.ModelSelectorState
+import ai.divyam.data.model.SelectorTrainingConfigurationInput
+import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
+import java.io.File
 
 @CommandLine.Command(name = "create", description = ["Create a selector"])
 class ModelSelectorCreateCommand : BaseCommand() {
@@ -44,25 +47,60 @@ class ModelSelectorCreateCommand : BaseCommand() {
     @Option(
         names = ["--state"],
         description = [$$"Required: Selector state. ${COMPLETION-CANDIDATES}"],
-        required = true
+        required = false
     )
-    private lateinit var state: ModelSelectorState
+    private var state: ModelSelectorState? = ModelSelectorState.INACTIVE
+
+    @Option(
+        names = ["-c", "--config-file"],
+        description = ["Optional: Config file (YAML or JSON) to use for the selector"],
+    )
+    private var configFile: File? = null
+
+    @Option(
+        names = ["-x", "--extractor-strategy", "--extractor"],
+        description = ["Optional: Extractor strategy to use for the selector"],
+    )
+    private var extractorStrategy: String? = null
 
     override fun execute(): Int {
         val newModelSelector = runBlocking {
-            // TODO: Should remove selector endpoint from the db. Maybe store
-            //  a version instead.
+            val modelSelectorCreateRequest = ModelSelectorCreateRequest(
+                orgId = orgId,
+                serviceAccountId = serviceAccountId,
+                name = name,
+                state = state,
+                endpoint = selectorEndpoint,
+                config = readConfigFile(configFile),
+                extractorStrategy = extractorStrategy
+            )
             divyamClient.createModelSelector(
-                modelSelectorCreateRequest = ModelSelectorCreateRequest(
-                    orgId = orgId,
-                    serviceAccountId = serviceAccountId,
-                    name = name,
-                    state = state,
-                    endpoint = selectorEndpoint
-                )
+                modelSelectorCreateRequest = modelSelectorCreateRequest
             )
         }
         printObjs(newModelSelector)
         return 0
+    }
+
+    private fun readConfigFile(configFile: File?): SelectorTrainingConfigurationInput? {
+        val file = configFile ?: return null
+
+        if (!file.exists()) {
+            throw IllegalArgumentException("Config file does not exist: ${file.absolutePath}")
+        }
+
+        return when (val extension = file.extension.lowercase()) {
+            "yaml", "yml" -> getYamlMapper().readValue<SelectorTrainingConfigurationInput>(
+                file
+            )
+
+            "json" -> getJsonMapper().readValue<SelectorTrainingConfigurationInput>(
+                file
+            )
+
+            else -> throw IllegalArgumentException(
+                "Unsupported config file format: $extension. Use .yaml, .yml, or .json"
+            )
+        }
     }
 }

@@ -185,15 +185,14 @@ class DivyamCliTest {
             """
             [ {
               "name" : "Sample Org",
-              "id" : 1,
-              "security_policy" : null
+              "id" : 1
             }, {
               "name" : "Test Org",
-              "id" : 2,
-              "security_policy" : null
+              "id" : 2
             } ]
         """.trimIndent()
         )
+        println("actual json: $json")
         assertEquals(expected, json)
     }
 
@@ -684,6 +683,7 @@ class DivyamCliTest {
             "--name", "Test Selector",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default",
             "--state", "INACTIVE"
         )
 
@@ -726,6 +726,7 @@ class DivyamCliTest {
             "--name", "Test Selector",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default",
             "--state", "INACTIVE"
         )
 
@@ -786,6 +787,224 @@ class DivyamCliTest {
         )
 
         assertEquals(0, exitCode)
+    }
+
+
+    @Test
+    @Order(34)
+
+    fun `selector create with config file`() {
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Test Selector with Config File",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--state", "INACTIVE",
+            "--config-file", "src/test/data/selector-config.json"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        assertEquals("Test Selector with Config File", json.get("name").asText())
+    }
+
+
+    @Test
+    @Order(36)
+    fun `selector update with candidate models`() {
+
+        val modelInfo1ExitCode = executeCommand(
+            ModelInfoCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--provider-name", "openai",
+            "--model-names", "gpt-4.1-mini",
+            "--provider-base-url", "https://api.openai.com/v1",
+            "--provider-api-key", "test-key",
+            "--service-account-id", testServiceAccountId
+        )
+
+        assertEquals(0, modelInfo1ExitCode)
+        
+
+        val modelInfo2ExitCode = executeCommand(
+            ModelInfoCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--provider-name", "anthropic",
+            "--model-names", "claude-4-opus",
+            "--provider-base-url", "https://api.anthropic.com/v1",
+            "--provider-api-key", "test-key",
+            "--service-account-id", testServiceAccountId
+        )
+
+        assertEquals(0, modelInfo2ExitCode)
+        outContent.reset()
+
+        val createExitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Selector For Candidate Models",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default",
+            "--state", "INACTIVE"
+        )
+
+        assertEquals(0, createExitCode)
+        val createJson = parseJson()
+        println("actual json: $createJson")
+        val selectorId = createJson!!.get("id").asInt()
+
+        outContent.reset()
+
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "update",
+            "--id", selectorId.toString(),
+            "--candidate-models", "openai:gpt-4.1-mini,anthropic:claude-4-opus",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+    }
+
+    @Test
+    @Order(37)
+    fun `selector clone`() {
+        // First create a source selector
+        val createExitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Source Selector For Clone",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default",
+            "--state", "INACTIVE"
+        )
+
+        assertEquals(0, createExitCode)
+        val createJson = parseJson()
+        val sourceSelectorId = createJson!!.get("id").asInt()
+
+        outContent.reset()
+
+        // Clone the selector
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "clone",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--from-id", sourceSelectorId.toString(),
+            "--state", "INACTIVE",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        // Default cloned name should be "<source_name>_clone"
+        assertEquals("Source Selector For Clone_clone", json.get("name").asText())
+        assertEquals("INACTIVE", json.get("state").asText())
+    }
+
+    @Test
+    @Order(38)
+    fun `selector clone with custom name`() {
+        // First create a source selector
+        val createExitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Another Source Selector",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--state", "TRAINED"
+        )
+
+        assertEquals(0, createExitCode)
+        val createJson = parseJson()
+        val sourceSelectorId = createJson!!.get("id").asInt()
+
+        outContent.reset()
+
+        // Clone the selector with a custom name
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "clone",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--from-id", sourceSelectorId.toString(),
+            "--state", "INACTIVE",
+            "--name", "My Custom Cloned Selector",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        println("actual json: $json")
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        assertEquals("My Custom Cloned Selector", json.get("name").asText())
+        assertEquals("INACTIVE", json.get("state").asText())
+    }
+
+    @Test
+    @Order(39)
+    fun `selector clone with invalid from-id fails`() {
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "clone",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--from-id", "999999",
+            "--state", "INACTIVE",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        // Should fail because the source selector doesn't exist
+        assertEquals(1, exitCode)
     }
 
     // ============================================
@@ -930,6 +1149,70 @@ class DivyamCliTest {
         assertNotNull(json)
         assertEquals("Updated Eval", json!!.get("name").asText())
         assertEquals("INACTIVE", json.get("state").asText())
+    }
+
+    // ============================================
+    // Selector Update with Eval Test (Requires Eval)
+    // ============================================
+
+    @Test
+    @Order(44)
+    fun `selector update with eval-id`() {
+        // First create an eval to associate with the selector
+        executeCommand(
+            EvalCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--service-account-id", testServiceAccountId,
+            "--name", "Eval For Selector",
+            "--granularity", "LLM_REQUEST_RESPONSE",
+            "--class-name", "TestEval",
+            "--state", "ACTIVE"
+        )
+
+        val evalJson = parseJson()
+        val evalId = evalJson!!.get("id").asInt()
+
+        outContent.reset()
+
+        // Create a selector
+        val createExitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Selector For Eval Update",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--state", "INACTIVE"
+        )
+
+        assertEquals(0, createExitCode)
+        val createJson = parseJson()
+        val selectorId = createJson!!.get("id").asInt()
+
+        outContent.reset()
+
+        // Update the selector with eval-id
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "update",
+            "--id", selectorId.toString(),
+            "--eval-id", evalId.toString(),
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
     }
 
     // ============================================

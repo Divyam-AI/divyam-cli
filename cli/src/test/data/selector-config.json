@@ -1,0 +1,114 @@
+{
+    "evaluator": {
+        "eval_id": 1,
+        "name": "test_evaluator",
+        "eval_class_path": "TestEvaluator",
+        "eval_class_init_config": {"key1": "value1"},
+        "eval_sampling_config": {"sampling_key": "sampling_value"}
+    },
+    "datasets": {
+        "train_ds": {
+            "name": "train_dataset",
+            "sample_ratio": 0.8,
+            "sample_size_limit": 5000,
+            "request_body_filter": "filter_expression",
+            "min_rows": 100,
+            "source": "router_logs",
+            "source_specs": {
+                "flowid": "flow-123",
+                "start_date": "2024-01-01T00:00:00",
+                "end_date": "2024-01-31T23:59:59",
+                "file_path": "/path/to/file",
+                "ignore_control_bucket": false
+            },
+            "reuse_existing": false
+        },
+        "eval_ds": {
+            "name": "eval_dataset",
+            "sample_ratio": 0.2,
+            "sample_size_limit": 1000,
+            "min_rows": 50,
+            "source": "file",
+            "source_specs": {
+                "start_date": "2024-01-01T00:00:00",
+                "end_date": "2024-01-31T23:59:59"
+            },
+            "reuse_existing": true
+        },
+        "calibration_ds": {
+            "name": "calibration_dataset",
+            "sample_size_limit": 500,
+            "source": "router_logs",
+            "source_specs": {
+                "start_date": "2024-01-01T00:00:00",
+                "end_date": "2024-01-31T23:59:59"
+            }
+        },
+        "eval_split_config": {
+            "ratio": 0.2,
+            "force": true
+        },
+        "calibration_split_config": {
+            "ratio": 0.1,
+            "force": false
+        }
+    },
+    "model_provider_list": [
+        {
+            "id": 1,
+            "provider": "openai",
+            "model": "gpt-4o",
+            "base_model_name": "gpt-4o-base",
+            "api_key": "test-api-key",
+            "endpoint": "https://api.openai.com/v1",
+            "api_type": "COMPLETIONS",
+            "supported_modalities": ["text"],
+            "model_configs": {"temperature": 0.7},
+            "pricing": {"input": 0.01, "output": 0.03},
+            "currency": "USD",
+            "per_n_tokens": 1000
+        }
+    ],
+    "stages": {
+        "enrichment": {
+            "skip_evaluation": true,
+            "skip_response_collection": true,
+            "skip_cost_calculation": true,
+            "concurrency": 10,
+            "rate_limit_rps": 100,
+            "mock_model": true,
+            "reuse_existing": false
+        },
+        "selector_training": {
+            "run": false,
+            "epochs": 1000,
+            "device": "cuda",
+            "model_params": {"learning_rate": 0.001},
+            "candidate_model_ids": [1, 2, 3],
+            "train_calibration_model": false
+        },
+        "selector_evaluation": {
+            "generate_artifacts": false,
+            "run": false,
+            "embedder_model": "custom-embedder",
+            "device": "cuda",
+            "anchor_point_count": 200,
+            "base_model_id": 1,
+            "candidate_model_ids": [1, 2],
+            "lambda_vals": [0.1, 0.2, 0.3],
+            "extractor_strategy": "custom_strategy",
+            "k": 100,
+            "lambda_min": 0.001,
+            "lambda_max": 0.0001,
+            "lambda_count": 200,
+            "requests_data_path": "/path/to/requests",
+            "skip_cost_quality_tradeoff_analysis": true
+        },
+        "promote_artifacts": {
+            "run": false,
+            "high_quality_lambda": 0.5,
+            "cost_efficient_lambda": 0.1
+        }
+    }
+}
+

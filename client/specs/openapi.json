@@ -1495,6 +1495,144 @@
         ],
         "title": "Body_generate_access_token"
       },
+      "DatasetSource": {
+        "type": "string",
+        "enum": [
+          "file",
+          "router_logs"
+        ],
+        "title": "DatasetSource"
+      },
+      "DecryptedModelProviderInfo": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "base_model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Model Name"
+          },
+          "api_key": {
+            "type": "string",
+            "title": "Api Key"
+          },
+          "endpoint": {
+            "type": "string",
+            "title": "Endpoint"
+          },
+          "api_type": {
+            "$ref": "#/components/schemas/ModelApiType"
+          },
+          "supported_modalities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supported Modalities"
+          },
+          "model_configs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Model Configs"
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/TextPricing"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "per_n_tokens": {
+            "type": "integer",
+            "title": "Per N Tokens"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "provider",
+          "model",
+          "api_key",
+          "endpoint",
+          "api_type",
+          "supported_modalities",
+          "model_configs",
+          "pricing",
+          "currency",
+          "per_n_tokens"
+        ],
+        "title": "DecryptedModelProviderInfo"
+      },
+      "EnrichmentParams": {
+        "properties": {
+          "skip_evaluation": {
+            "type": "boolean",
+            "title": "Skip Evaluation",
+            "default": false
+          },
+          "skip_response_collection": {
+            "type": "boolean",
+            "title": "Skip Response Collection",
+            "default": false
+          },
+          "skip_cost_calculation": {
+            "type": "boolean",
+            "title": "Skip Cost Calculation",
+            "default": false
+          },
+          "concurrency": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Concurrency"
+          },
+          "rate_limit_rps": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Limit Rps"
+          },
+          "mock_model": {
+            "type": "boolean",
+            "title": "Mock Model",
+            "default": false
+          },
+          "reuse_existing": {
+            "type": "boolean",
+            "title": "Reuse Existing",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EnrichmentParams"
+      },
       "Eval": {
         "properties": {
           "id": {
@@ -1721,6 +1859,400 @@
         "type": "object",
         "title": "EvalUpdateRequest"
       },
+      "EvaluationParams-Input": {
+        "properties": {
+          "generate_artifacts": {
+            "type": "boolean",
+            "title": "Generate Artifacts",
+            "default": true
+          },
+          "run": {
+            "type": "boolean",
+            "title": "Run",
+            "default": true
+          },
+          "embedder_model": {
+            "type": "string",
+            "title": "Embedder Model",
+            "default": "all-MiniLM-L6-v2"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "cpu"
+          },
+          "anchor_point_count": {
+            "type": "integer",
+            "title": "Anchor Point Count",
+            "default": 100
+          },
+          "base_model_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Model Id"
+          },
+          "candidate_model_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Candidate Model Ids",
+            "default": []
+          },
+          "lambda_vals": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Lambda Vals",
+            "default": []
+          },
+          "extractor_strategy": {
+            "type": "string",
+            "title": "Extractor Strategy"
+          },
+          "k": {
+            "type": "integer",
+            "title": "K",
+            "default": 50
+          },
+          "lambda_min": {
+            "type": "number",
+            "title": "Lambda Min",
+            "default": 0.01
+          },
+          "lambda_max": {
+            "type": "number",
+            "title": "Lambda Max",
+            "default": 1e-05
+          },
+          "lambda_count": {
+            "type": "integer",
+            "title": "Lambda Count",
+            "default": 150
+          },
+          "replay_dataset_info": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentDatasetInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requests_data_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requests Data Path"
+          },
+          "skip_cost_quality_tradeoff_analysis": {
+            "type": "boolean",
+            "title": "Skip Cost Quality Tradeoff Analysis",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "extractor_strategy"
+        ],
+        "title": "EvaluationParams"
+      },
+      "EvaluationParams-Output": {
+        "properties": {
+          "generate_artifacts": {
+            "type": "boolean",
+            "title": "Generate Artifacts",
+            "default": true
+          },
+          "run": {
+            "type": "boolean",
+            "title": "Run",
+            "default": true
+          },
+          "embedder_model": {
+            "type": "string",
+            "title": "Embedder Model",
+            "default": "all-MiniLM-L6-v2"
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "cpu"
+          },
+          "anchor_point_count": {
+            "type": "integer",
+            "title": "Anchor Point Count",
+            "default": 100
+          },
+          "base_model_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Model Id"
+          },
+          "candidate_model_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Candidate Model Ids",
+            "default": []
+          },
+          "lambda_vals": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Lambda Vals",
+            "default": []
+          },
+          "extractor_strategy": {
+            "type": "string",
+            "title": "Extractor Strategy"
+          },
+          "k": {
+            "type": "integer",
+            "title": "K",
+            "default": 50
+          },
+          "lambda_min": {
+            "type": "number",
+            "title": "Lambda Min",
+            "default": 0.01
+          },
+          "lambda_max": {
+            "type": "number",
+            "title": "Lambda Max",
+            "default": 1e-05
+          },
+          "lambda_count": {
+            "type": "integer",
+            "title": "Lambda Count",
+            "default": 150
+          },
+          "replay_dataset_info": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentDatasetInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requests_data_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requests Data Path"
+          },
+          "skip_cost_quality_tradeoff_analysis": {
+            "type": "boolean",
+            "title": "Skip Cost Quality Tradeoff Analysis",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "extractor_strategy"
+        ],
+        "title": "EvaluationParams"
+      },
+      "ExperimentDatasetInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sample_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sample Ratio"
+          },
+          "sample_size_limit": {
+            "type": "integer",
+            "title": "Sample Size Limit",
+            "default": 4000
+          },
+          "request_body_filter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Body Filter"
+          },
+          "min_rows": {
+            "type": "integer",
+            "title": "Min Rows",
+            "default": 0
+          },
+          "source": {
+            "$ref": "#/components/schemas/DatasetSource",
+            "default": "router_logs"
+          },
+          "source_specs": {
+            "$ref": "#/components/schemas/SourceSpec"
+          },
+          "reuse_existing": {
+            "type": "boolean",
+            "title": "Reuse Existing",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "source_specs"
+        ],
+        "title": "ExperimentDatasetInfo"
+      },
+      "ExperimentDatasetSplitConfig": {
+        "properties": {
+          "ratio": {
+            "type": "number",
+            "title": "Ratio",
+            "default": 0.15
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ExperimentDatasetSplitConfig"
+      },
+      "ExperimentDatasets-Input": {
+        "properties": {
+          "train_ds": {
+            "$ref": "#/components/schemas/ExperimentDatasetInfo"
+          },
+          "eval_ds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentDatasetInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "calibration_ds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentDatasetInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eval_split_config": {
+            "$ref": "#/components/schemas/ExperimentDatasetSplitConfig",
+            "default": {
+              "ratio": 0.15,
+              "force": false
+            }
+          },
+          "calibration_split_config": {
+            "$ref": "#/components/schemas/ExperimentDatasetSplitConfig",
+            "default": {
+              "ratio": 0.15,
+              "force": false
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "train_ds"
+        ],
+        "title": "ExperimentDatasets"
+      },
+      "ExperimentDatasets-Output": {
+        "properties": {
+          "train_ds": {
+            "$ref": "#/components/schemas/ExperimentDatasetInfo"
+          },
+          "eval_ds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentDatasetInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "calibration_ds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExperimentDatasetInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "eval_split_config": {
+            "$ref": "#/components/schemas/ExperimentDatasetSplitConfig",
+            "default": {
+              "ratio": 0.15,
+              "force": false
+            }
+          },
+          "calibration_split_config": {
+            "$ref": "#/components/schemas/ExperimentDatasetSplitConfig",
+            "default": {
+              "ratio": 0.15,
+              "force": false
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "train_ds"
+        ],
+        "title": "ExperimentDatasets"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1788,6 +2320,41 @@
           "xff"
         ],
         "title": "IpVerificationStrategy"
+      },
+      "LLMEvaluatorParams": {
+        "properties": {
+          "eval_id": {
+            "type": "integer",
+            "title": "Eval Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "eval_class_path": {
+            "type": "string",
+            "title": "Eval Class Path"
+          },
+          "eval_class_init_config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Eval Class Init Config",
+            "default": {}
+          },
+          "eval_sampling_config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Eval Sampling Config",
+            "default": {}
+          }
+        },
+        "type": "object",
+        "required": [
+          "eval_id",
+          "name",
+          "eval_class_path"
+        ],
+        "title": "LLMEvaluatorParams"
       },
       "Modality": {
         "type": "string",
@@ -2279,15 +2846,12 @@
           "config": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/SelectorTrainingConfiguration-Output"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Config",
-            "default": {}
+            ]
           },
           "created_at": {
             "type": "integer",
@@ -2303,6 +2867,31 @@
           "created_at"
         ],
         "title": "ModelSelector"
+      },
+      "ModelSelectorCandidateModel": {
+        "properties": {
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "title": "ModelSelectorCandidateModel"
       },
       "ModelSelectorCreateRequest": {
         "properties": {
@@ -2326,14 +2915,48 @@
             "title": "Service Account Id"
           },
           "config": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Config",
-            "default": {}
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SelectorTrainingConfiguration-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "state": {
             "$ref": "#/components/schemas/ModelSelectorState",
             "default": "REQUESTED"
+          },
+          "eval_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eval Id"
+          },
+          "candidate_models": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ModelSelectorCandidateModel"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Models"
+          },
+          "recreate_dataset": {
+            "type": "boolean",
+            "title": "Recreate Dataset",
+            "default": false
           },
           "endpoint": {
             "anyOf": [
@@ -2345,6 +2968,17 @@
               }
             ],
             "title": "Endpoint"
+          },
+          "extractor_strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extractor Strategy"
           }
         },
         "type": "object",
@@ -2387,14 +3021,12 @@
           "config": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/SelectorTrainingConfiguration-Input"
               },
               {
                 "type": "null"
               }
-            ],
-            "title": "Config"
+            ]
           },
           "state": {
             "anyOf": [
@@ -2416,6 +3048,31 @@
               }
             ],
             "title": "Endpoint"
+          },
+          "eval_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Eval Id"
+          },
+          "candidate_models": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ModelSelectorCandidateModel"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Models"
           }
         },
         "type": "object",
@@ -2524,6 +3181,40 @@
         "type": "object",
         "title": "OrgUpdateRequest"
       },
+      "PromoteArtifactsParams": {
+        "properties": {
+          "run": {
+            "type": "boolean",
+            "title": "Run",
+            "default": true
+          },
+          "high_quality_lambda": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "High Quality Lambda"
+          },
+          "cost_efficient_lambda": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Efficient Lambda"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PromoteArtifactsParams"
+      },
       "SecurityPolicy": {
         "properties": {
           "allowed_ip_networks": {
@@ -2596,6 +3287,76 @@
         },
         "type": "object",
         "title": "SecurityPolicy"
+      },
+      "SelectorTrainingConfiguration-Input": {
+        "properties": {
+          "evaluator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LLMEvaluatorParams"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "datasets": {
+            "$ref": "#/components/schemas/ExperimentDatasets-Input"
+          },
+          "model_provider_list": {
+            "items": {
+              "$ref": "#/components/schemas/DecryptedModelProviderInfo"
+            },
+            "type": "array",
+            "title": "Model Provider List",
+            "default": []
+          },
+          "stages": {
+            "$ref": "#/components/schemas/StageWiseParams-Input"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "datasets",
+          "stages"
+        ],
+        "title": "SelectorTrainingConfiguration"
+      },
+      "SelectorTrainingConfiguration-Output": {
+        "properties": {
+          "evaluator": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LLMEvaluatorParams"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "datasets": {
+            "$ref": "#/components/schemas/ExperimentDatasets-Output"
+          },
+          "model_provider_list": {
+            "items": {
+              "$ref": "#/components/schemas/DecryptedModelProviderInfo"
+            },
+            "type": "array",
+            "title": "Model Provider List",
+            "default": []
+          },
+          "stages": {
+            "$ref": "#/components/schemas/StageWiseParams-Output"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "datasets",
+          "stages"
+        ],
+        "title": "SelectorTrainingConfiguration"
       },
       "ServiceAccount": {
         "properties": {
@@ -2846,6 +3607,132 @@
         "type": "object",
         "title": "ServiceAccountUpdateRequest"
       },
+      "SourceSpec": {
+        "properties": {
+          "flowid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flowid"
+          },
+          "start_date": {
+            "type": "string",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "title": "End Date"
+          },
+          "file_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Path"
+          },
+          "ignore_control_bucket": {
+            "type": "boolean",
+            "title": "Ignore Control Bucket",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "start_date",
+          "end_date"
+        ],
+        "title": "SourceSpec"
+      },
+      "StageWiseParams-Input": {
+        "properties": {
+          "enrichment": {
+            "$ref": "#/components/schemas/EnrichmentParams",
+            "default": {
+              "skip_evaluation": false,
+              "skip_response_collection": false,
+              "skip_cost_calculation": false,
+              "mock_model": false,
+              "reuse_existing": true
+            }
+          },
+          "selector_training": {
+            "$ref": "#/components/schemas/TrainingParams",
+            "default": {
+              "run": true,
+              "epochs": 2000,
+              "device": "cpu",
+              "model_params": {},
+              "candidate_model_ids": [],
+              "train_calibration_model": true
+            }
+          },
+          "selector_evaluation": {
+            "$ref": "#/components/schemas/EvaluationParams-Input"
+          },
+          "promote_artifacts": {
+            "$ref": "#/components/schemas/PromoteArtifactsParams",
+            "default": {
+              "run": true
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "selector_evaluation"
+        ],
+        "title": "StageWiseParams"
+      },
+      "StageWiseParams-Output": {
+        "properties": {
+          "enrichment": {
+            "$ref": "#/components/schemas/EnrichmentParams",
+            "default": {
+              "skip_evaluation": false,
+              "skip_response_collection": false,
+              "skip_cost_calculation": false,
+              "mock_model": false,
+              "reuse_existing": true
+            }
+          },
+          "selector_training": {
+            "$ref": "#/components/schemas/TrainingParams",
+            "default": {
+              "run": true,
+              "epochs": 2000,
+              "device": "cpu",
+              "model_params": {},
+              "candidate_model_ids": [],
+              "train_calibration_model": true
+            }
+          },
+          "selector_evaluation": {
+            "$ref": "#/components/schemas/EvaluationParams-Output"
+          },
+          "promote_artifacts": {
+            "$ref": "#/components/schemas/PromoteArtifactsParams",
+            "default": {
+              "run": true
+            }
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "selector_evaluation"
+        ],
+        "title": "StageWiseParams"
+      },
       "TextPricing": {
         "properties": {
           "input": {
@@ -2863,6 +3750,47 @@
           "output"
         ],
         "title": "TextPricing"
+      },
+      "TrainingParams": {
+        "properties": {
+          "run": {
+            "type": "boolean",
+            "title": "Run",
+            "default": true
+          },
+          "epochs": {
+            "type": "integer",
+            "title": "Epochs",
+            "default": 2000
+          },
+          "device": {
+            "type": "string",
+            "title": "Device",
+            "default": "cpu"
+          },
+          "model_params": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Model Params",
+            "default": {}
+          },
+          "candidate_model_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Candidate Model Ids",
+            "default": []
+          },
+          "train_calibration_model": {
+            "type": "boolean",
+            "title": "Train Calibration Model",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "TrainingParams"
       },
       "User": {
         "properties": {

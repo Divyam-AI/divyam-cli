@@ -22,6 +22,9 @@ import ai.divyam.data.model.ResponseRole
 import ai.divyam.data.model.ResponsesDebugResponse
 import ai.divyam.data.model.ResponsesRequest
 import ai.divyam.data.model.ResponsesResponse
+import com.fasterxml.jackson.annotation.JsonAutoDetect
+import com.fasterxml.jackson.annotation.JsonFormat
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.MapperFeature
@@ -42,6 +45,26 @@ import kotlinx.coroutines.runBlocking
 import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
 
+@JsonFormat(shape = JsonFormat.Shape.OBJECT)
+@JsonAutoDetect(
+    getterVisibility = JsonAutoDetect.Visibility.ANY,      // Finds @get:JsonProperty
+    isGetterVisibility = JsonAutoDetect.Visibility.ANY,    // Finds boolean getters
+    fieldVisibility = JsonAutoDetect.Visibility.NONE,      // FIX: Prevents Java 21 HashMap crash
+    creatorVisibility = JsonAutoDetect.Visibility.ANY      // Allows finding the constructor
+)
+@JsonIgnoreProperties(
+    "empty",
+    "entries",
+    "keys",
+    "values",
+    "threshold",
+    "loadFactor",
+    "modCount",
+    "size",
+    ignoreUnknown = true
+)
+abstract class OpenAPIHashMapMixin
+
 class DivyamClient(
     emailId: String? = null,
     password: String? = null,
@@ -60,12 +83,29 @@ class DivyamClient(
     jsonBlock = configureObjectMapper()
 ) {
     companion object {
-        private fun configureObjectMapper(): ObjectMapper.() -> Unit = {
+        fun configureObjectMapper(): ObjectMapper.() -> Unit = {
             registerKotlinModule()
             disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             @Suppress("DEPRECATION")
             enable(MapperFeature.ACCEPT_CASE_INSENSITIVE_ENUMS)
             setDefaultPropertyInclusion(JsonInclude.Include.NON_NULL)
+
+            val index =
+                object {}.javaClass.getResourceAsStream("/model-index.txt")
+                    ?.bufferedReader()
+                    ?.readLines() ?: emptyList()
+
+            index.forEach { className ->
+                try {
+                    val clazz = Class.forName(className)
+                    @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+                    if (java.util.Map::class.java.isAssignableFrom(clazz)) {
+                        addMixIn(clazz, OpenAPIHashMapMixin::class.java)
+                    }
+                } catch (_: Exception) {
+                    // Class might not be on the classpath in this specific build
+                }
+            }
         }
 
         private fun httpClientEngine(disableTlsVerification: Boolean): HttpClientEngine =
