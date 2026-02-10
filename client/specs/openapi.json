@@ -2568,7 +2568,6 @@
           "name_provider",
           "id_provider",
           "name_model",
-          "base_model_name",
           "id_model",
           "endpoint",
           "masked_api_key_model",
