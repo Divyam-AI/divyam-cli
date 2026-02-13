@@ -45,13 +45,6 @@ class ModelSelectorCreateCommand : BaseCommand() {
     private var selectorEndpoint: String? = null
 
     @Option(
-        names = ["--state"],
-        description = [$$"Required: Selector state. ${COMPLETION-CANDIDATES}"],
-        required = false
-    )
-    private var state: ModelSelectorState? = ModelSelectorState.INACTIVE
-
-    @Option(
         names = ["-c", "--config-file"],
         description = ["Optional: Config file (YAML or JSON) to use for the selector"],
     )
@@ -63,22 +56,35 @@ class ModelSelectorCreateCommand : BaseCommand() {
     )
     private var extractorStrategy: String? = null
 
+    @Option(
+        names = ["--eval-id"],
+        description = ["Optional: Eval id to use for the selector"],
+    )
+    private var evalId: Int? = null
+
+    @Option(
+        names = ["--candidate-models", "--candidates", "-m"],
+        description = ["Optional: Candidate models to use for the selector as a comma separated list of provider:model pairs"],
+    )
+    private var candidateModels: String? = null
+
     override fun execute(): Int {
         val newModelSelector = runBlocking {
             val modelSelectorCreateRequest = ModelSelectorCreateRequest(
                 orgId = orgId,
                 serviceAccountId = serviceAccountId,
                 name = name,
-                state = state,
                 endpoint = selectorEndpoint,
                 config = readConfigFile(configFile),
-                extractorStrategy = extractorStrategy
+                extractorStrategy = extractorStrategy,
+                evalId = evalId,
+                candidateModels = SelectorCommandUtils.parseCandidateModels(candidateModels)
             )
             divyamClient.createModelSelector(
                 modelSelectorCreateRequest = modelSelectorCreateRequest
             )
         }
-        printObjs(newModelSelector)
+        printObjs(newModelSelector, skipKeys = setOf("config"))
         return 0
     }
 

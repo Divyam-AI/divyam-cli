@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Divyam",
-    "version": "0.1.105"
+    "version": "0.1.106"
   },
   "paths": {
     "/v1/orgs/": {
@@ -902,6 +902,52 @@
       }
     },
     "/v1/model_selectors/{model_selector_id}/": {
+      "get": {
+        "summary": "Get Model Selector By Id",
+        "operationId": "get_model_selector_by_id",
+        "parameters": [
+          {
+            "name": "model_selector_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Model Selector Id"
+            }
+          },
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelProviderInfo"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "summary": "Update Model Selector",
         "operationId": "update_model_selector",
@@ -1629,7 +1675,6 @@
             "default": true
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "title": "EnrichmentParams"
       },
@@ -1930,7 +1975,7 @@
           "lambda_max": {
             "type": "number",
             "title": "Lambda Max",
-            "default": 1e-05
+            "default": 0.00001
           },
           "lambda_count": {
             "type": "integer",
@@ -1964,7 +2009,6 @@
             "default": false
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "extractor_strategy"
@@ -2042,7 +2086,7 @@
           "lambda_max": {
             "type": "number",
             "title": "Lambda Max",
-            "default": 1e-05
+            "default": 0.00001
           },
           "lambda_count": {
             "type": "integer",
@@ -2076,7 +2120,6 @@
             "default": false
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "extractor_strategy"
@@ -2134,7 +2177,6 @@
             "default": true
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "name",
@@ -2155,7 +2197,6 @@
             "default": false
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "title": "ExperimentDatasetSplitConfig"
       },
@@ -2199,7 +2240,6 @@
             }
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "train_ds"
@@ -2246,7 +2286,6 @@
             }
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "train_ds"
@@ -2355,6 +2394,24 @@
           "eval_class_path"
         ],
         "title": "LLMEvaluatorParams"
+      },
+      "LambdaConfig": {
+        "properties": {
+          "high_quality_lambda": {
+            "type": "number",
+            "title": "High Quality Lambda"
+          },
+          "cost_efficient_lambda": {
+            "type": "number",
+            "title": "Cost Efficient Lambda"
+          }
+        },
+        "type": "object",
+        "required": [
+          "high_quality_lambda",
+          "cost_efficient_lambda"
+        ],
+        "title": "LambdaConfig"
       },
       "Modality": {
         "type": "string",
@@ -2511,7 +2568,6 @@
           "name_provider",
           "id_provider",
           "name_model",
-          "base_model_name",
           "id_model",
           "endpoint",
           "masked_api_key_model",
@@ -2856,6 +2912,28 @@
           "created_at": {
             "type": "integer",
             "title": "Created At"
+          },
+          "wtp_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WTPConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "training_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training Metadata"
           }
         },
         "type": "object",
@@ -2886,7 +2964,6 @@
             "title": "Model"
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "model"
@@ -2924,10 +3001,6 @@
               }
             ]
           },
-          "state": {
-            "$ref": "#/components/schemas/ModelSelectorState",
-            "default": "REQUESTED"
-          },
           "eval_id": {
             "anyOf": [
               {
@@ -2952,11 +3025,6 @@
               }
             ],
             "title": "Candidate Models"
-          },
-          "recreate_dataset": {
-            "type": "boolean",
-            "title": "Recreate Dataset",
-            "default": false
           },
           "endpoint": {
             "anyOf": [
@@ -3018,20 +3086,20 @@
             ],
             "title": "Name"
           },
-          "config": {
+          "state": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/SelectorTrainingConfiguration-Input"
+                "$ref": "#/components/schemas/ModelSelectorState"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "state": {
+          "wtp_config": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ModelSelectorState"
+                "$ref": "#/components/schemas/WTPConfig"
               },
               {
                 "type": "null"
@@ -3048,31 +3116,6 @@
               }
             ],
             "title": "Endpoint"
-          },
-          "eval_id": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Eval Id"
-          },
-          "candidate_models": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/ModelSelectorCandidateModel"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Candidate Models"
           }
         },
         "type": "object",
@@ -3181,40 +3224,6 @@
         "type": "object",
         "title": "OrgUpdateRequest"
       },
-      "PromoteArtifactsParams": {
-        "properties": {
-          "run": {
-            "type": "boolean",
-            "title": "Run",
-            "default": true
-          },
-          "high_quality_lambda": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "High Quality Lambda"
-          },
-          "cost_efficient_lambda": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cost Efficient Lambda"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "PromoteArtifactsParams"
-      },
       "SecurityPolicy": {
         "properties": {
           "allowed_ip_networks": {
@@ -3315,7 +3324,6 @@
             "$ref": "#/components/schemas/StageWiseParams-Input"
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "datasets",
@@ -3350,7 +3358,6 @@
             "$ref": "#/components/schemas/StageWiseParams-Output"
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "datasets",
@@ -3645,7 +3652,6 @@
             "default": true
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "start_date",
@@ -3678,15 +3684,8 @@
           },
           "selector_evaluation": {
             "$ref": "#/components/schemas/EvaluationParams-Input"
-          },
-          "promote_artifacts": {
-            "$ref": "#/components/schemas/PromoteArtifactsParams",
-            "default": {
-              "run": true
-            }
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "selector_evaluation"
@@ -3718,15 +3717,8 @@
           },
           "selector_evaluation": {
             "$ref": "#/components/schemas/EvaluationParams-Output"
-          },
-          "promote_artifacts": {
-            "$ref": "#/components/schemas/PromoteArtifactsParams",
-            "default": {
-              "run": true
-            }
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "required": [
           "selector_evaluation"
@@ -3788,7 +3780,6 @@
             "default": true
           }
         },
-        "additionalProperties": false,
         "type": "object",
         "title": "TrainingParams"
       },
@@ -4000,6 +3991,18 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WTPConfig": {
+        "properties": {
+          "lambda_cfg": {
+            "$ref": "#/components/schemas/LambdaConfig"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lambda_cfg"
+        ],
+        "title": "WTPConfig"
       }
     }
   }

@@ -1,3 +1,7 @@
+/**
+ * Copyright 2025 Divyam.ai
+ * SPDX-License-Identifier: Apache-2.0
+ */
 package ai.divyam.cli.selector
 
 import ai.divyam.cli.base.BaseCommand
@@ -36,13 +40,6 @@ class ModelSelectorCloneCommand : BaseCommand() {
         required = true
     )
     private var fromSelectorId: Int = 0
-
-    @Option(
-        names = ["--state"],
-        description = [$$"Required: Selector state. ${COMPLETION-CANDIDATES}"],
-        required = true
-    )
-    private lateinit var state: ModelSelectorState
 
     @Option(
         names = ["--name", "-n"],
@@ -181,7 +178,6 @@ class ModelSelectorCloneCommand : BaseCommand() {
                 orgId = sourceSelector.orgId,
                 serviceAccountId = sourceSelector.serviceAccountId,
                 name = clonedName,
-                state = state,
                 config = configInput,
                 endpoint = sourceSelector.endpoint
             )
