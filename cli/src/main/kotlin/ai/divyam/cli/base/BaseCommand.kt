@@ -2,19 +2,15 @@
  * Copyright 2025 Divyam.ai
  * SPDX-License-Identifier: Apache-2.0
  */
+@file:Suppress("JoinDeclarationAndAssignment")
+
 package ai.divyam.cli.base
 
-import ai.divyam.cli.table.ObjectAsciiTablePrinter
+import ai.divyam.cli.config.ConfigCollection
+import ai.divyam.cli.format.Printing
 import ai.divyam.client.DivyamClient
-import ai.divyam.data.model.Input
-import ai.divyam.data.model.InputDeserializer
-import ai.divyam.data.model.InputSerializer
-import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
-import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import kotlinx.coroutines.runBlocking
 import org.fusesource.jansi.Ansi.ansi
 import org.fusesource.jansi.AnsiConsole
@@ -35,14 +31,14 @@ enum class OutputFormat {
 /**
  * Base class for leaf level command.
  */
-abstract class BaseCommand : Callable<Int> {
+abstract class BaseCommand(val preferApiToken: Boolean = false) :
+    Callable<Int> {
     @CommandLine.Option(
         names = ["-e", "--endpoint"],
         description = ["The API endpoint base URL (e.g. https://api.divyam" +
                 ".ai)"],
-        defaultValue = "https://api.divyam.ai"
     )
-    lateinit var endpoint: String
+    var endpointCli: String? = null
 
     @CommandLine.Option(
         names = ["--disable-tls-verification"],
@@ -51,7 +47,7 @@ abstract class BaseCommand : Callable<Int> {
         help = false,
         hidden = true
     )
-    var disableTlsVerification: Boolean = false
+    var disableTlsVerificationCli: Boolean? = null
 
     // TODO: Check all option names for usability, consistency and conventions.
     @CommandLine.Option(
@@ -59,7 +55,7 @@ abstract class BaseCommand : Callable<Int> {
         description = ["User email-id. Required if service account api token" +
                 " is not provided."],
     )
-    protected var user: String? = null
+    protected var userCli: String? = null
 
     @CommandLine.Option(
         names = ["-p", "--password"],
@@ -68,7 +64,7 @@ abstract class BaseCommand : Callable<Int> {
         interactive = true,
         arity = "0..1"
     )
-    protected var password: String? = null
+    protected var passwordCli: String? = null
 
     @CommandLine.Option(
         names = ["-t", "--api-token"],
@@ -76,7 +72,7 @@ abstract class BaseCommand : Callable<Int> {
         interactive = true,
         arity = "0..1"
     )
-    protected var apiToken: String? = null
+    protected var apiTokenCli: String? = null
 
     @CommandLine.Option(
         names = ["--format"],
@@ -108,59 +104,67 @@ abstract class BaseCommand : Callable<Int> {
     )
     var authorityOverrides: String? = null
 
+    /**
+     * The Divyam endpoint to use, obtained after resolution from config and
+     * environment.
+     */
+    val endpoint: String
+
+    /**
+     * The Divyam user to use, obtained after resolution from config and
+     * environment.
+     */
+    val user: String?
+
+    /**
+     * The Divyam password to use, obtained after resolution from config and
+     * environment.
+     */
+    val password: String?
+
+    /**
+     * The Divyam apiToken to use, obtained after resolution from config and
+     * environment.
+     */
+    val apiToken: String?
+
+    /**
+     * Disables TLS verification.
+     */
+    var disableTlsVerification: Boolean
+
     protected val divyamClient: DivyamClient by lazy(
         mode =
             LazyThreadSafetyMode.SYNCHRONIZED
     ) {
+        val apiTokenToUse = if (user != null && apiToken != null &&
+            !preferApiToken
+        ) {
+            null
+        } else {
+            apiToken
+        }
         DivyamClient(
             endpoint = endpoint, emailId = user, password =
-                password, apiToken = apiToken, disableTlsVerification =
+                password, apiToken = apiTokenToUse, disableTlsVerification =
                 disableTlsVerification, authorityOverride = authorityOverrides
         )
     }
 
-    protected fun printObjs(objs: Any, skipKeys: Set<String> = emptySet()) {
-        val sanitizedObjs = if (skipKeys.isEmpty()) {
-            objs
-        } else {
-            removeRootKeys(objs, skipKeys)
-        }
+    init {
+        endpoint = endpointCli ?: System.getenv("DIVYAM_ENDPOINT")
+                ?: ConfigCollection.get().getCurrentConfig()?.endpoint
+                ?: "https://api.divyam.ai"
+        user = userCli ?: System.getenv("DIVYAM_USER") ?: ConfigCollection.get()
+            .getCurrentConfig()?.user
+        password = passwordCli ?: System.getenv("DIVYAM_PASSWORD")
+                ?: ConfigCollection.get().getCurrentConfig()?.password
+        apiToken = apiTokenCli ?: System.getenv("DIVYAM_API_TOKEN")
+                ?: ConfigCollection.get().getCurrentConfig()?.apiToken
+        disableTlsVerification =
+            disableTlsVerificationCli ?: System.getenv("DIVYAM_DISABLE_TLS")
+                ?.toBoolean() ?: false
 
-        when (outputFormat) {
-            OutputFormat.TEXT -> ObjectAsciiTablePrinter.printTable(
-                if (sanitizedObjs is List<*>) {
-                    @Suppress("UNCHECKED_CAST")
-                    sanitizedObjs as List<Any>
-                } else {
-                    listOf(sanitizedObjs)
-                }
-            )
-
-            OutputFormat.JSON -> printJson(sanitizedObjs)
-            OutputFormat.YAML -> printYaml(sanitizedObjs)
-        }
-    }
-
-    private fun removeRootKeys(objs: Any, skipKeys: Set<String>): Any {
-        val mapper = getJsonMapper()
-
-        fun sanitize(node: JsonNode): JsonNode {
-            if (!node.isObject) return node
-            val objectNode = node.deepCopy<ObjectNode>()
-            skipKeys.forEach { objectNode.remove(it) }
-            return objectNode
-        }
-
-        return when (objs) {
-            is List<*> -> objs.map {
-                val node = mapper.valueToTree<JsonNode>(it)
-                sanitize(node)
-            }
-            else -> {
-                val node = mapper.valueToTree<JsonNode>(objs)
-                sanitize(node)
-            }
-        }
     }
 
     final override fun call(): Int {
@@ -205,38 +209,19 @@ abstract class BaseCommand : Callable<Int> {
     abstract fun execute(): Int
 
     protected fun printJson(objs: Any) {
-        val mapper = getJsonMapper()
-        val writer = mapper.writerWithDefaultPrettyPrinter()
-        println(writer.writeValueAsString(objs))
+        Printing.printJson(objs)
     }
 
     protected fun getJsonMapper(): ObjectMapper {
-        val mapper = ObjectMapper()
-        configureMapper(mapper)
-        return mapper
-    }
-
-    private fun configureMapper(mapper: ObjectMapper) {
-        mapper.registerKotlinModule()
-        val module = SimpleModule().apply {
-            addDeserializer(Input::class.java, InputDeserializer())
-            addSerializer(Input::class.java, InputSerializer())
-        }
-        mapper.registerModule(module)
-
-        mapper.apply { DivyamClient.configureObjectMapper()() }
+        return Printing.getJsonMapper()
     }
 
     protected fun printYaml(objs: Any) {
-        val mapper = getYamlMapper()
-        val writer = mapper.writerWithDefaultPrettyPrinter()
-        println(writer.writeValueAsString(objs))
+        Printing.printYaml(objs)
     }
 
     protected fun getYamlMapper(): YAMLMapper {
-        val mapper = YAMLMapper()
-        configureMapper(mapper)
-        return mapper
+        return Printing.getYamlMapper()
     }
 
     protected fun <T> measureAndDisplayTime(
@@ -280,5 +265,21 @@ abstract class BaseCommand : Callable<Int> {
             }
         }
         return result to timeString
+    }
+
+    protected fun printObjs(objs: Any, skipKeys: Set<String> = emptySet()) {
+        Printing.printObjs(objs, outputFormat, skipKeys)
+    }
+
+    protected fun getOrgId(orgIdCli: Int?): Int {
+        return orgIdCli ?: System.getenv("DIVYAM_ORG_ID")?.toIntOrNull()
+        ?: ConfigCollection.get().getCurrentConfig()?.orgId
+        ?: throw Exception("org id is required")
+    }
+
+    protected fun getSaId(saIdCli: String?): String {
+        return saIdCli ?: System.getenv("DIVYAM_SA_ID")
+        ?: ConfigCollection.get().getCurrentConfig()?.serviceAccountId
+        ?: throw Exception("service account id is required")
     }
 }

@@ -28,11 +28,15 @@ object ObjectAsciiTablePrinter {
         val clazz: Class<*> = objects[0].javaClass
         val fields = clazz.getDeclaredFields()
 
-        // Dynamically create headers
-        val headers = Arrays.stream(fields)
-            .map { field: Field? -> splitCamelCase(field!!.name) }
-            .collect(Collectors.toList())
+        val table = if (isPrimitiveOrWrapper(clazz)) {
+            createPrimitiveObjectsTable(objects)
+        } else {
+            createObjectsTable(fields, objects)
+        }
+        println(table.render(100))
+    }
 
+    private fun createPrimitiveObjectsTable(objects: List<Any>): AsciiTable {
         val table = AsciiTable()
         table.renderer.cwc = CWC_LongestWord()
         table.setPaddingLeft(2)   // left & right padding = 1
@@ -41,31 +45,24 @@ object ObjectAsciiTablePrinter {
         table.context.setGrid(
             A8_Grids.lineDoubleBlocks()
         )
-        table.addRule()
-        table.addRow(headers)
-        table.addRule()
 
         table.context.setGrid(U8_Grids.borderLight())
-        // Print the data rows
+
+        table.addRule()
         for (obj in objects) {
-            val rowData = Arrays.stream(fields)
-                .map { field: Field? ->
-                    try {
-                        field!!.setAccessible(true) // Allow access to private fields
-                        return@map formatValue(
-                            field,
-                            field.get(obj)?.toString() ?: ""
-                        )
-                    } catch (_: IllegalAccessException) {
-                        return@map "N/A"
-                    }
-                }
-                .collect(Collectors.toList())
-            table.addRow(rowData)
+            table.addRow(obj.toString())
         }
         table.addRule()
 
-        println(table.render(100))
+        return table
+    }
+
+    fun isPrimitiveOrWrapper(clazz: Class<*>): Boolean {
+        return clazz.isPrimitive || String::class.java.isAssignableFrom(clazz) || Number::class.java.isAssignableFrom(
+            clazz
+        ) || Boolean::class.javaObjectType.isAssignableFrom(clazz) || Char::class.javaObjectType.isAssignableFrom(
+            clazz
+        ) || Enum::class.java.isAssignableFrom(clazz)
     }
 
     private fun formatValue(field: Field, value: String): String {
@@ -90,8 +87,46 @@ object ObjectAsciiTablePrinter {
     }
 
     private fun splitCamelCase(input: String): String {
-        return input
-            .split(Regex("(?=[A-Z])"))
+        return input.split(Regex("(?=[A-Z])"))
             .joinToString(" ") { it.replaceFirstChar { char -> char.uppercase() } }
+    }
+
+    private fun createObjectsTable(
+        fields: Array<out Field>?, objects: List<Any>
+    ): AsciiTable {
+        // Dynamically create headers
+        val headers = Arrays.stream(fields)
+            .map { field: Field? -> splitCamelCase(field!!.name) }
+            .collect(Collectors.toList())
+
+        val table = AsciiTable()
+        table.renderer.cwc = CWC_LongestWord()
+        table.setPaddingLeft(2)   // left & right padding = 1
+
+        // Print headers
+        table.context.setGrid(
+            A8_Grids.lineDoubleBlocks()
+        )
+        table.addRule()
+        table.addRow(headers)
+        table.addRule()
+
+        table.context.setGrid(U8_Grids.borderLight())
+        // Print the data rows
+        for (obj in objects) {
+            val rowData = Arrays.stream(fields).map { field: Field? ->
+                try {
+                    field!!.setAccessible(true) // Allow access to private fields
+                    return@map formatValue(
+                        field, field.get(obj)?.toString() ?: ""
+                    )
+                } catch (_: IllegalAccessException) {
+                    return@map "N/A"
+                }
+            }.collect(Collectors.toList())
+            table.addRow(rowData)
+        }
+        table.addRule()
+        return table
     }
 }

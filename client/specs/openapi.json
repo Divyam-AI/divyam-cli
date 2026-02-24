@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Divyam",
-    "version": "0.1.106"
+    "version": "0.1.105"
   },
   "paths": {
     "/v1/orgs/": {
@@ -1975,7 +1975,7 @@
           "lambda_max": {
             "type": "number",
             "title": "Lambda Max",
-            "default": 0.00001
+            "default": 1e-05
           },
           "lambda_count": {
             "type": "integer",
@@ -2086,7 +2086,7 @@
           "lambda_max": {
             "type": "number",
             "title": "Lambda Max",
-            "default": 0.00001
+            "default": 1e-05
           },
           "lambda_count": {
             "type": "integer",
@@ -3450,13 +3450,10 @@
           "name",
           "org_id",
           "org_name",
-          "api_key",
           "divyam_auth_key_hashed",
           "optimization_goal",
           "authmode_model_api",
-          "traffic_allocation_config",
-          "is_org_admin",
-          "is_admin"
+          "traffic_allocation_config"
         ],
         "title": "ServiceAccount"
       },

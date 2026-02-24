@@ -13,13 +13,12 @@ class SaListCommand : BaseCommand() {
     @CommandLine.Option(
         names = ["-o", "--org-id"],
         description = ["the org id"],
-        required = true
     )
-    var orgId: Int = 0
+    var orgId: Int? = null
 
     override fun execute(): Int {
         runBlocking {
-            val orgs = divyamClient.listServiceAccounts(orgId = orgId)
+            val orgs = divyamClient.listServiceAccounts(orgId = getOrgId(orgId))
             printObjs(orgs)
         }
         return 0
