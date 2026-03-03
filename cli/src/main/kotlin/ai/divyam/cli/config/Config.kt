@@ -5,6 +5,7 @@
 package ai.divyam.cli.config
 
 import ai.divyam.cli.format.Printing
+import ai.divyam.client.reflection.Reflectable
 import kotlinx.io.IOException
 import java.nio.file.Paths
 import kotlin.io.path.createDirectories
@@ -16,6 +17,7 @@ import kotlin.reflect.full.primaryConstructor
 
 private val mapper = Printing.getJsonMapper()
 
+@Reflectable
 data class Config(
     val endpoint: String?,
     val user: String? = null,
@@ -45,6 +47,7 @@ data class Config(
     }
 }
 
+@Reflectable
 data class ConfigCollection(
     val configs: MutableMap<String, Config> = HashMap(),
     var currentConfigName: String? = null

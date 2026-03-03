@@ -108,30 +108,30 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
      * The Divyam endpoint to use, obtained after resolution from config and
      * environment.
      */
-    val endpoint: String
+    lateinit var endpoint: String
 
     /**
      * The Divyam user to use, obtained after resolution from config and
      * environment.
      */
-    val user: String?
+    var user: String? = null
 
     /**
      * The Divyam password to use, obtained after resolution from config and
      * environment.
      */
-    val password: String?
+    var password: String? = null
 
     /**
      * The Divyam apiToken to use, obtained after resolution from config and
      * environment.
      */
-    val apiToken: String?
+    var apiToken: String? = null
 
     /**
      * Disables TLS verification.
      */
-    var disableTlsVerification: Boolean
+    var disableTlsVerification: Boolean = false
 
     protected val divyamClient: DivyamClient by lazy(
         mode =
@@ -151,7 +151,7 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
         )
     }
 
-    init {
+    fun initiailize() {
         endpoint = endpointCli ?: System.getenv("DIVYAM_ENDPOINT")
                 ?: ConfigCollection.get().getCurrentConfig()?.endpoint
                 ?: "https://api.divyam.ai"
@@ -168,6 +168,9 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
     }
 
     final override fun call(): Int {
+        // Initiailze the lazy properties
+        initiailize()
+
         System.setProperty("jansi.force", "true")
 
         // Coloured output support.
