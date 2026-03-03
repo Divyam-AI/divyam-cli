@@ -151,7 +151,7 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
         )
     }
 
-    fun initiailize() {
+    fun initialize() {
         endpoint = endpointCli ?: System.getenv("DIVYAM_ENDPOINT")
                 ?: ConfigCollection.get().getCurrentConfig()?.endpoint
                 ?: "https://api.divyam.ai"
@@ -168,8 +168,8 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
     }
 
     final override fun call(): Int {
-        // Initiailze the lazy properties
-        initiailize()
+        // Initialize the lazy properties
+        initialize()
 
         System.setProperty("jansi.force", "true")
 
