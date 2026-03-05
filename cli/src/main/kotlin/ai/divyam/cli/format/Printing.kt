@@ -29,23 +29,23 @@ object Printing {
         outputFormat: OutputFormat,
         skipKeys: Set<String> = emptySet()
     ) {
-        val sanitizedObjs = if (skipKeys.isEmpty()) {
-            objs
-        } else {
-            removeRootKeys(objs, skipKeys)
-        }
         when (outputFormat) {
-            OutputFormat.TEXT -> ObjectAsciiTablePrinter.printTable(
-                if (sanitizedObjs is List<*>) {
-                    @Suppress("UNCHECKED_CAST")
-                    sanitizedObjs as List<Any>
+            OutputFormat.TEXT -> {
+                val list = if (objs is List<*>) {
+                    objs.filterNotNull()
                 } else {
-                    listOf(sanitizedObjs)
+                    listOfNotNull(objs)
                 }
-            )
-
-            OutputFormat.JSON -> printJson(sanitizedObjs)
-            OutputFormat.YAML -> printYaml(sanitizedObjs)
+                ObjectAsciiTablePrinter.printTable(list, skipKeys)
+            }
+            OutputFormat.JSON -> {
+                val sanitizedObjs = if (skipKeys.isEmpty()) objs else removeRootKeys(objs, skipKeys)
+                printJson(sanitizedObjs)
+            }
+            OutputFormat.YAML -> {
+                val sanitizedObjs = if (skipKeys.isEmpty()) objs else removeRootKeys(objs, skipKeys)
+                printYaml(sanitizedObjs)
+            }
         }
     }
 

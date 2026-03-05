@@ -18,7 +18,7 @@ import java.util.stream.Collectors
 object ObjectAsciiTablePrinter {
     val timestampFields = setOf("createdAt", "updatedAt")
 
-    fun printTable(objects: List<Any>?) {
+    fun printTable(objects: List<Any>?, skipKeys: Set<String> = emptySet()) {
         if (objects == null || objects.isEmpty()) {
             println("No objects to display.")
             return
@@ -26,7 +26,10 @@ object ObjectAsciiTablePrinter {
 
         // Use the first object to determine the headers (column names)
         val clazz: Class<*> = objects[0].javaClass
-        val fields = clazz.getDeclaredFields()
+        // FIX: Filter out any fields that match our skipKeys
+        val fields = clazz.declaredFields
+        .filter { it.name !in skipKeys }
+        .toTypedArray()
 
         val table = if (isPrimitiveOrWrapper(clazz)) {
             createPrimitiveObjectsTable(objects)
