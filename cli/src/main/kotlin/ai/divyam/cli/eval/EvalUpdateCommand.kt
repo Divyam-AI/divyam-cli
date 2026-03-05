@@ -23,6 +23,12 @@ class EvalUpdateCommand : SaSpecificCommand() {
     var evalId: Int = 0
 
     @Option(
+        names = ["-o", "--org-id"],
+        description = ["Organization id to associate the eval with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
+    )
+    var orgId: Int? = null
+
+    @Option(
         names = ["--name"],
         description = ["Optional: New eval name if change desired"],
     )
@@ -55,6 +61,13 @@ class EvalUpdateCommand : SaSpecificCommand() {
     )
     private var state: EvalState? = null
 
+    @Option(
+        names = ["--is-primary"],
+        description = ["Whether the eval is primary"],
+        arity = "1"
+    )
+    private var isPrimary: Boolean? = null
+
     override fun execute(): Int {
         val classInitConfigMap = if (classInitConfig != null) {
             @Suppress("UNCHECKED_CAST")
@@ -67,14 +80,16 @@ class EvalUpdateCommand : SaSpecificCommand() {
 
         val newEval = runBlocking {
             divyamClient.updateEval(
-                serviceAccountId = serviceAccountId,
+                orgId = getOrgId(orgId),
+                serviceAccountId = getSaId(serviceAccountId),
                 evalId = evalId,
                 evalUpdateRequest = EvalUpdateRequest(
                     name = name,
                     granularity = granularity,
                     className = className,
                     classInitConfig = classInitConfigMap,
-                    state = state
+                    state = state,
+                    isPrimary = isPrimary
                 ),
             )
         }
