@@ -598,7 +598,7 @@ fun Application.configureRouting(password: String) {
                         samplingConfig = createRequest.samplingConfig,
                         state = createRequest.state,
                         createdAt = (System.currentTimeMillis() / 1000).toInt(),
-                        isPrimary = false
+                        isPrimary = createRequest.isPrimary ?: false
                     )
 
                     MockDataStore.evals.computeIfAbsent(serviceAccountId) { mutableMapOf() }[evalId] =
@@ -640,7 +640,8 @@ fun Application.configureRouting(password: String) {
                                 ?: existingEval.classInitConfig,
                             samplingConfig = updateRequest.samplingConfig
                                 ?: existingEval.samplingConfig,
-                            state = updateRequest.state ?: existingEval.state
+                            state = updateRequest.state ?: existingEval.state,
+                            isPrimary = updateRequest.isPrimary ?: existingEval.isPrimary
                             // createdAt remains unchanged (model expects createdAt)
                         )
                         MockDataStore.evals[serviceAccountId]!![evalId] =

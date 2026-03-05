@@ -16,10 +16,10 @@ import picocli.CommandLine.Option
 class UserCreateCommand : BaseCommand(), HasSecurityPolicy {
     @Option(
         names = ["-o", "--org-id"],
-        description = ["the org id"],
+        description = ["Required: Organization id to associate the user with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
         required = true
     )
-    private var orgId: Int = 0
+    private var orgId: Int? = null
 
     @Option(
         names = ["--name"],
@@ -98,9 +98,9 @@ class UserCreateCommand : BaseCommand(), HasSecurityPolicy {
 
         val created = runBlocking {
             divyamClient.createUser(
-                orgId = orgId,
-                UserCreateRequest(
-                    orgId = orgId,
+                orgId = getOrgId(orgId),
+                userCreateRequest = UserCreateRequest(
+                    orgId = getOrgId(orgId),
                     name = name,
                     isOrgAdmin = isOrgAdmin,
                     isAdmin = isAdmin,

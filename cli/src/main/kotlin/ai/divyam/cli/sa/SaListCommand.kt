@@ -12,7 +12,7 @@ import picocli.CommandLine
 class SaListCommand : BaseCommand() {
     @CommandLine.Option(
         names = ["-o", "--org-id"],
-        description = ["the org id"],
+        description = ["Required: Organization id to list service accounts for. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
     )
     var orgId: Int? = null
 

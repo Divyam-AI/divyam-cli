@@ -23,14 +23,13 @@ class ModelSelectorCloneCommand : BaseCommand() {
     @Option(
         names = ["-o", "--org-id"],
         description = ["Required: Organization id to associate the model " +
-                "selector with"],
-        required = true
+                "selector with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
     )
-    private var orgId: Int = 0
+    private var orgId: Int? = null
 
     @Option(
         names = ["-s", "--sa-id", "--service-account-id"],
-        description = ["Optional: service account id to associate the model selector with"],
+        description = ["Required: service account id to associate the model selector with. If omitted, falls back to the DIVYAM_SA_ID environment variable, then the current config file."],
     )
     private var serviceAccountId: String? = null
 
@@ -131,10 +130,12 @@ class ModelSelectorCloneCommand : BaseCommand() {
 
     override fun execute(): Int {
         val clonedSelector = runBlocking {
+            val resolvedOrgId = getOrgId(orgId)
+            val resolvedServiceAccountId = getSaId(serviceAccountId)
             // First, find the source selector by listing all selectors
             val allSelectors = divyamClient.listModelSelectors(
-                orgId = orgId,
-                serviceAccountId = serviceAccountId,
+                orgId = resolvedOrgId,
+                serviceAccountId = resolvedServiceAccountId,
                 modelSelectorState = null
             )
 

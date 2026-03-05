@@ -13,14 +13,13 @@ import picocli.CommandLine
 class ModelSelectorListCommand : BaseCommand() {
     @CommandLine.Option(
         names = ["-o", "--org-id"],
-        description = ["Required: organization id to get model selectors for"],
-        required = true
+        description = ["Required: organization id to get model selectors for. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
     )
-    private var orgId: Int = 0
+    private var orgId: Int? = null
 
     @CommandLine.Option(
         names = ["-s", "--sa-id", "--service-account-id"],
-        description = ["Optional: service account id to query for"],
+        description = ["Required: service account id to query for. If omitted, falls back to the DIVYAM_SA_ID environment variable, then the current config file."],
     )
     private var serviceAccountId: String? = null
 
@@ -33,13 +32,15 @@ class ModelSelectorListCommand : BaseCommand() {
 
     override fun execute(): Int {
         runBlocking {
+            val resolvedOrgId = getOrgId(orgId)
+            val resolvedServiceAccountId = getSaId(serviceAccountId)
             val selectors =
                 divyamClient.listModelSelectors(
-                    orgId = orgId,
-                    serviceAccountId = serviceAccountId,
+                    orgId = resolvedOrgId,
+                    serviceAccountId = resolvedServiceAccountId,
                     modelSelectorState = states
                 )
-            printObjs(selectors)
+            printObjs(selectors, skipKeys = setOf("config"))
         }
         return 0
     }

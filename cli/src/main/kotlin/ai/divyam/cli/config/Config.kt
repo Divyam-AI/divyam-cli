@@ -53,9 +53,9 @@ data class ConfigCollection(
     var currentConfigName: String? = null
 ) {
     companion object {
-        val homePath = Paths.get(System.getProperty("user.home"))
-        val configFolder = homePath.resolve(".divyam")
-        val configFile = configFolder.resolve("config.json")
+        val homePath get() = Paths.get(System.getProperty("user.home"))
+        val configFolder get() = homePath.resolve(".divyam")
+        val configFile get() = configFolder.resolve("config.json")
 
         fun get(): ConfigCollection {
             return try {

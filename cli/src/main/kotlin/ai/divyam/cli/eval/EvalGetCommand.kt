@@ -18,10 +18,17 @@ class EvalGetCommand : SaSpecificCommand() {
     )
     var evalId: Int = 0
 
+    @Option(
+        names = ["-o", "--org-id"],
+        description = ["Organization id to associate the eval with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
+    )
+    var orgId: Int? = null
+
     override fun execute(): Int {
         val newEval = runBlocking {
             divyamClient.getEval(
-                serviceAccountId = serviceAccountId,
+                serviceAccountId = getSaId(serviceAccountId),
+                orgId = getOrgId(orgId),
                 evalId = evalId
             )
         }
