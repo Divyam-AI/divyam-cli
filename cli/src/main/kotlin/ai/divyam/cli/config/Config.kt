@@ -71,8 +71,13 @@ data class ConfigCollection(
                     configFile.createFile()
                 }
 
+                val content = configFile.readText()
+                if (content.isBlank()) {
+                    return ConfigCollection()
+                }
+
                 mapper.readValue(
-                    configFile.readText(),
+                    content,
                     ConfigCollection::class.java
                 )
             } catch (ex: Exception) {
