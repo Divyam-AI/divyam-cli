@@ -163,8 +163,7 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
                 ?: ConfigCollection.get().getCurrentConfig()?.apiToken
         disableTlsVerification =
             disableTlsVerificationCli ?: System.getenv("DIVYAM_DISABLE_TLS")
-                ?.toBoolean() ?: false
-
+                ?.toBoolean() ?: ConfigCollection.get().getCurrentConfig()?.disableTlsVerification ?: false
     }
 
     final override fun call(): Int {
