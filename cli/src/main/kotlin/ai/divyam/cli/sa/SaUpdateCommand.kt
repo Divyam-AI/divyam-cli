@@ -9,11 +9,13 @@ import ai.divyam.cli.base.HasSecurityPolicy
 import ai.divyam.data.model.IpVerificationStrategy
 import ai.divyam.data.model.ModelAPIAuthMode
 import ai.divyam.data.model.OptimizationGoal
+import ai.divyam.data.model.RetryFallbackPolicy
 import ai.divyam.data.model.ServiceAccount
 import ai.divyam.data.model.ServiceAccountUpdateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
+import java.io.File
 
 @CommandLine.Command(
     name = "update",
@@ -100,6 +102,18 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
     )
     override var xffIndices: List<Int>? = null
 
+    @Option(
+        names = ["--retry-fallback-policy-file"],
+        description = ["Optional: Path to a JSON file with retry/fallback policy (e.g. retry_delay_s, max_retries, max_fallback_hops)"],
+    )
+    var retryFallbackPolicyFile: File? = null
+
+    @Option(
+        names = ["--retry-fallback-policy"],
+        description = ["Optional: Inline JSON for retry/fallback policy. Example: {\"retry_delay_s\":3,\"max_fallback_hops\":4}"],
+    )
+    var retryFallbackPolicyInline: String? = null
+
     override fun execute(): Int {
         // Get and update the service account object.
         val sa = getAndUpdateLocalServiceAccount()
@@ -116,7 +130,8 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
                     isOrgAdmin = sa.isOrgAdmin,
                     isAdmin = sa.isAdmin,
                     regenerateApiKey = regenerateApiKey,
-                    securityPolicy = sa.securityPolicy
+                    securityPolicy = sa.securityPolicy,
+                    retryFallbackPolicy = sa.retryFallbackPolicy
                 )
             )
         }
@@ -153,8 +168,25 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
         isAdmin?.let { sa = sa.copy(isAdmin = it) }
         isOrgAdmin?.let { sa = sa.copy(isOrgAdmin = it) }
 
+        parseRetryFallbackPolicy()?.let { policy ->
+            sa = sa.copy(retryFallbackPolicy = policy)
+        }
+
         sa = updateObjectSecurityPolicyFromArgs(obj = sa)
         return sa
+    }
+
+    private fun parseRetryFallbackPolicy(): RetryFallbackPolicy? {
+        retryFallbackPolicyFile?.let { file ->
+            if (file.exists()) {
+                return getJsonMapper().readValue(file, RetryFallbackPolicy::class.java)
+            }
+            throw IllegalArgumentException("Retry fallback policy file not found: ${file.absolutePath}")
+        }
+        retryFallbackPolicyInline?.let { json ->
+            return getJsonMapper().readValue(json, RetryFallbackPolicy::class.java)
+        }
+        return null
     }
 
     /**

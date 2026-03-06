@@ -233,7 +233,7 @@ class DivyamClient(
         while (retries > 0) {
             @Suppress("UNCHECKED_CAST")
             response = chatCompletionsWithResponse(
-                requestBody = mapper.readValue(
+                body = mapper.readValue(
                     mapper
                         .writeValueAsString(chatRequest), Map::class.java
                 ) as
@@ -385,7 +385,7 @@ class DivyamClient(
         while (retries > 0) {
             @Suppress("UNCHECKED_CAST")
             response = responsesWithResponse(
-                requestBody = mapper.readValue(
+                body = mapper.readValue(
                     mapper
                         .writeValueAsString(chatRequest), Map::class.java
                 ) as

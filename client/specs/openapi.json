@@ -762,7 +762,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+
+                }
               }
             }
           },
@@ -931,7 +933,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModelProviderInfo"
+                  "$ref": "#/components/schemas/ModelSelector"
                 }
               }
             }
@@ -1014,7 +1016,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+
+                }
               }
             }
           },
@@ -1081,6 +1085,15 @@
             "schema": {
               "type": "string",
               "title": "Service Account Id"
+            }
+          },
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Org Id"
             }
           },
           {
@@ -1159,6 +1172,15 @@
               "type": "string",
               "title": "Service Account Id"
             }
+          },
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Org Id"
+            }
           }
         ],
         "requestBody": {
@@ -1217,6 +1239,15 @@
               "type": "integer",
               "title": "Eval Id"
             }
+          },
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Org Id"
+            }
           }
         ],
         "responses": {
@@ -1263,6 +1294,15 @@
               "type": "integer",
               "title": "Eval Id"
             }
+          },
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Org Id"
+            }
           }
         ],
         "requestBody": {
@@ -1299,6 +1339,110 @@
         }
       }
     },
+    "/v1/control/{deployment_id}/usage": {
+      "post": {
+        "tags": [
+          "control"
+        ],
+        "summary": "Control Usage",
+        "operationId": "control_usage",
+        "parameters": [
+          {
+            "name": "deployment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deployment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsageIngestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/control/{deployment_id}/deployment": {
+      "post": {
+        "tags": [
+          "control"
+        ],
+        "summary": "Control Deployment",
+        "operationId": "control_deployment",
+        "parameters": [
+          {
+            "name": "deployment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Deployment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeploymentIngestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/status": {
       "get": {
         "summary": "Status",
@@ -1309,7 +1453,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+
+                }
               }
             }
           }
@@ -1335,7 +1481,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+
+                }
               }
             }
           },
@@ -1395,7 +1543,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+
+                }
               }
             }
           },
@@ -1455,7 +1605,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+
+                }
               }
             }
           },
@@ -1503,7 +1655,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+
+                }
               }
             }
           },
@@ -1624,6 +1778,50 @@
           "per_n_tokens"
         ],
         "title": "DecryptedModelProviderInfo"
+      },
+      "DeploymentIngestRequest": {
+        "properties": {
+          "deployment_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployment Version",
+            "description": "Version string of the client-side controller"
+          },
+          "is_healthy": {
+            "type": "boolean",
+            "title": "Is Healthy",
+            "description": "Overall health flag from the client deployment"
+          },
+          "details": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Details",
+            "description": "Details of the client cluster deployment and its configuration"
+          },
+          "reported_at_utc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported At Utc",
+            "description": "ISO-8601 UTC timestamp when the client generated this report"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_healthy"
+        ],
+        "title": "DeploymentIngestRequest"
       },
       "EnrichmentParams": {
         "properties": {
@@ -1926,11 +2124,6 @@
             "title": "Device",
             "default": "cpu"
           },
-          "anchor_point_count": {
-            "type": "integer",
-            "title": "Anchor Point Count",
-            "default": 100
-          },
           "base_model_id": {
             "anyOf": [
               {
@@ -2036,11 +2229,6 @@
             "type": "string",
             "title": "Device",
             "default": "cpu"
-          },
-          "anchor_point_count": {
-            "type": "integer",
-            "title": "Anchor Point Count",
-            "default": 100
           },
           "base_model_id": {
             "anyOf": [
@@ -2378,13 +2566,17 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Eval Class Init Config",
-            "default": {}
+            "default": {
+
+            }
           },
           "eval_sampling_config": {
             "additionalProperties": true,
             "type": "object",
             "title": "Eval Sampling Config",
-            "default": {}
+            "default": {
+
+            }
           }
         },
         "type": "object",
@@ -2584,14 +2776,7 @@
       "ModelProviderInfoCreation": {
         "properties": {
           "service_account_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Service Account Id"
           },
           "name_provider": {
@@ -2680,6 +2865,7 @@
         },
         "type": "object",
         "required": [
+          "service_account_id",
           "name_provider",
           "name_model",
           "endpoint",
@@ -2981,14 +3167,7 @@
             "title": "Org Id"
           },
           "service_account_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "string",
             "title": "Service Account Id"
           },
           "config": {
@@ -3052,7 +3231,8 @@
         "type": "object",
         "required": [
           "name",
-          "org_id"
+          "org_id",
+          "service_account_id"
         ],
         "title": "ModelSelectorCreateRequest"
       },
@@ -3224,6 +3404,172 @@
         "type": "object",
         "title": "OrgUpdateRequest"
       },
+      "OrgUsageSummary": {
+        "properties": {
+          "org_id": {
+            "type": "integer",
+            "title": "Org Id",
+            "description": "Org integer ID on the client deployment"
+          },
+          "org_name": {
+            "type": "string",
+            "title": "Org Name",
+            "description": "Human-readable org name"
+          },
+          "service_account_count": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Service Account Count",
+            "description": "Number of active service accounts in this org"
+          }
+        },
+        "type": "object",
+        "required": [
+          "org_id",
+          "org_name",
+          "service_account_count"
+        ],
+        "title": "OrgUsageSummary"
+      },
+      "RetryFallbackPolicy": {
+        "properties": {
+          "retry_delay_s": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Delay S",
+            "description": "Initial time in seconds to wait before retrying"
+          },
+          "retry_delay_multiplier": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Delay Multiplier",
+            "description": "Multiplier for retry delay on successive retries"
+          },
+          "max_retries": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Retries",
+            "description": "Maximum number of tries (includes first attempt)"
+          },
+          "max_request_latency_s": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Request Latency S",
+            "description": "Max latency in seconds before timing out"
+          },
+          "max_fallback_hops": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Fallback Hops",
+            "description": "Maximum number of fallback hops (includes first attempt)"
+          },
+          "circuit_breaker_request_threshold": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Circuit Breaker Request Threshold",
+            "description": "Min requests before checking circuit breaker"
+          },
+          "circuit_breaker_failure_threshold_pct": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100,
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Circuit Breaker Failure Threshold Pct",
+            "description": "Failure percentage to trigger circuit breaker"
+          },
+          "circuit_breaker_duration_s": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Circuit Breaker Duration S",
+            "description": "Duration in seconds to keep circuit breaker open"
+          },
+          "circuit_breaker_sliding_window_time_s": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Circuit Breaker Sliding Window Time S",
+            "description": "Time window in seconds for circuit breaker"
+          },
+          "circuit_breaker_sliding_window_resolution_s": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Circuit Breaker Sliding Window Resolution S",
+            "description": "Bucket size in seconds for circuit breaker"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RetryFallbackPolicy",
+        "description": "Combined retry, circuit breaker, and fallback policy configuration.\nValidation runs on creation and when setting via the ServiceAccount property."
+      },
       "SecurityPolicy": {
         "properties": {
           "allowed_ip_networks": {
@@ -3289,9 +3635,7 @@
               }
             ],
             "title": "Xff Indices",
-            "default": [
-              -1
-            ]
+            "default": [-1]
           }
         },
         "type": "object",
@@ -3442,6 +3786,16 @@
                 "type": "null"
               }
             ]
+          },
+          "retry_fallback_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetryFallbackPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3450,13 +3804,10 @@
           "name",
           "org_id",
           "org_name",
-          "api_key",
           "divyam_auth_key_hashed",
           "optimization_goal",
           "authmode_model_api",
-          "traffic_allocation_config",
-          "is_org_admin",
-          "is_admin"
+          "traffic_allocation_config"
         ],
         "title": "ServiceAccount"
       },
@@ -3502,6 +3853,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/SecurityPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retry_fallback_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetryFallbackPolicy"
               },
               {
                 "type": "null"
@@ -3609,6 +3970,16 @@
               }
             ],
             "title": "Regenerate Api Key"
+          },
+          "retry_fallback_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RetryFallbackPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3677,9 +4048,15 @@
               "run": true,
               "epochs": 2000,
               "device": "cpu",
-              "model_params": {},
+              "model_params": {
+
+              },
               "candidate_model_ids": [],
-              "train_calibration_model": true
+              "train_calibration_model": true,
+              "estimator_type": "irt",
+              "estimator_init_configs": {
+
+              }
             }
           },
           "selector_evaluation": {
@@ -3710,9 +4087,15 @@
               "run": true,
               "epochs": 2000,
               "device": "cpu",
-              "model_params": {},
+              "model_params": {
+
+              },
               "candidate_model_ids": [],
-              "train_calibration_model": true
+              "train_calibration_model": true,
+              "estimator_type": "irt",
+              "estimator_init_configs": {
+
+              }
             }
           },
           "selector_evaluation": {
@@ -3764,7 +4147,9 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Model Params",
-            "default": {}
+            "default": {
+
+            }
           },
           "candidate_model_ids": {
             "items": {
@@ -3778,10 +4163,65 @@
             "type": "boolean",
             "title": "Train Calibration Model",
             "default": true
+          },
+          "estimator_type": {
+            "type": "string",
+            "title": "Estimator Type",
+            "default": "irt"
+          },
+          "estimator_init_configs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Estimator Init Configs",
+            "default": {
+
+            }
           }
         },
         "type": "object",
         "title": "TrainingParams"
+      },
+      "UsageIngestRequest": {
+        "properties": {
+          "total_org_count": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Total Org Count",
+            "description": "Total orgs on the client deployment"
+          },
+          "total_service_account_count": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Total Service Account Count",
+            "description": "Total service accounts across all orgs"
+          },
+          "orgs": {
+            "items": {
+              "$ref": "#/components/schemas/OrgUsageSummary"
+            },
+            "type": "array",
+            "title": "Orgs",
+            "description": "Per-org breakdown (optional but recommended)"
+          },
+          "reported_at_utc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reported At Utc",
+            "description": "ISO-8601 UTC timestamp when the client generated this report"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_org_count",
+          "total_service_account_count"
+        ],
+        "title": "UsageIngestRequest"
       },
       "User": {
         "properties": {
