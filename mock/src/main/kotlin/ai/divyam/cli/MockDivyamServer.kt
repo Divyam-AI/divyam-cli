@@ -694,7 +694,7 @@ fun Application.configureRouting(password: String) {
                         name = createRequest.name,
                         orgId = createRequest.orgId,
                         serviceAccountId = createRequest.serviceAccountId,
-                        state = ModelSelectorState.INACTIVE,
+                        state = ModelSelectorState.REQUESTED,
                         endpoint = createRequest.endpoint,
                         createdAt = createdAtInt
                     )

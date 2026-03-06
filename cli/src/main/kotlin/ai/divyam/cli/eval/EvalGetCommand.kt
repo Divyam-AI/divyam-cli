@@ -20,9 +20,11 @@ class EvalGetCommand : SaSpecificCommand() {
 
     override fun execute(): Int {
         val newEval = runBlocking {
+            val sa = getServiceAccount()
             divyamClient.getEval(
                 serviceAccountId = serviceAccountId,
-                evalId = evalId
+                evalId = evalId,
+                orgId = sa.orgId
             )
         }
         printObjs(newEval)

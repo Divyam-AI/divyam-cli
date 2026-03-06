@@ -64,6 +64,7 @@ class EvalCreateCommand : SaSpecificCommand() {
             val sa = getServiceAccount()
             divyamClient.createEval(
                 serviceAccountId = serviceAccountId,
+                orgId = sa.orgId,
                 evalCreateRequest = EvalCreateRequest(
                     orgId = sa.orgId,
                     serviceAccountId = sa.id,

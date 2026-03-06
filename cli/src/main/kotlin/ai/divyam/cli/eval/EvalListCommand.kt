@@ -29,9 +29,11 @@ class EvalListCommand : SaSpecificCommand() {
 
     override fun execute(): Int {
         runBlocking {
+            val sa = getServiceAccount()
             val evals =
                 divyamClient.listEvals(
                     serviceAccountId = serviceAccountId,
+                    orgId = sa.orgId,
                     evalState = states,
                     primaryOnly = primaryOnly
                 )

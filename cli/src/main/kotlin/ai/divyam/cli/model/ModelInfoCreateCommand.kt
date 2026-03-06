@@ -155,7 +155,9 @@ class ModelInfoCreateCommand : BaseCommand() {
                 val mInfo = divyamClient.createModelInfo(
                     orgId = orgId,
                     modelProviderInfoCreation = ModelProviderInfoCreation(
-                        serviceAccountId = serviceAccountId,
+                        serviceAccountId = requireNotNull(serviceAccountId) {
+                            "Service account id is required (use -s or --service-account-id)"
+                        },
                         nameProvider = providerName,
                         endpoint = providerBaseUrl,
                         apiType = apiType,

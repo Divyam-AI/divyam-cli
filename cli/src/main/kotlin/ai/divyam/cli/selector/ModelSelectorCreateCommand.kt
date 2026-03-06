@@ -72,7 +72,9 @@ class ModelSelectorCreateCommand : BaseCommand() {
         val newModelSelector = runBlocking {
             val modelSelectorCreateRequest = ModelSelectorCreateRequest(
                 orgId = orgId,
-                serviceAccountId = serviceAccountId,
+                serviceAccountId = requireNotNull(serviceAccountId) {
+                    "Service account id is required (use -s or --service-account-id)"
+                },
                 name = name,
                 endpoint = selectorEndpoint,
                 config = readConfigFile(configFile),

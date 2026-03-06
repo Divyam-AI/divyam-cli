@@ -66,9 +66,11 @@ class EvalUpdateCommand : SaSpecificCommand() {
         }
 
         val newEval = runBlocking {
+            val sa = getServiceAccount()
             divyamClient.updateEval(
                 serviceAccountId = serviceAccountId,
                 evalId = evalId,
+                orgId = sa.orgId,
                 evalUpdateRequest = EvalUpdateRequest(
                     name = name,
                     granularity = granularity,
