@@ -14,6 +14,7 @@ import ai.divyam.cli.sa.SaCommand
 import ai.divyam.cli.selector.ModelSelectorCommand
 import ai.divyam.cli.user.UserCommand
 import ai.divyam.cli.version.VersionCommand
+import org.fusesource.jansi.Ansi.ansi
 import picocli.CommandLine
 import java.util.concurrent.Callable
 import kotlin.system.exitProcess
@@ -44,6 +45,13 @@ class DivyamCliMain : Callable<Int> {
 fun main(args: Array<String>) {
     val rc =
         CommandLine(DivyamCliMain()).setCaseInsensitiveEnumValuesAllowed(true)
+            .setExecutionExceptionHandler { ex, _, _ ->
+                val errorMessage = ex.message ?: "An unexpected error occurred."
+                System.err.println(
+                    ansi().fgRed().a("Error: $errorMessage").reset()
+                )
+                1
+            }
             .execute(*args)
     exitProcess(rc)
 }
