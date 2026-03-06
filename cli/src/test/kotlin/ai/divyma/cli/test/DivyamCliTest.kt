@@ -473,6 +473,73 @@ class DivyamCliTest {
         assertEquals("Updated SA", json!!.get("name").asText())
     }
 
+    @Test
+    @Order(14)
+    fun `sa create with retry fallback policy`() {
+        val policyPath = "src/test/data/sample_retry_fallback_policy.json"
+        val exitCode = executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA With Retry Policy",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--retry-fallback-policy-file", policyPath
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        assertEquals("SA With Retry Policy", json.get("name").asText())
+        assertTrue(json.has("retry_fallback_policy"))
+        val policy = json.get("retry_fallback_policy")
+        assertEquals(3, policy.get("retry_delay_s").asInt())
+        assertEquals(4, policy.get("max_fallback_hops").asInt())
+    }
+
+    @Test
+    @Order(15)
+    fun `sa update with retry fallback policy`() {
+        executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA To Update With Policy",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        val createJson = parseJson()
+        val saId = createJson!!.get("id").asText()
+
+        outContent.reset()
+
+        val policyPath = "src/test/data/sample_retry_fallback_policy.json"
+        val exitCode = executeCommand(
+            SaCommand(),
+            "update",
+            "--id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--retry-fallback-policy-file", policyPath
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("retry_fallback_policy"))
+        val policy = json.get("retry_fallback_policy")
+        assertEquals(3, policy.get("retry_delay_s").asInt())
+        assertEquals(4, policy.get("max_fallback_hops").asInt())
+    }
+
     // ============================================
     // Model Info CRUD Tests (Requires SA)
     // ============================================
