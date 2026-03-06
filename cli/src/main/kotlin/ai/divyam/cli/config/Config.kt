@@ -45,6 +45,18 @@ data class Config(
         }
         return merged
     }
+
+    fun unsetKeys(keys: Collection<String>): Config {
+        val thisAsMap = Config::class.memberProperties.associate {
+            it.name to it.get(this)
+        }.toMutableMap()
+        for (key in keys) {
+            thisAsMap[key] = if (key == ::disableTlsVerification.name) false else null
+        }
+        val constructor = Config::class.primaryConstructor!!
+        val args = constructor.parameters.associateWith { thisAsMap[it.name] }
+        return constructor.callBy(args)
+    }
 }
 
 @Reflectable

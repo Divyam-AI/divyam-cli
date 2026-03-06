@@ -13,6 +13,6 @@ import java.util.concurrent.Callable
     description = ["Manage default configuration - for e.g. credentials, " +
             "default org, service account etc."],
     subcommands = [ConfigSetCommand::class, ConfigGetCommand::class,
-        ConfigUseCommand::class, ConfigListCommand::class],
+        ConfigUseCommand::class, ConfigListCommand::class, ConfigUnsetCommand::class],
 )
 class ConfigCommand : BaseSubCommand(), Callable<Int>
