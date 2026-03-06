@@ -519,7 +519,8 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
-            "--org-id", "1"
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId
         )
 
         assertEquals(0, exitCode)
@@ -607,6 +608,7 @@ class DivyamCliTest {
             "--password", testPassword,
             "--format", "json",
             "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
             "--id", modelInfoId.toString(),
             "--model-name", "gpt-4.1-nano",
         )
@@ -710,7 +712,8 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
-            "--org-id", "1"
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId
         )
 
         assertEquals(0, exitCode)
@@ -984,6 +987,7 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval",
             "--granularity", "LLM_REQUEST_RESPONSE",
@@ -1008,6 +1012,7 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval",
             "--granularity", "LLM_REQUEST_RESPONSE",
@@ -1020,6 +1025,7 @@ class DivyamCliTest {
         val exitCode = executeCommand(
             EvalCommand(),
             "ls",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
@@ -1043,6 +1049,7 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval 2",
             "--granularity", "LLM_REQUEST_RESPONSE",
@@ -1058,6 +1065,7 @@ class DivyamCliTest {
         val exitCode = executeCommand(
             EvalCommand(),
             "get",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--id", evalId.toString(),
             "--endpoint", baseUrl,
@@ -1082,6 +1090,7 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval 3",
             "--granularity", "LLM_REQUEST_RESPONSE",
@@ -1097,6 +1106,7 @@ class DivyamCliTest {
         val exitCode = executeCommand(
             EvalCommand(),
             "update",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--id", evalId.toString(),
             "--name", "Updated Eval",
@@ -1124,6 +1134,7 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Primary Eval",
             "--granularity", "LLM_REQUEST_RESPONSE",
@@ -1150,6 +1161,7 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Eval For Primary Update",
             "--granularity", "LLM_REQUEST_RESPONSE",
@@ -1165,6 +1177,7 @@ class DivyamCliTest {
         val exitCode = executeCommand(
             EvalCommand(),
             "update",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--id", evalId.toString(),
             "--is-primary=true",
