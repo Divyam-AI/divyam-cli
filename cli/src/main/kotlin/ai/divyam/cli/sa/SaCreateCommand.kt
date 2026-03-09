@@ -21,10 +21,9 @@ import picocli.CommandLine.Option
 class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
     @Option(
         names = ["-o", "--org-id"],
-        description = ["the org id"],
-        required = true
+        description = ["Required: Organization id to associate the service account with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
     )
-    var orgId: Int = 0
+    var orgId: Int? = null
 
     @Option(
         names = ["--name"],
@@ -105,10 +104,11 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
             ) as Map<String, Double>
         }
         val created = runBlocking {
+            val resolvedOrgId = getOrgId(orgId)
             divyamClient.createServiceAccount(
-                orgId = orgId,
+                orgId = resolvedOrgId,
                 serviceAccountCreateRequest = ServiceAccountCreateRequest(
-                    orgId = orgId,
+                    orgId = resolvedOrgId,
                     name = name,
                     isOrgAdmin = isOrgAdmin,
                     isAdmin = isAdmin,

@@ -19,14 +19,13 @@ class ModelSelectorCreateCommand : BaseCommand() {
     @Option(
         names = ["-o", "--org-id"],
         description = ["Required: Organization id to associate the model " +
-                "selector with"],
-        required = true
+                "selector with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
     )
-    private var orgId: Int = 0
+    private var orgId: Int? = null
 
     @Option(
         names = ["-s", "--sa-id", "--service-account-id"],
-        description = ["Optional: service account id to associate the model selector with"],
+        description = ["Required: service account id to associate the model selector with. If omitted, falls back to the DIVYAM_SA_ID environment variable, then the current config file."],
     )
     private var serviceAccountId: String? = null
 
@@ -69,10 +68,13 @@ class ModelSelectorCreateCommand : BaseCommand() {
     private var candidateModels: String? = null
 
     override fun execute(): Int {
+        validateOptions()
         val newModelSelector = runBlocking {
+            val resolvedOrgId = getOrgId(orgId)
+            val resolvedServiceAccountId = getSaId(serviceAccountId)
             val modelSelectorCreateRequest = ModelSelectorCreateRequest(
-                orgId = orgId,
-                serviceAccountId = serviceAccountId,
+                orgId = resolvedOrgId,
+                serviceAccountId = resolvedServiceAccountId,
                 name = name,
                 endpoint = selectorEndpoint,
                 config = readConfigFile(configFile),
@@ -86,6 +88,14 @@ class ModelSelectorCreateCommand : BaseCommand() {
         }
         printObjs(newModelSelector, skipKeys = setOf("config"))
         return 0
+    }
+
+    private fun validateOptions() {
+        if (configFile == null && extractorStrategy == null) {
+            throw IllegalArgumentException(
+                "Either a config file (-c/--config-file) or an extractor strategy (-x/--extractor-strategy) must be provided"
+            )
+        }
     }
 
     private fun readConfigFile(configFile: File?): SelectorTrainingConfigurationInput? {

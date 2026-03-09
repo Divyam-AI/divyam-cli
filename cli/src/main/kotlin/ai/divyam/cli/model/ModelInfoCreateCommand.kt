@@ -21,15 +21,14 @@ class ModelInfoCreateCommand : BaseCommand() {
     @Option(
         names = ["-o", "--org-id"],
         description = ["Required: Organization id to associate the model " +
-                "info with"],
-        required = true
+                "info with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
     )
-    private var orgId: Int = 0
+    private var orgId: Int? = null
 
     @Option(
         names = ["-s", "--sa-id", "--service-account-id"],
-        description = ["Optional: service account id to associate the model " +
-                "info with"],
+        description = ["service account id to associate the model " +
+                "info with. If omitted, falls back to the DIVYAM_SA_ID environment variable, then the current config file."],
     )
     private var serviceAccountId: String? = null
 
@@ -152,10 +151,12 @@ class ModelInfoCreateCommand : BaseCommand() {
                     throw Exception("Invalid model-configs-json", e)
                 }
 
+                val resolvedOrgId = getOrgId(orgId)
+                val resolvedServiceAccountId = getSaId(serviceAccountId)
                 val mInfo = divyamClient.createModelInfo(
-                    orgId = orgId,
+                    orgId = resolvedOrgId,
                     modelProviderInfoCreation = ModelProviderInfoCreation(
-                        serviceAccountId = serviceAccountId,
+                        serviceAccountId = resolvedServiceAccountId,
                         nameProvider = providerName,
                         endpoint = providerBaseUrl,
                         apiType = apiType,

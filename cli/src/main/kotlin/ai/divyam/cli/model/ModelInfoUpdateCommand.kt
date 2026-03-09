@@ -27,15 +27,14 @@ class ModelInfoUpdateCommand : BaseCommand() {
     @Option(
         names = ["-o", "--org-id"],
         description = ["Required: Organization id to associate the model " +
-                "info with"],
-        required = true
+                "info with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
     )
-    private var orgId: Int = 0
+    private var orgId: Int? = null
 
     @Option(
         names = ["-s", "--sa-id", "--service-account-id"],
-        description = ["Optional: service account id to associate the model " +
-                "info with"],
+        description = ["Required: service account id to associate the model " +
+                "info with. If omitted, falls back to the DIVYAM_SA_ID environment variable, then the current config file."],
     )
     private var serviceAccountId: String? = null
 
@@ -129,8 +128,9 @@ class ModelInfoUpdateCommand : BaseCommand() {
         runBlocking {
             val modelPricing = if (!skipPricing) {
                 val pricingStore = pricingStore(modelPricingYaml)
+                val resolvedOrgId = getOrgId(orgId)
                 val existingModelInfo = divyamClient.getModelInfoById(
-                    orgId = orgId,
+                    orgId = resolvedOrgId,
                     modelInfoId = id
                 )
 
@@ -168,11 +168,13 @@ class ModelInfoUpdateCommand : BaseCommand() {
                 }
             }
 
+            val resolvedOrgIdForUpdate = getOrgId(orgId)
+            val resolvedServiceAccountId = getSaId(serviceAccountId)
             val updated = divyamClient.updateModelInfo(
-                orgId = orgId,
+                orgId = resolvedOrgIdForUpdate,
                 modelInfoId = id,
                 modelProviderInfoUpdation = ModelProviderInfoUpdation(
-                    serviceAccountId = serviceAccountId,
+                    serviceAccountId = resolvedServiceAccountId,
                     providerName = providerName,
                     endpoint = providerBaseUrl,
                     apiType = apiType,

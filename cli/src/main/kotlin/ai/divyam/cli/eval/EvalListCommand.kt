@@ -15,6 +15,12 @@ import picocli.CommandLine
 )
 class EvalListCommand : SaSpecificCommand() {
     @CommandLine.Option(
+        names = ["-o", "--org-id"],
+        description = ["Organization id to associate the eval with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
+    )
+    var orgId: Int? = null
+
+    @CommandLine.Option(
         names = ["--states"],
         split = ",",
         description = [$$"Optional: List of selectors with states to show. ${COMPLETION-CANDIDATES}"]
@@ -31,7 +37,8 @@ class EvalListCommand : SaSpecificCommand() {
         runBlocking {
             val evals =
                 divyamClient.listEvals(
-                    serviceAccountId = serviceAccountId,
+                    orgId = getOrgId(orgId),
+                    serviceAccountId = getSaId(serviceAccountId),
                     evalState = states,
                     primaryOnly = primaryOnly
                 )

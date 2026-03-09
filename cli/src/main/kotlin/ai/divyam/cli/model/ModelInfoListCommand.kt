@@ -14,22 +14,23 @@ class ModelInfoListCommand : BaseCommand() {
     @Option(
         names = ["-o", "--org-id"],
         description = ["Required: Organization id to associate the model " +
-                "info with"],
-        required = true
+                "info with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
     )
-    private var orgId: Int = 0
+    private var orgId: Int? = null
 
     @Option(
         names = ["-s", "--sa-id", "--service-account-id"],
-        description = ["Optional: service account id to filter model " +
-                "info with"],
+        description = ["Required: service account id to filter model " +
+                "info with. If omitted, falls back to the DIVYAM_SA_ID environment variable, then the current config file."],
     )
     private var serviceAccountId: String? = null
 
     override fun execute(): Int {
         runBlocking {
+            val resolvedOrgId = getOrgId(orgId)
+            val resolvedServiceAccountId = getSaId(serviceAccountId)
             val infos =
-                divyamClient.listModelInfos(orgId, serviceAccountId)
+                divyamClient.listModelInfos(resolvedOrgId, resolvedServiceAccountId)
             printObjs(infos)
         }
         return 0

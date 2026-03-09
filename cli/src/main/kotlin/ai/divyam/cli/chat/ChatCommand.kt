@@ -35,7 +35,7 @@ import java.util.concurrent.Callable
     name = "chat",
     description = ["Command line chatbot"]
 )
-class ChatCommand : BaseCommand(), Callable<Int> {
+class ChatCommand : BaseCommand(preferApiToken = true), Callable<Int> {
     companion object {
         const val GREETING =
             "Hello, my name is Divyam. I'm a simple chatbot. How may I assist you today?"

@@ -13,12 +13,11 @@ import picocli.CommandLine.Option
 abstract class SaSpecificCommand : BaseCommand() {
     @Option(
         names = ["-s", "--sa-id", "--service-account-id"],
-        description = ["Required: service account id to associate with"],
-        required = true
+        description = ["Required: Service account id to associate with. If omitted, falls back to the DIVYAM_SA_ID environment variable, then the current config file."],
     )
-    protected lateinit var serviceAccountId: String
+    protected var serviceAccountId: String? = null
 
     suspend fun getServiceAccount(): ServiceAccount {
-        return divyamClient.getServiceAccount(serviceAccountId)
+        return divyamClient.getServiceAccount(getSaId(serviceAccountId))
     }
 }
