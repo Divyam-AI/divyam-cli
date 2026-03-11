@@ -14,6 +14,6 @@ import java.util.concurrent.Callable
     description = ["Manage selectors"],
     subcommands = [ModelSelectorListCommand::class, ModelSelectorCreateCommand::class,
         ModelSelectorUpdateCommand::class, ModelSelectorDeleteCommand::class,
-        ModelSelectorCloneCommand::class]
+        ModelSelectorCloneCommand::class, ModelSelectorGetCommand::class]
 )
 class ModelSelectorCommand : BaseSubCommand(), Callable<Int>

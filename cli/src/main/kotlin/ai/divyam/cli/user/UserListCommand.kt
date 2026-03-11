@@ -13,16 +13,17 @@ class UserListCommand : BaseCommand() {
     // TODO: List user's across all orgs? Need to fix this model.
     @CommandLine.Option(
         names = ["-o", "--org-id"],
-        description = ["The org id"],
+        description = ["Required: Organization id to list users for. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
         required = true
     )
-    var orgId: Int = 0
+    var orgId: Int? = null
 
     override fun execute(): Int {
         runBlocking {
-            val users = divyamClient.listOrgUsers(orgId)
+            val resolvedOrgId = getOrgId(orgId)
+            val users = divyamClient.listOrgUsers(resolvedOrgId)
             printObjs(users)
+            }
+            return 0
         }
-        return 0
     }
-}

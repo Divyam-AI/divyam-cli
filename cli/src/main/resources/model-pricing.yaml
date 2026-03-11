@@ -214,6 +214,12 @@ google:
       text_output_price: 0.30
       per_n_tokens: 1000000
       effective_start_date: 2025-01-01
+  gemini-2.5-flash-lite:
+    - currency: usd
+      text_input_price: 0.10
+      text_output_price: 0.40
+      per_n_tokens: 1000000
+      effective_start_date: 2025-07-22
 anthropic:
   claude-4-opus:
     - currency: usd

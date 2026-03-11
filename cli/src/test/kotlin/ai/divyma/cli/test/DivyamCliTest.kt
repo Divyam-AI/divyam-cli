@@ -12,6 +12,7 @@ import ai.divyam.cli.org.OrgCommand
 import ai.divyam.cli.sa.SaCommand
 import ai.divyam.cli.selector.ModelSelectorCommand
 import ai.divyam.cli.user.UserCommand
+import java.nio.file.Files
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -20,6 +21,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
@@ -52,6 +54,9 @@ class DivyamCliTest {
 
     // Shared test data
     private lateinit var testServiceAccountId: String
+
+    // Fallback test helpers
+    private val originalUserHome: String = System.getProperty("user.home")
 
     @BeforeAll
     fun setupServer() {
@@ -581,7 +586,8 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
-            "--org-id", "1"
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId
         )
 
         assertEquals(0, exitCode)
@@ -669,6 +675,7 @@ class DivyamCliTest {
             "--password", testPassword,
             "--format", "json",
             "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
             "--id", modelInfoId.toString(),
             "--model-name", "gpt-4.1-nano",
         )
@@ -772,7 +779,8 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
-            "--org-id", "1"
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId
         )
 
         assertEquals(0, exitCode)
@@ -831,6 +839,7 @@ class DivyamCliTest {
             "--name", "Delete Selector",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
@@ -879,6 +888,45 @@ class DivyamCliTest {
         assertEquals("Test Selector with Config File", json.get("name").asText())
     }
 
+    @Test
+    @Order(35)
+    fun `selector get`() {
+        val createExitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Test Selector For Get",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default"
+        )
+
+        assertEquals(0, createExitCode)
+        val createJson = parseJson()
+        val selectorId = createJson!!.get("id").asInt()
+
+        outContent.reset()
+
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "get",
+            "--id", selectorId.toString(),
+            "--org-id", "1",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        assertEquals("Test Selector For Get", json.get("name").asText())
+    }
 
     @Test
     @Order(37)
@@ -939,7 +987,8 @@ class DivyamCliTest {
             "--format", "json",
             "--name", "Another Source Selector",
             "--org-id", "1",
-            "--service-account-id", testServiceAccountId
+            "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default"
         )
 
         assertEquals(0, createExitCode)
@@ -1005,6 +1054,7 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval",
             "--granularity", "LLM_REQUEST_RESPONSE",
@@ -1029,6 +1079,7 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval",
             "--granularity", "LLM_REQUEST_RESPONSE",
@@ -1041,6 +1092,7 @@ class DivyamCliTest {
         val exitCode = executeCommand(
             EvalCommand(),
             "ls",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
@@ -1064,6 +1116,7 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval 2",
             "--granularity", "LLM_REQUEST_RESPONSE",
@@ -1079,6 +1132,7 @@ class DivyamCliTest {
         val exitCode = executeCommand(
             EvalCommand(),
             "get",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--id", evalId.toString(),
             "--endpoint", baseUrl,
@@ -1103,6 +1157,7 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval 3",
             "--granularity", "LLM_REQUEST_RESPONSE",
@@ -1118,6 +1173,7 @@ class DivyamCliTest {
         val exitCode = executeCommand(
             EvalCommand(),
             "update",
+            "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--id", evalId.toString(),
             "--name", "Updated Eval",
@@ -1133,6 +1189,75 @@ class DivyamCliTest {
         assertNotNull(json)
         assertEquals("Updated Eval", json!!.get("name").asText())
         assertEquals("INACTIVE", json.get("state").asText())
+    }
+
+    @Test
+    @Order(44)
+    fun `eval create with is-primary`() {
+        val exitCode = executeCommand(
+            EvalCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--name", "Primary Eval",
+            "--granularity", "LLM_REQUEST_RESPONSE",
+            "--class-name", "TestEval",
+            "--state", "ACTIVE",
+            "--is-primary=true"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        assertEquals("Primary Eval", json.get("name").asText())
+        assertEquals(true, json.get("is_primary").asBoolean())
+    }
+
+    @Test
+    @Order(45)
+    fun `eval update with is-primary`() {
+        executeCommand(
+            EvalCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--name", "Eval For Primary Update",
+            "--granularity", "LLM_REQUEST_RESPONSE",
+            "--class-name", "TestEval",
+            "--state", "ACTIVE"
+        )
+
+        val createJson = parseJson()
+        val evalId = createJson!!.get("id").asInt()
+
+        outContent.reset()
+
+        val exitCode = executeCommand(
+            EvalCommand(),
+            "update",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--id", evalId.toString(),
+            "--is-primary=true",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertEquals(true, json!!.get("is_primary").asBoolean())
     }
 
     // ============================================
@@ -1157,6 +1282,285 @@ class DivyamCliTest {
             assertEquals(0, exitCode)
         } finally {
             System.setIn(originalIn)
+        }
+    }
+
+    // ============================================
+    // Fallback Behavior Tests
+    // Priority: CLI args > env vars > config file > defaults
+    // ============================================
+
+    @Suppress("UNCHECKED_CAST")
+    private fun setEnv(key: String, value: String) {
+        val peClass = Class.forName("java.lang.ProcessEnvironment")
+        val theEnvField = peClass.getDeclaredField("theEnvironment")
+        theEnvField.isAccessible = true
+        val theEnv = theEnvField.get(null) as MutableMap<Any, Any>
+
+        val variableClass = peClass.declaredClasses.first { it.simpleName == "Variable" }
+        val valueClass = peClass.declaredClasses.first { it.simpleName == "Value" }
+        val variableValueOf = variableClass.getDeclaredMethod("valueOf", String::class.java)
+        variableValueOf.isAccessible = true
+        val valueValueOf = valueClass.getDeclaredMethod("valueOf", String::class.java)
+        valueValueOf.isAccessible = true
+
+        theEnv[variableValueOf.invoke(null, key)] = valueValueOf.invoke(null, value)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun clearEnv(key: String) {
+        val peClass = Class.forName("java.lang.ProcessEnvironment")
+        val theEnvField = peClass.getDeclaredField("theEnvironment")
+        theEnvField.isAccessible = true
+        val theEnv = theEnvField.get(null) as MutableMap<Any, Any>
+        theEnv.keys.removeIf { it.toString() == key }
+    }
+
+    private fun withTempHome(block: (tempHome: java.io.File) -> Unit) {
+        val tempHome = Files.createTempDirectory("divyam-test-home").toFile()
+        System.setProperty("user.home", tempHome.absolutePath)
+        try {
+            block(tempHome)
+        } finally {
+            System.setProperty("user.home", originalUserHome)
+            tempHome.deleteRecursively()
+        }
+    }
+
+    private fun writeTestConfig(
+        tempHome: java.io.File,
+        endpoint: String? = null,
+        user: String? = null,
+        password: String? = null,
+        orgId: Int? = null,
+        serviceAccountId: String? = null
+    ) {
+        val configDir = tempHome.resolve(".divyam")
+        configDir.mkdirs()
+        val endpointStr = if (endpoint != null) "\"endpoint\": \"$endpoint\"" else "\"endpoint\": null"
+        val userStr = if (user != null) ", \"user\": \"$user\"" else ""
+        val passwordStr = if (password != null) ", \"password\": \"$password\"" else ""
+        val orgIdStr = if (orgId != null) ", \"orgId\": $orgId" else ""
+        val saIdStr = if (serviceAccountId != null) ", \"serviceAccountId\": \"$serviceAccountId\"" else ""
+        val json =
+            """{"configs":{"test-config":{$endpointStr$userStr$passwordStr$orgIdStr$saIdStr}},"currentConfigName":null}"""
+        configDir.resolve("config.json").writeText(json)
+    }
+
+    @Test
+    @Order(60)
+    fun `connection params resolved from env vars`() {
+        withTempHome { _ ->
+            // tempHome has no config — config source is ruled out
+            setEnv("DIVYAM_ENDPOINT", baseUrl)
+            setEnv("DIVYAM_USER", "admin@dashboard.divyam.ai")
+            setEnv("DIVYAM_PASSWORD", testPassword)
+            try {
+                val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
+                assertEquals(0, exitCode)
+                val json = parseJson()
+                assertNotNull(json)
+                assertTrue(json!!.isArray)
+            } finally {
+                clearEnv("DIVYAM_ENDPOINT")
+                clearEnv("DIVYAM_USER")
+                clearEnv("DIVYAM_PASSWORD")
+            }
+        }
+    }
+
+    @Test
+    @Order(61)
+    fun `connection params resolved from config file`() {
+        withTempHome { tempHome ->
+            writeTestConfig(
+                tempHome,
+                endpoint = baseUrl,
+                user = "admin@dashboard.divyam.ai",
+                password = testPassword
+            )
+            // No CLI args, no env vars — config file is the only source
+            val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
+            assertEquals(0, exitCode)
+            val json = parseJson()
+            assertNotNull(json)
+            assertTrue(json!!.isArray)
+        }
+    }
+
+    @Test
+    @Order(62)
+    fun `cli args override env vars for connection params`() {
+        withTempHome { _ ->
+            // Env vars point to a wrong host — CLI args must win
+            setEnv("DIVYAM_ENDPOINT", "http://wrong-host:9999")
+            setEnv("DIVYAM_USER", "wrong-user@example.com")
+            setEnv("DIVYAM_PASSWORD", "wrong-password")
+            try {
+                val exitCode = executeCommand(
+                    OrgCommand(),
+                    "ls",
+                    "--endpoint", baseUrl,
+                    "--user", "admin@dashboard.divyam.ai",
+                    "--password", testPassword,
+                    "--format", "json"
+                )
+                assertEquals(0, exitCode)
+                val json = parseJson()
+                assertNotNull(json)
+                assertTrue(json!!.isArray)
+            } finally {
+                clearEnv("DIVYAM_ENDPOINT")
+                clearEnv("DIVYAM_USER")
+                clearEnv("DIVYAM_PASSWORD")
+            }
+        }
+    }
+
+    @Test
+    @Order(63)
+    fun `env vars override config file for connection params`() {
+        withTempHome { tempHome ->
+            // Config file points to a wrong host — env vars must win
+            writeTestConfig(
+                tempHome,
+                endpoint = "http://wrong-config-host:9999",
+                user = "wrong-config-user@example.com",
+                password = "wrong-config-password"
+            )
+            setEnv("DIVYAM_ENDPOINT", baseUrl)
+            setEnv("DIVYAM_USER", "admin@dashboard.divyam.ai")
+            setEnv("DIVYAM_PASSWORD", testPassword)
+            try {
+                val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
+                assertEquals(0, exitCode)
+                val json = parseJson()
+                assertNotNull(json)
+                assertTrue(json!!.isArray)
+            } finally {
+                clearEnv("DIVYAM_ENDPOINT")
+                clearEnv("DIVYAM_USER")
+                clearEnv("DIVYAM_PASSWORD")
+            }
+        }
+    }
+
+    @Test
+    @Order(64)
+    fun `endpoint defaults to hardcoded value when no source provides it`() {
+        withTempHome { tempHome ->
+            // Config has user/password but no endpoint
+            writeTestConfig(
+                tempHome,
+                endpoint = null,
+                user = "admin@dashboard.divyam.ai",
+                password = testPassword
+            )
+            // No DIVYAM_ENDPOINT env var, no --endpoint CLI arg
+            // initialize() defaults endpoint to "https://api.divyam.ai"
+            val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
+            // Expect failure — not because endpoint is missing from config, but because
+            // https://api.divyam.ai is unreachable in tests. Exit 1 = network error, not config error.
+            assertEquals(1, exitCode)
+            val errOutput = errContent.toString()
+            assertFalse(
+                errOutput.contains("endpoint is required"),
+                "Expected a network error, not a missing-endpoint config error"
+            )
+        }
+    }
+
+    @Test
+    @Order(65)
+    fun `org-id resolved from env var`() {
+        withTempHome { _ ->
+            setEnv("DIVYAM_ORG_ID", "1")
+            try {
+                val exitCode = executeCommand(
+                    SaCommand(),
+                    "ls",
+                    "--endpoint", baseUrl,
+                    "--user", "admin@dashboard.divyam.ai",
+                    "--password", testPassword,
+                    "--format", "json"
+                    // No --org-id CLI arg — DIVYAM_ORG_ID env var supplies it
+                )
+                assertEquals(0, exitCode)
+                val json = parseJson()
+                assertNotNull(json)
+                assertTrue(json!!.isArray)
+            } finally {
+                clearEnv("DIVYAM_ORG_ID")
+            }
+        }
+    }
+
+    @Test
+    @Order(66)
+    fun `org-id resolved from config file`() {
+        withTempHome { tempHome ->
+            writeTestConfig(tempHome, orgId = 1)
+            // No --org-id CLI arg, no DIVYAM_ORG_ID env var
+            val exitCode = executeCommand(
+                SaCommand(),
+                "ls",
+                "--endpoint", baseUrl,
+                "--user", "admin@dashboard.divyam.ai",
+                "--password", testPassword,
+                "--format", "json"
+            )
+            assertEquals(0, exitCode)
+            val json = parseJson()
+            assertNotNull(json)
+            assertTrue(json!!.isArray)
+        }
+    }
+
+    @Test
+    @Order(67)
+    fun `sa-id resolved from env var`() {
+        withTempHome { _ ->
+            setEnv("DIVYAM_SA_ID", testServiceAccountId)
+            setEnv("DIVYAM_ORG_ID", "1")
+            try {
+                val exitCode = executeCommand(
+                    ModelSelectorCommand(),
+                    "ls",
+                    "--endpoint", baseUrl,
+                    "--user", "admin@dashboard.divyam.ai",
+                    "--password", testPassword,
+                    "--format", "json"
+                    // No --service-account-id or --org-id CLI args
+                )
+                assertEquals(0, exitCode)
+                val json = parseJson()
+                assertNotNull(json)
+                assertTrue(json!!.isArray)
+            } finally {
+                clearEnv("DIVYAM_SA_ID")
+                clearEnv("DIVYAM_ORG_ID")
+            }
+        }
+    }
+
+    @Test
+    @Order(68)
+    fun `sa-id resolved from config file`() {
+        withTempHome { tempHome ->
+            writeTestConfig(tempHome, orgId = 1, serviceAccountId = testServiceAccountId)
+            // No --service-account-id or --org-id CLI args, no env vars
+            val exitCode = executeCommand(
+                ModelSelectorCommand(),
+                "ls",
+                "--endpoint", baseUrl,
+                "--user", "admin@dashboard.divyam.ai",
+                "--password", testPassword,
+                "--format", "json"
+            )
+            assertEquals(0, exitCode)
+            val json = parseJson()
+            assertNotNull(json)
+            assertTrue(json!!.isArray)
         }
     }
 }

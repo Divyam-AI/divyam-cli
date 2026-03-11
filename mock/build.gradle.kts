@@ -1,4 +1,5 @@
 import ai.divyam.gradle.Versions
+import ai.divyam.gradle.configureKotlin
 
 plugins {
     application
@@ -49,6 +50,8 @@ dependencies {
 
 }
 
+project.configureKotlin()
+
 tasks.test {
     useJUnitPlatform()
 }
@@ -73,3 +76,4 @@ tasks.register<JavaExec>("generateCompletion") {
         outputDir.mkdirs()
     }
 }
+

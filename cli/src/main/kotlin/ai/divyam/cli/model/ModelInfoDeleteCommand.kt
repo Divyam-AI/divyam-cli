@@ -21,16 +21,15 @@ class ModelInfoDeleteCommand : BaseCommand() {
 
     @Option(
         names = ["-o", "--org-id"],
-        description = ["Required: Organization id to associate the model " +
-                "info with"],
-        required = true
+        description = ["Organization id to associate the model " +
+                "info with. If omitted, falls back to the DIVYAM_ORG_ID environment variable, then the current config file."],
     )
-    private var orgId: Int = 0
+    private var orgId: Int? = null
 
     override fun execute(): Int {
         runBlocking {
             divyamClient.deleteModelInfo(
-                orgId = orgId,
+                orgId = getOrgId(orgId),
                 modelInfoId = id
             )
 
