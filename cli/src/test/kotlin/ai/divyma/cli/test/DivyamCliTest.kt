@@ -545,12 +545,320 @@ class DivyamCliTest {
         assertEquals(4, policy.get("max_fallback_hops").asInt())
     }
 
+    @Test
+    @Order(16)
+    fun `sa create with retry fallback policy inline json`() {
+        val exitCode = executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA With Inline Policy",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--retry-fallback-policy", "{\"retry_delay_s\":2,\"max_retries\":3,\"max_fallback_hops\":4}"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        assertEquals("SA With Inline Policy", json.get("name").asText())
+        assertTrue(json.has("retry_fallback_policy"))
+        val policy = json.get("retry_fallback_policy")
+        assertEquals(2, policy.get("retry_delay_s").asInt())
+        assertEquals(3, policy.get("max_retries").asInt())
+        assertEquals(4, policy.get("max_fallback_hops").asInt())
+    }
+
+    @Test
+    @Order(17)
+    fun `sa update with retry fallback policy inline json`() {
+        executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA To Update With Inline",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        val createJson = parseJson()
+        val saId = createJson!!.get("id").asText()
+        outContent.reset()
+
+        val exitCode = executeCommand(
+            SaCommand(),
+            "update",
+            "--id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--retry-fallback-policy", "{\"retry_delay_s\":6,\"max_retries\":1,\"max_fallback_hops\":2}"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("retry_fallback_policy"))
+        val policy = json.get("retry_fallback_policy")
+        assertEquals(6, policy.get("retry_delay_s").asInt())
+        assertEquals(1, policy.get("max_retries").asInt())
+        assertEquals(2, policy.get("max_fallback_hops").asInt())
+    }
+
+    @Test
+    @Order(18)
+    fun `sa update with single retry param retry-delay-s`() {
+        executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA Single Param Retry Delay",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+        val createJson = parseJson()
+        val saId = createJson!!.get("id").asText()
+        outContent.reset()
+
+        val exitCode = executeCommand(
+            SaCommand(),
+            "update",
+            "--id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--retry-delay-s", "9"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("retry_fallback_policy"))
+        assertEquals(9, json.get("retry_fallback_policy").get("retry_delay_s").asInt())
+    }
+
+    @Test
+    @Order(19)
+    fun `sa update with single retry param max-retries`() {
+        executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA Single Param Max Retries",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+        val createJson = parseJson()
+        val saId = createJson!!.get("id").asText()
+        outContent.reset()
+
+        val exitCode = executeCommand(
+            SaCommand(),
+            "update",
+            "--id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--max-retries", "1"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("retry_fallback_policy"))
+        assertEquals(1, json.get("retry_fallback_policy").get("max_retries").asInt())
+    }
+
+    @Test
+    @Order(20)
+    fun `sa update with single retry param max-fallback-hops`() {
+        executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA Single Param Max Fallback Hops",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+        val createJson = parseJson()
+        val saId = createJson!!.get("id").asText()
+        outContent.reset()
+
+        val exitCode = executeCommand(
+            SaCommand(),
+            "update",
+            "--id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--max-fallback-hops", "7"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("retry_fallback_policy"))
+        assertEquals(7, json.get("retry_fallback_policy").get("max_fallback_hops").asInt())
+    }
+
+    @Test
+    @Order(22)
+    fun `sa create with retry fallback policy individual params`() {
+        val exitCode = executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA With Individual Policy Params",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--retry-delay-s", "5",
+            "--max-retries", "2",
+            "--max-fallback-hops", "3",
+            "--circuit-breaker-duration-s", "30"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        assertEquals("SA With Individual Policy Params", json.get("name").asText())
+        assertTrue(json.has("retry_fallback_policy"))
+        val policy = json.get("retry_fallback_policy")
+        assertEquals(5, policy.get("retry_delay_s").asInt())
+        assertEquals(2, policy.get("max_retries").asInt())
+        assertEquals(3, policy.get("max_fallback_hops").asInt())
+        assertEquals(30, policy.get("circuit_breaker_duration_s").asInt())
+    }
+
+    @Test
+    @Order(23)
+    fun `sa update with retry fallback policy individual params`() {
+        executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA To Update With Individual Params",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        val createJson = parseJson()
+        val saId = createJson!!.get("id").asText()
+
+        outContent.reset()
+
+        val exitCode = executeCommand(
+            SaCommand(),
+            "update",
+            "--id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--retry-delay-s", "1",
+            "--max-retries", "4",
+            "--max-fallback-hops", "5",
+            "--circuit-breaker-failure-threshold-pct", "50"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("retry_fallback_policy"))
+        val policy = json.get("retry_fallback_policy")
+        assertEquals(1, policy.get("retry_delay_s").asInt())
+        assertEquals(4, policy.get("max_retries").asInt())
+        assertEquals(5, policy.get("max_fallback_hops").asInt())
+        assertEquals(50, policy.get("circuit_breaker_failure_threshold_pct").asInt())
+    }
+
+    @Test
+    @Order(24)
+    fun `sa create fails when mixing retry policy file and individual args`() {
+        val policyPath = "src/test/data/sample_retry_fallback_policy.json"
+        val exitCode = executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA Mixed Policy",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--retry-fallback-policy-file", policyPath,
+            "--retry-delay-s", "5"
+        )
+
+        assertFalse(exitCode == 0) { "Expected non-zero exit when mixing policy file and individual args" }
+        val output = errContent.toString() + outContent.toString()
+        assertTrue(
+            output.contains("Use only one of") || output.contains("retry-fallback-policy"),
+            "Expected error message about mutual exclusivity, got stderr: ${errContent.toString()}, stdout: ${outContent.toString()}"
+        )
+    }
+
+    @Test
+    @Order(25)
+    fun `sa update fails when mixing retry policy inline and individual args`() {
+        executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA For Inline Mixed Test",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+        val createJson = parseJson()
+        val saId = createJson!!.get("id").asText()
+        outContent.reset()
+
+        val exitCode = executeCommand(
+            SaCommand(),
+            "update",
+            "--id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--retry-fallback-policy", "{\"retry_delay_s\":2,\"max_fallback_hops\":1}",
+            "--max-retries", "3"
+        )
+
+        assertFalse(exitCode == 0) { "Expected non-zero exit when mixing inline policy and individual args" }
+        val output = errContent.toString() + outContent.toString()
+        assertTrue(
+            output.contains("Use only one of") || output.contains("retry-fallback-policy"),
+            "Expected error message about mutual exclusivity, got stderr: ${errContent.toString()}, stdout: ${outContent.toString()}"
+        )
+    }
+
     // ============================================
     // Model Info CRUD Tests (Requires SA)
     // ============================================
 
     @Test
-    @Order(20)
+    @Order(26)
     fun `model-info create`() {
         val exitCode = executeCommand(
             ModelInfoCommand(),
@@ -577,7 +885,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(21)
+    @Order(27)
     fun `model-info list`() {
         val exitCode = executeCommand(
             ModelInfoCommand(),
@@ -597,7 +905,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(22)
+    @Order(28)
     fun `model-info get`() {
         var exitCode = executeCommand(
             ModelInfoCommand(),
@@ -641,7 +949,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(23)
+    @Order(29)
     fun `model-info update`() {
         var exitCode = executeCommand(
             ModelInfoCommand(),
@@ -687,7 +995,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(24)
+    @Order(30)
     fun `model-info delete`() {
         var exitCode = executeCommand(
             ModelInfoCommand(),
@@ -745,7 +1053,7 @@ class DivyamCliTest {
     // ============================================
 
     @Test
-    @Order(30)
+    @Order(31)
     fun `selector create`() {
         val exitCode = executeCommand(
             ModelSelectorCommand(),
@@ -770,7 +1078,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(31)
+    @Order(32)
     fun `selector list`() {
         val exitCode = executeCommand(
             ModelSelectorCommand(),
@@ -790,7 +1098,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(32)
+    @Order(33)
     fun `selector update`() {
         val createExitCode = executeCommand(
             ModelSelectorCommand(),
@@ -831,7 +1139,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(33)
+    @Order(34)
     fun `selector delete`() {
         executeCommand(
             ModelSelectorCommand(),
@@ -866,7 +1174,7 @@ class DivyamCliTest {
 
 
     @Test
-    @Order(34)
+    @Order(35)
     fun `selector create with config file`() {
         val exitCode = executeCommand(
             ModelSelectorCommand(),
@@ -889,7 +1197,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(35)
+    @Order(36)
     fun `selector get`() {
         val createExitCode = executeCommand(
             ModelSelectorCommand(),
