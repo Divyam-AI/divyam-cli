@@ -84,7 +84,6 @@ class EvalUpdateCommand : SaSpecificCommand() {
                 orgId = getOrgId(orgId),
                 serviceAccountId = getSaId(serviceAccountId),
                 evalId = evalId,
-                orgId = sa.orgId,
                 evalUpdateRequest = EvalUpdateRequest(
                     name = name,
                     granularity = granularity,
