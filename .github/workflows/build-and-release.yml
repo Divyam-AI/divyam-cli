@@ -169,7 +169,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           name: macos-packages-${{ matrix.arch }}
           path: dist/
