@@ -246,6 +246,8 @@ jobs:
 
       - name: Build and push multi-arch image
         uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_NO_SUMMARY: true
         with:
           context: ./cli
           file: ./cli/Dockerfile
