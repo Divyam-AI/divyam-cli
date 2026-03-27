@@ -228,7 +228,7 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
         isAdmin?.let { sa = sa.copy(isAdmin = it) }
         isOrgAdmin?.let { sa = sa.copy(isOrgAdmin = it) }
 
-        resolveRetryFallbackPolicy()?.let { policy ->
+        resolveRetryFallbackPolicy(baseRetryPolicy = sa.retryFallbackPolicy)?.let { policy ->
             sa = sa.copy(retryFallbackPolicy = policy)
         }
 
@@ -238,8 +238,9 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
 
     /**
      * Resolves retry/fallback policy from exactly one source: file, inline JSON, or individual arguments (mutually exclusive).
+     * Individual arguments are merged onto [baseRetryPolicy]; file and inline JSON replace the policy entirely.
      */
-    private fun resolveRetryFallbackPolicy(): RetryFallbackPolicy? {
+    private fun resolveRetryFallbackPolicy(baseRetryPolicy: RetryFallbackPolicy?): RetryFallbackPolicy? {
         val fromFile = retryFallbackPolicyFile != null
         val fromInline = retryFallbackPolicyInline != null
         val fromIndividual = hasAnyRetryFallbackIndividualArg()
@@ -259,17 +260,22 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
             return getJsonMapper().readValue(json, RetryFallbackPolicy::class.java)
         }
         if (fromIndividual) {
+            val base = baseRetryPolicy ?: RetryFallbackPolicy()
             return RetryFallbackPolicy(
-                retryDelayS = retryDelayS,
-                retryDelayMultiplier = retryDelayMultiplier,
-                maxRetries = maxRetries,
-                maxRequestLatencyS = maxRequestLatencyS,
-                maxFallbackHops = maxFallbackHops,
-                circuitBreakerRequestThreshold = circuitBreakerRequestThreshold,
-                circuitBreakerFailureThresholdPct = circuitBreakerFailureThresholdPct,
-                circuitBreakerDurationS = circuitBreakerDurationS,
-                circuitBreakerSlidingWindowTimeS = circuitBreakerSlidingWindowTimeS,
-                circuitBreakerSlidingWindowResolutionS = circuitBreakerSlidingWindowResolutionS,
+                retryDelayS = retryDelayS ?: base.retryDelayS,
+                retryDelayMultiplier = retryDelayMultiplier ?: base.retryDelayMultiplier,
+                maxRetries = maxRetries ?: base.maxRetries,
+                maxRequestLatencyS = maxRequestLatencyS ?: base.maxRequestLatencyS,
+                maxFallbackHops = maxFallbackHops ?: base.maxFallbackHops,
+                circuitBreakerRequestThreshold =
+                    circuitBreakerRequestThreshold ?: base.circuitBreakerRequestThreshold,
+                circuitBreakerFailureThresholdPct =
+                    circuitBreakerFailureThresholdPct ?: base.circuitBreakerFailureThresholdPct,
+                circuitBreakerDurationS = circuitBreakerDurationS ?: base.circuitBreakerDurationS,
+                circuitBreakerSlidingWindowTimeS =
+                    circuitBreakerSlidingWindowTimeS ?: base.circuitBreakerSlidingWindowTimeS,
+                circuitBreakerSlidingWindowResolutionS =
+                    circuitBreakerSlidingWindowResolutionS ?: base.circuitBreakerSlidingWindowResolutionS,
             )
         }
         return null
