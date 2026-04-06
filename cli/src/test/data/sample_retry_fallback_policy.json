@@ -1,0 +1,4 @@
+{
+  "retry_delay_s": 3,
+  "max_fallback_hops": 4
+}
