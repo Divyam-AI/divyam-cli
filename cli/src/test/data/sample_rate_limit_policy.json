@@ -1,0 +1,16 @@
+[
+  {
+    "provider_id": 1,
+    "model_id": 2,
+    "unit": "requests",
+    "duration": "minute",
+    "limit": 100
+  },
+  {
+    "provider_id": 3,
+    "model_id": 4,
+    "unit": "tokens",
+    "duration": "hour",
+    "limit": 5000
+  }
+]

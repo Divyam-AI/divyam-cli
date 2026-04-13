@@ -853,12 +853,187 @@ class DivyamCliTest {
         )
     }
 
+    @Test
+    @Order(26)
+    fun `sa create with rate limit policy file`() {
+        val policyPath = "src/test/data/sample_rate_limit_policy.json"
+        val exitCode = executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA With Rate Limit Policy",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--rate-limit-policy-file", policyPath
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        assertEquals("SA With Rate Limit Policy", json.get("name").asText())
+        assertTrue(json.has("rate_limit_policy"))
+        val policies = json.get("rate_limit_policy")
+        assertTrue(policies.isArray)
+        assertEquals(2, policies.size())
+        assertEquals(1, policies.get(0).get("provider_id").asInt())
+        assertEquals(2, policies.get(0).get("model_id").asInt())
+        assertEquals("requests", policies.get(0).get("unit").asText())
+        assertEquals("minute", policies.get(0).get("duration").asText())
+        assertEquals(100, policies.get(0).get("limit").asInt())
+        assertEquals(3, policies.get(1).get("provider_id").asInt())
+        assertEquals("tokens", policies.get(1).get("unit").asText())
+    }
+
+    @Test
+    @Order(27)
+    fun `sa update with rate limit policy file`() {
+        executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA To Update With Rate Limit",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        val createJson = parseJson()
+        val saId = createJson!!.get("id").asText()
+
+        outContent.reset()
+
+        val policyPath = "src/test/data/sample_rate_limit_policy.json"
+        val exitCode = executeCommand(
+            SaCommand(),
+            "update",
+            "--id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--rate-limit-policy-file", policyPath
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("rate_limit_policy"))
+        val policies = json.get("rate_limit_policy")
+        assertTrue(policies.isArray)
+        assertEquals(2, policies.size())
+        assertEquals(100, policies.get(0).get("limit").asInt())
+    }
+
+    @Test
+    @Order(28)
+    fun `sa create with rate limit policy inline json`() {
+        val inline =
+            "[{\"provider_id\":10,\"model_id\":20,\"unit\":\"requests\",\"duration\":\"day\",\"limit\":999}]"
+        val exitCode = executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA With Inline Rate Limit",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--rate-limit-policy", inline
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        assertEquals("SA With Inline Rate Limit", json.get("name").asText())
+        assertTrue(json.has("rate_limit_policy"))
+        val policies = json.get("rate_limit_policy")
+        assertTrue(policies.isArray)
+        assertEquals(1, policies.size())
+        assertEquals(10, policies.get(0).get("provider_id").asInt())
+        assertEquals(20, policies.get(0).get("model_id").asInt())
+        assertEquals("requests", policies.get(0).get("unit").asText())
+        assertEquals("day", policies.get(0).get("duration").asText())
+        assertEquals(999, policies.get(0).get("limit").asInt())
+    }
+
+    @Test
+    @Order(29)
+    fun `sa update with rate limit policy inline json`() {
+        executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA To Update With Inline Rate Limit",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        val createJson = parseJson()
+        val saId = createJson!!.get("id").asText()
+        outContent.reset()
+
+        val inline =
+            "[{\"provider_id\":7,\"model_id\":8,\"unit\":\"tokens\",\"duration\":\"hour\",\"limit\":42}]"
+        val exitCode = executeCommand(
+            SaCommand(),
+            "update",
+            "--id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--rate-limit-policy", inline
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("rate_limit_policy"))
+        val policies = json.get("rate_limit_policy")
+        assertTrue(policies.isArray)
+        assertEquals(1, policies.size())
+        assertEquals(7, policies.get(0).get("provider_id").asInt())
+        assertEquals(42, policies.get(0).get("limit").asInt())
+    }
+
+    @Test
+    @Order(30)
+    fun `sa create fails when mixing rate limit policy file and inline`() {
+        val policyPath = "src/test/data/sample_rate_limit_policy.json"
+        val exitCode = executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "SA Mixed Rate Limit",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--rate-limit-policy-file", policyPath,
+            "--rate-limit-policy", "[{\"provider_id\":1,\"model_id\":1,\"unit\":\"requests\",\"duration\":\"minute\",\"limit\":1}]"
+        )
+
+        assertFalse(exitCode == 0) { "Expected non-zero exit when mixing rate limit file and inline" }
+        val output = errContent.toString() + outContent.toString()
+        assertTrue(
+            output.contains("Use only one of") || output.contains("rate-limit-policy"),
+            "Expected error message about mutual exclusivity, got stderr: ${errContent.toString()}, stdout: ${outContent.toString()}"
+        )
+    }
+
     // ============================================
     // Model Info CRUD Tests (Requires SA)
     // ============================================
 
     @Test
-    @Order(26)
+    @Order(31)
     fun `model-info create`() {
         val exitCode = executeCommand(
             ModelInfoCommand(),
@@ -885,7 +1060,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(27)
+    @Order(32)
     fun `model-info list`() {
         val exitCode = executeCommand(
             ModelInfoCommand(),
@@ -905,7 +1080,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(28)
+    @Order(33)
     fun `model-info get`() {
         var exitCode = executeCommand(
             ModelInfoCommand(),
@@ -949,7 +1124,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(29)
+    @Order(34)
     fun `model-info update`() {
         var exitCode = executeCommand(
             ModelInfoCommand(),
@@ -995,7 +1170,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(30)
+    @Order(35)
     fun `model-info delete`() {
         var exitCode = executeCommand(
             ModelInfoCommand(),
@@ -1053,7 +1228,7 @@ class DivyamCliTest {
     // ============================================
 
     @Test
-    @Order(31)
+    @Order(36)
     fun `selector create`() {
         val exitCode = executeCommand(
             ModelSelectorCommand(),
@@ -1078,7 +1253,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(32)
+    @Order(37)
     fun `selector list`() {
         val exitCode = executeCommand(
             ModelSelectorCommand(),
@@ -1098,7 +1273,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(33)
+    @Order(38)
     fun `selector update`() {
         val createExitCode = executeCommand(
             ModelSelectorCommand(),
@@ -1139,7 +1314,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(34)
+    @Order(39)
     fun `selector delete`() {
         executeCommand(
             ModelSelectorCommand(),
@@ -1174,7 +1349,7 @@ class DivyamCliTest {
 
 
     @Test
-    @Order(35)
+    @Order(40)
     fun `selector create with config file`() {
         val exitCode = executeCommand(
             ModelSelectorCommand(),
@@ -1197,7 +1372,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(36)
+    @Order(41)
     fun `selector get`() {
         val createExitCode = executeCommand(
             ModelSelectorCommand(),
@@ -1237,7 +1412,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(37)
+    @Order(42)
     fun `selector clone`() {
         // First create a source selector
         val createExitCode = executeCommand(
@@ -1283,7 +1458,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(38)
+    @Order(43)
     fun `selector clone with custom name`() {
         // First create a source selector
         val createExitCode = executeCommand(
@@ -1330,7 +1505,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(39)
+    @Order(44)
     fun `selector clone with invalid from-id fails`() {
         val exitCode = executeCommand(
             ModelSelectorCommand(),
@@ -1353,7 +1528,7 @@ class DivyamCliTest {
     // ============================================
 
     @Test
-    @Order(40)
+    @Order(45)
     fun `eval create`() {
         val exitCode = executeCommand(
             EvalCommand(),
@@ -1378,7 +1553,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(41)
+    @Order(46)
     fun `eval list`() {
         executeCommand(
             EvalCommand(),
@@ -1415,7 +1590,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(42)
+    @Order(47)
     fun `eval get`() {
         executeCommand(
             EvalCommand(),
@@ -1456,7 +1631,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(43)
+    @Order(48)
     fun `eval update`() {
         executeCommand(
             EvalCommand(),
@@ -1500,7 +1675,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(44)
+    @Order(49)
     fun `eval create with is-primary`() {
         val exitCode = executeCommand(
             EvalCommand(),
@@ -1527,7 +1702,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(45)
+    @Order(50)
     fun `eval update with is-primary`() {
         executeCommand(
             EvalCommand(),
@@ -1573,7 +1748,7 @@ class DivyamCliTest {
     // ============================================
 
     @Test
-    @Order(50)
+    @Order(55)
     fun `chat completions`() {
         val originalIn = System.`in`
         try {
@@ -1656,7 +1831,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(60)
+    @Order(65)
     fun `connection params resolved from env vars`() {
         withTempHome { _ ->
             // tempHome has no config — config source is ruled out
@@ -1678,7 +1853,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(61)
+    @Order(66)
     fun `connection params resolved from config file`() {
         withTempHome { tempHome ->
             writeTestConfig(
@@ -1697,7 +1872,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(62)
+    @Order(67)
     fun `cli args override env vars for connection params`() {
         withTempHome { _ ->
             // Env vars point to a wrong host — CLI args must win
@@ -1726,7 +1901,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(63)
+    @Order(68)
     fun `env vars override config file for connection params`() {
         withTempHome { tempHome ->
             // Config file points to a wrong host — env vars must win
@@ -1754,7 +1929,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(64)
+    @Order(69)
     fun `endpoint defaults to hardcoded value when no source provides it`() {
         withTempHome { tempHome ->
             // Config has user/password but no endpoint
@@ -1779,7 +1954,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(65)
+    @Order(70)
     fun `org-id resolved from env var`() {
         withTempHome { _ ->
             setEnv("DIVYAM_ORG_ID", "1")
@@ -1804,7 +1979,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(66)
+    @Order(71)
     fun `org-id resolved from config file`() {
         withTempHome { tempHome ->
             writeTestConfig(tempHome, orgId = 1)
@@ -1825,7 +2000,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(67)
+    @Order(72)
     fun `sa-id resolved from env var`() {
         withTempHome { _ ->
             setEnv("DIVYAM_SA_ID", testServiceAccountId)
@@ -1852,7 +2027,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(68)
+    @Order(73)
     fun `sa-id resolved from config file`() {
         withTempHome { tempHome ->
             writeTestConfig(tempHome, orgId = 1, serviceAccountId = testServiceAccountId)

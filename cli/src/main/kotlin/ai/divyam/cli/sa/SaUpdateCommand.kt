@@ -9,7 +9,6 @@ import ai.divyam.cli.base.HasSecurityPolicy
 import ai.divyam.data.model.IpVerificationStrategy
 import ai.divyam.data.model.ModelAPIAuthMode
 import ai.divyam.data.model.OptimizationGoal
-import ai.divyam.data.model.RetryFallbackPolicy
 import ai.divyam.data.model.ServiceAccount
 import ai.divyam.data.model.ServiceAccountUpdateRequest
 import kotlinx.coroutines.runBlocking
@@ -174,6 +173,25 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
     )
     var circuitBreakerSlidingWindowResolutionS: Int? = null
 
+    @Option(
+        names = ["--rate-limit-policy-file"],
+        description = [
+            "Optional: JSON file with a rate_limit_policy array (provider_id, model_id, unit, duration, limit). " +
+                "Replaces existing policies. Mutually exclusive with --rate-limit-policy"
+        ],
+    )
+    var rateLimitPolicyFile: File? = null
+
+    @Option(
+        names = ["--rate-limit-policy"],
+        description = [
+            "Optional: Inline JSON array for rate_limit_policy. Example: " +
+                "[{\"provider_id\":1,\"model_id\":2,\"unit\":\"requests\",\"duration\":\"minute\",\"limit\":100}]. " +
+                "Replaces existing policies. Mutually exclusive with --rate-limit-policy-file"
+        ],
+    )
+    var rateLimitPolicyInline: String? = null
+
     override fun execute(): Int {
         // Get and update the service account object.
         val sa = getAndUpdateLocalServiceAccount()
@@ -191,7 +209,8 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
                     isAdmin = sa.isAdmin,
                     regenerateApiKey = regenerateApiKey,
                     securityPolicy = sa.securityPolicy,
-                    retryFallbackPolicy = sa.retryFallbackPolicy
+                    retryFallbackPolicy = sa.retryFallbackPolicy,
+                    rateLimitPolicy = sa.rateLimitPolicy,
                 )
             )
         }
@@ -228,65 +247,40 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
         isAdmin?.let { sa = sa.copy(isAdmin = it) }
         isOrgAdmin?.let { sa = sa.copy(isOrgAdmin = it) }
 
-        resolveRetryFallbackPolicy(baseRetryPolicy = sa.retryFallbackPolicy)?.let { policy ->
+        resolveRetryFallbackPolicy(
+            getJsonMapper(),
+            RetryFallbackPolicyCliInput(
+                retryFallbackPolicyFile = retryFallbackPolicyFile,
+                retryFallbackPolicyInline = retryFallbackPolicyInline,
+                retryDelayS = retryDelayS,
+                retryDelayMultiplier = retryDelayMultiplier,
+                maxRetries = maxRetries,
+                maxRequestLatencyS = maxRequestLatencyS,
+                maxFallbackHops = maxFallbackHops,
+                circuitBreakerRequestThreshold = circuitBreakerRequestThreshold,
+                circuitBreakerFailureThresholdPct = circuitBreakerFailureThresholdPct,
+                circuitBreakerDurationS = circuitBreakerDurationS,
+                circuitBreakerSlidingWindowTimeS = circuitBreakerSlidingWindowTimeS,
+                circuitBreakerSlidingWindowResolutionS = circuitBreakerSlidingWindowResolutionS,
+            ),
+            baseRetryPolicy = sa.retryFallbackPolicy,
+        )?.let { policy ->
             sa = sa.copy(retryFallbackPolicy = policy)
+        }
+
+        resolveRateLimitPolicy(
+            getJsonMapper(),
+            RateLimitPolicyCliInput(
+                rateLimitPolicyFile = rateLimitPolicyFile,
+                rateLimitPolicyInline = rateLimitPolicyInline,
+            ),
+        )?.let { policies ->
+            sa = sa.copy(rateLimitPolicy = policies)
         }
 
         sa = updateObjectSecurityPolicyFromArgs(obj = sa)
         return sa
     }
-
-    /**
-     * Resolves retry/fallback policy from exactly one source: file, inline JSON, or individual arguments (mutually exclusive).
-     * Individual arguments are merged onto [baseRetryPolicy]; file and inline JSON replace the policy entirely.
-     */
-    private fun resolveRetryFallbackPolicy(baseRetryPolicy: RetryFallbackPolicy?): RetryFallbackPolicy? {
-        val fromFile = retryFallbackPolicyFile != null
-        val fromInline = retryFallbackPolicyInline != null
-        val fromIndividual = hasAnyRetryFallbackIndividualArg()
-        when {
-            fromFile && (fromInline || fromIndividual) ->
-                throw IllegalArgumentException("Use only one of: --retry-fallback-policy-file, --retry-fallback-policy, or individual --retry-*/--circuit-breaker-* arguments")
-            fromInline && fromIndividual ->
-                throw IllegalArgumentException("Use only one of: --retry-fallback-policy-file, --retry-fallback-policy, or individual --retry-*/--circuit-breaker-* arguments")
-        }
-        retryFallbackPolicyFile?.let { file ->
-            if (file.exists()) {
-                return getJsonMapper().readValue(file, RetryFallbackPolicy::class.java)
-            }
-            throw IllegalArgumentException("Retry fallback policy file not found: ${file.absolutePath}")
-        }
-        retryFallbackPolicyInline?.let { json ->
-            return getJsonMapper().readValue(json, RetryFallbackPolicy::class.java)
-        }
-        if (fromIndividual) {
-            val base = baseRetryPolicy ?: RetryFallbackPolicy()
-            return RetryFallbackPolicy(
-                retryDelayS = retryDelayS ?: base.retryDelayS,
-                retryDelayMultiplier = retryDelayMultiplier ?: base.retryDelayMultiplier,
-                maxRetries = maxRetries ?: base.maxRetries,
-                maxRequestLatencyS = maxRequestLatencyS ?: base.maxRequestLatencyS,
-                maxFallbackHops = maxFallbackHops ?: base.maxFallbackHops,
-                circuitBreakerRequestThreshold =
-                    circuitBreakerRequestThreshold ?: base.circuitBreakerRequestThreshold,
-                circuitBreakerFailureThresholdPct =
-                    circuitBreakerFailureThresholdPct ?: base.circuitBreakerFailureThresholdPct,
-                circuitBreakerDurationS = circuitBreakerDurationS ?: base.circuitBreakerDurationS,
-                circuitBreakerSlidingWindowTimeS =
-                    circuitBreakerSlidingWindowTimeS ?: base.circuitBreakerSlidingWindowTimeS,
-                circuitBreakerSlidingWindowResolutionS =
-                    circuitBreakerSlidingWindowResolutionS ?: base.circuitBreakerSlidingWindowResolutionS,
-            )
-        }
-        return null
-    }
-
-    private fun hasAnyRetryFallbackIndividualArg(): Boolean =
-        retryDelayS != null || retryDelayMultiplier != null || maxRetries != null ||
-            maxRequestLatencyS != null || maxFallbackHops != null ||
-            circuitBreakerRequestThreshold != null || circuitBreakerFailureThresholdPct != null ||
-            circuitBreakerDurationS != null || circuitBreakerSlidingWindowTimeS != null ||
-            circuitBreakerSlidingWindowResolutionS != null
 
     /**
      * Updates the security policy of an object based on command-line arguments.

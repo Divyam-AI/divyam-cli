@@ -304,7 +304,8 @@ fun Application.configureRouting(password: String) {
                         isOrgAdmin = request.isOrgAdmin,
                         isAdmin = request.isAdmin ?: false,
                         securityPolicy = request.securityPolicy,
-                        retryFallbackPolicy = request.retryFallbackPolicy
+                        retryFallbackPolicy = request.retryFallbackPolicy,
+                        rateLimitPolicy = request.rateLimitPolicy,
                     )
 
                     MockDataStore.serviceAccounts[sa.id] = sa
@@ -554,7 +555,9 @@ fun Application.configureRouting(password: String) {
                             securityPolicy = updateRequest.securityPolicy
                                 ?: existingAccount.securityPolicy,
                             retryFallbackPolicy = updateRequest.retryFallbackPolicy
-                                ?: existingAccount.retryFallbackPolicy
+                                ?: existingAccount.retryFallbackPolicy,
+                            rateLimitPolicy = updateRequest.rateLimitPolicy
+                                ?: existingAccount.rateLimitPolicy,
                         )
                         MockDataStore.serviceAccounts[serviceAccountId] =
                             updatedAccount
