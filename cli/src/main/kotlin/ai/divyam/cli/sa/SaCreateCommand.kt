@@ -166,25 +166,6 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
     )
     var circuitBreakerSlidingWindowResolutionS: Int? = null
 
-    @Option(
-        names = ["--rate-limit-policy-file"],
-        description = [
-            "Optional: JSON file with a rate_limit_policy array (provider_id, model_id, unit, duration, limit). " +
-                "Mutually exclusive with --rate-limit-policy"
-        ],
-    )
-    var rateLimitPolicyFile: File? = null
-
-    @Option(
-        names = ["--rate-limit-policy"],
-        description = [
-            "Optional: Inline JSON array for rate_limit_policy. Example: " +
-                "[{\"provider_id\":1,\"model_id\":2,\"unit\":\"requests\",\"duration\":\"minute\",\"limit\":100}]. " +
-                "Mutually exclusive with --rate-limit-policy-file"
-        ],
-    )
-    var rateLimitPolicyInline: String? = null
-
     override fun execute(): Int {
         var trafficAllocationConfigObj: Map<String, Double>? = null
         if (trafficAllocationConfig != null) {
@@ -213,13 +194,6 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
             ),
             baseRetryPolicy = null,
         )
-        val rateLimitPolicy = resolveRateLimitPolicy(
-            getJsonMapper(),
-            RateLimitPolicyCliInput(
-                rateLimitPolicyFile = rateLimitPolicyFile,
-                rateLimitPolicyInline = rateLimitPolicyInline,
-            ),
-        )
         val created = runBlocking {
             val resolvedOrgId = getOrgId(orgId)
             divyamClient.createServiceAccount(
@@ -237,7 +211,6 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
                         ?: OptimizationGoal.HIGH_QUALITY,
                     securityPolicy = createSecurityPolicy(),
                     retryFallbackPolicy = retryFallbackPolicy,
-                    rateLimitPolicy = rateLimitPolicy,
                 )
             )
         }

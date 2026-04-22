@@ -1537,7 +1537,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "default": false,
+              "default": true,
               "title": "Mock Model"
             }
           }
@@ -1599,7 +1599,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "default": false,
+              "default": true,
               "title": "Mock Model"
             }
           }
@@ -1661,7 +1661,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "default": false,
+              "default": true,
               "title": "Mock Model"
             }
           }
@@ -2738,6 +2738,16 @@
           "is_selection_enabled": {
             "type": "boolean",
             "title": "Is Selection Enabled"
+          },
+          "rate_limit_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateLimitPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -2847,6 +2857,16 @@
             ],
             "title": "Is Selection Enabled",
             "default": true
+          },
+          "rate_limit_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateLimitPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3027,6 +3047,16 @@
               }
             ],
             "title": "Is Selection Enabled"
+          },
+          "rate_limit_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateLimitPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3397,51 +3427,25 @@
       },
       "RateLimitPolicy": {
         "properties": {
-          "provider_id": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "title": "Provider Id"
+          "evaluation": {
+            "$ref": "#/components/schemas/Section"
           },
-          "model_id": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "title": "Model Id"
+          "training": {
+            "$ref": "#/components/schemas/Section"
           },
-          "unit": {
-            "type": "string",
-            "enum": [
-              "requests",
-              "tokens"
-            ],
-            "title": "Unit"
-          },
-          "duration": {
-            "type": "string",
-            "enum": [
-              "minute",
-              "hour",
-              "day"
-            ],
-            "title": "Duration"
-          },
-          "limit": {
-            "type": "integer",
-            "minimum": 0,
-            "title": "Limit",
-            "description": "Maximum requests or tokens per duration window (whole number)."
+          "production": {
+            "$ref": "#/components/schemas/Section"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "provider_id",
-          "model_id",
-          "unit",
-          "duration",
-          "limit"
+          "evaluation",
+          "training",
+          "production"
         ],
         "title": "RateLimitPolicy",
-        "description": "Admin-configured rate limit for one provider/model pair.\n\nThe policy is stored in the context of a service account (e.g. on the\n``ServiceAccount`` row); the service account id is not repeated here."
+        "description": "Admin-configured rate limit policy payload by workload section."
       },
       "RetryFallbackPolicy": {
         "properties": {
@@ -3581,6 +3585,41 @@
         "type": "object",
         "title": "RetryFallbackPolicy",
         "description": "Combined retry, circuit breaker, and fallback policy configuration.\nValidation runs on creation and when setting via the ServiceAccount property."
+      },
+      "Section": {
+        "properties": {
+          "unit": {
+            "type": "string",
+            "enum": [
+              "requests",
+              "tokens"
+            ],
+            "title": "Unit"
+          },
+          "duration": {
+            "type": "string",
+            "enum": [
+              "minute",
+              "hour",
+              "day"
+            ],
+            "title": "Duration"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Limit",
+            "description": "Maximum requests or tokens per duration window (whole number)."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit",
+          "duration",
+          "limit"
+        ],
+        "title": "Section"
       },
       "SecurityPolicy": {
         "properties": {
@@ -3808,20 +3847,6 @@
                 "type": "null"
               }
             ]
-          },
-          "rate_limit_policy": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/RateLimitPolicy"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rate Limit Policy"
           }
         },
         "type": "object",
@@ -3894,20 +3919,6 @@
                 "type": "null"
               }
             ]
-          },
-          "rate_limit_policy": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/RateLimitPolicy"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rate Limit Policy"
           }
         },
         "type": "object",
@@ -4020,20 +4031,6 @@
                 "type": "null"
               }
             ]
-          },
-          "rate_limit_policy": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/RateLimitPolicy"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rate Limit Policy"
           }
         },
         "type": "object",

@@ -173,25 +173,6 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
     )
     var circuitBreakerSlidingWindowResolutionS: Int? = null
 
-    @Option(
-        names = ["--rate-limit-policy-file"],
-        description = [
-            "Optional: JSON file with a rate_limit_policy array (provider_id, model_id, unit, duration, limit). " +
-                "Replaces existing policies. Mutually exclusive with --rate-limit-policy"
-        ],
-    )
-    var rateLimitPolicyFile: File? = null
-
-    @Option(
-        names = ["--rate-limit-policy"],
-        description = [
-            "Optional: Inline JSON array for rate_limit_policy. Example: " +
-                "[{\"provider_id\":1,\"model_id\":2,\"unit\":\"requests\",\"duration\":\"minute\",\"limit\":100}]. " +
-                "Replaces existing policies. Mutually exclusive with --rate-limit-policy-file"
-        ],
-    )
-    var rateLimitPolicyInline: String? = null
-
     override fun execute(): Int {
         // Get and update the service account object.
         val sa = getAndUpdateLocalServiceAccount()
@@ -210,7 +191,6 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
                     regenerateApiKey = regenerateApiKey,
                     securityPolicy = sa.securityPolicy,
                     retryFallbackPolicy = sa.retryFallbackPolicy,
-                    rateLimitPolicy = sa.rateLimitPolicy,
                 )
             )
         }
@@ -266,16 +246,6 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
             baseRetryPolicy = sa.retryFallbackPolicy,
         )?.let { policy ->
             sa = sa.copy(retryFallbackPolicy = policy)
-        }
-
-        resolveRateLimitPolicy(
-            getJsonMapper(),
-            RateLimitPolicyCliInput(
-                rateLimitPolicyFile = rateLimitPolicyFile,
-                rateLimitPolicyInline = rateLimitPolicyInline,
-            ),
-        )?.let { policies ->
-            sa = sa.copy(rateLimitPolicy = policies)
         }
 
         sa = updateObjectSecurityPolicyFromArgs(obj = sa)

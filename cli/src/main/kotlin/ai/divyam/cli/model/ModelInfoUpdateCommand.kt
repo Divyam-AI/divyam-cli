@@ -124,6 +124,24 @@ class ModelInfoUpdateCommand : BaseCommand() {
     )
     var isSActive: Boolean? = null
 
+    @Option(
+        names = ["--rate-limit-policy-file"],
+        description = [
+            "Optional: JSON file with rate_limit_policy (evaluation, training, production workload sections). " +
+                "Replaces existing policy. Mutually exclusive with --rate-limit-policy"
+        ],
+    )
+    var rateLimitPolicyFile: File? = null
+
+    @Option(
+        names = ["--rate-limit-policy"],
+        description = [
+            "Optional: Inline JSON for rate_limit_policy with workload sections. " +
+                "Replaces existing policy. Mutually exclusive with --rate-limit-policy-file"
+        ],
+    )
+    var rateLimitPolicyInline: String? = null
+
     override fun execute(): Int {
         runBlocking {
             val modelPricing = if (!skipPricing) {
@@ -170,6 +188,13 @@ class ModelInfoUpdateCommand : BaseCommand() {
 
             val resolvedOrgIdForUpdate = getOrgId(orgId)
             val resolvedServiceAccountId = getSaId(serviceAccountId)
+            val rateLimitPolicy = resolveModelRateLimitPolicy(
+                getJsonMapper(),
+                ModelRateLimitPolicyCliInput(
+                    rateLimitPolicyFile = rateLimitPolicyFile,
+                    rateLimitPolicyInline = rateLimitPolicyInline,
+                ),
+            )
             val updated = divyamClient.updateModelInfo(
                 orgId = resolvedOrgIdForUpdate,
                 modelInfoId = id,
@@ -190,7 +215,8 @@ class ModelInfoUpdateCommand : BaseCommand() {
                     perNTokens = modelPricing?.perNTokens,
                     configsModel = modelConfigsJson,
                     isSelectionEnabled = isSelectionEnabled,
-                    isActive = isSActive
+                    isActive = isSActive,
+                    rateLimitPolicy = rateLimitPolicy,
                 )
             )
 

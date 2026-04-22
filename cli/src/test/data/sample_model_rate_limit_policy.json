@@ -1,16 +1,17 @@
-[
-  {
-    "provider_id": 1,
-    "model_id": 2,
+{
+  "evaluation": {
     "unit": "requests",
     "duration": "minute",
     "limit": 100
   },
-  {
-    "provider_id": 3,
-    "model_id": 4,
+  "training": {
     "unit": "tokens",
     "duration": "hour",
     "limit": 5000
+  },
+  "production": {
+    "unit": "requests",
+    "duration": "day",
+    "limit": 10000
   }
-]
+}

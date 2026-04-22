@@ -33,6 +33,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestMethodOrder
 import picocli.CommandLine
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.PrintStream
 import kotlin.concurrent.thread
 
@@ -146,6 +147,24 @@ class DivyamCliTest {
         } catch (_: Exception) {
             null
         }
+    }
+
+    /**
+     * Resolves the sample rate-limit policy JSON; Gradle's test CWD is usually the
+     * [divyam-cli] subproject, but can be the repo root in some invocations.
+     */
+    private fun sampleModelRateLimitPolicyPath(): String {
+        val candidates = listOf(
+            File("src/test/data/sample_model_rate_limit_policy.json"),
+            File("cli/src/test/data/sample_model_rate_limit_policy.json"),
+        )
+        val file = candidates.firstOrNull { it.isFile }
+            ?: error(
+                "sample_model_rate_limit_policy.json not found; tried " +
+                    candidates.joinToString { it.absolutePath } +
+                    " (user.dir=" + System.getProperty("user.dir") + ")"
+            )
+        return file.invariantSeparatorsPath
     }
 
     // ============================================
@@ -855,66 +874,71 @@ class DivyamCliTest {
 
     @Test
     @Order(26)
-    fun `sa create with rate limit policy file`() {
-        val policyPath = "src/test/data/sample_rate_limit_policy.json"
+    fun `model-info create with rate limit policy file`() {
+        val policyPath = sampleModelRateLimitPolicyPath()
         val exitCode = executeCommand(
-            SaCommand(),
+            ModelInfoCommand(),
             "create",
-            "--org-id", "1",
-            "--name", "SA With Rate Limit Policy",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
+            "--provider-name", "openai",
+            "--model-names", "gpt-4.1-mini",
+            "--provider-base-url", "https://api.openai.com/v1",
+            "--provider-api-key", "test-key",
+            "--service-account-id", testServiceAccountId,
             "--rate-limit-policy-file", policyPath
         )
 
         assertEquals(0, exitCode)
         val json = parseJson()
         assertNotNull(json)
-        assertTrue(json!!.has("id"))
-        assertEquals("SA With Rate Limit Policy", json.get("name").asText())
-        assertTrue(json.has("rate_limit_policy"))
-        val policies = json.get("rate_limit_policy")
-        assertTrue(policies.isArray)
-        assertEquals(2, policies.size())
-        assertEquals(1, policies.get(0).get("provider_id").asInt())
-        assertEquals(2, policies.get(0).get("model_id").asInt())
-        assertEquals("requests", policies.get(0).get("unit").asText())
-        assertEquals("minute", policies.get(0).get("duration").asText())
-        assertEquals(100, policies.get(0).get("limit").asInt())
-        assertEquals(3, policies.get(1).get("provider_id").asInt())
-        assertEquals("tokens", policies.get(1).get("unit").asText())
+        assertTrue(json!!.isArray)
+        val first = json.first()
+        assertTrue(first.has("rate_limit_policy"))
+        val rlp = first.get("rate_limit_policy")
+        assertTrue(rlp.has("evaluation"))
+        assertTrue(rlp.has("training"))
+        assertTrue(rlp.has("production"))
+        assertEquals(100, rlp.get("evaluation").get("limit").asInt())
+        assertEquals(5000, rlp.get("training").get("limit").asInt())
+        assertEquals(10000, rlp.get("production").get("limit").asInt())
     }
 
     @Test
     @Order(27)
-    fun `sa update with rate limit policy file`() {
+    fun `model-info update with rate limit policy file`() {
         executeCommand(
-            SaCommand(),
+            ModelInfoCommand(),
             "create",
-            "--org-id", "1",
-            "--name", "SA To Update With Rate Limit",
-            "--endpoint", baseUrl,
-            "--user", "admin@dashboard.divyam.ai",
-            "--password", testPassword,
-            "--format", "json"
-        )
-
-        val createJson = parseJson()
-        val saId = createJson!!.get("id").asText()
-
-        outContent.reset()
-
-        val policyPath = "src/test/data/sample_rate_limit_policy.json"
-        val exitCode = executeCommand(
-            SaCommand(),
-            "update",
-            "--id", saId,
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
+            "--provider-name", "openai",
+            "--model-names", "gpt-4.1-mini",
+            "--provider-base-url", "https://api.openai.com/v1",
+            "--provider-api-key", "test-key",
+            "--service-account-id", testServiceAccountId
+        )
+        val createArr = parseJson()
+        val modelInfoId = createArr!!.first().get("id").asInt()
+        outContent.reset()
+
+        val policyPath = sampleModelRateLimitPolicyPath()
+        val exitCode = executeCommand(
+            ModelInfoCommand(),
+            "update",
+            "--id", modelInfoId.toString(),
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
             "--rate-limit-policy-file", policyPath
         )
 
@@ -922,73 +946,79 @@ class DivyamCliTest {
         val json = parseJson()
         assertNotNull(json)
         assertTrue(json!!.has("rate_limit_policy"))
-        val policies = json.get("rate_limit_policy")
-        assertTrue(policies.isArray)
-        assertEquals(2, policies.size())
-        assertEquals(100, policies.get(0).get("limit").asInt())
+        val rlp = json.get("rate_limit_policy")
+        assertEquals(100, rlp.get("evaluation").get("limit").asInt())
     }
 
     @Test
     @Order(28)
-    fun `sa create with rate limit policy inline json`() {
+    fun `model-info create with rate limit policy inline json`() {
         val inline =
-            "[{\"provider_id\":10,\"model_id\":20,\"unit\":\"requests\",\"duration\":\"day\",\"limit\":999}]"
+            "{\"evaluation\":{\"unit\":\"requests\",\"duration\":\"minute\",\"limit\":50}," +
+                "\"training\":{\"unit\":\"tokens\",\"duration\":\"hour\",\"limit\":200}," +
+                "\"production\":{\"unit\":\"requests\",\"duration\":\"day\",\"limit\":300}}"
         val exitCode = executeCommand(
-            SaCommand(),
+            ModelInfoCommand(),
             "create",
-            "--org-id", "1",
-            "--name", "SA With Inline Rate Limit",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
+            "--provider-name", "openai",
+            "--model-names", "gpt-4.1-mini",
+            "--provider-base-url", "https://api.openai.com/v1",
+            "--provider-api-key", "test-key",
+            "--service-account-id", testServiceAccountId,
             "--rate-limit-policy", inline
         )
 
         assertEquals(0, exitCode)
         val json = parseJson()
         assertNotNull(json)
-        assertTrue(json!!.has("id"))
-        assertEquals("SA With Inline Rate Limit", json.get("name").asText())
-        assertTrue(json.has("rate_limit_policy"))
-        val policies = json.get("rate_limit_policy")
-        assertTrue(policies.isArray)
-        assertEquals(1, policies.size())
-        assertEquals(10, policies.get(0).get("provider_id").asInt())
-        assertEquals(20, policies.get(0).get("model_id").asInt())
-        assertEquals("requests", policies.get(0).get("unit").asText())
-        assertEquals("day", policies.get(0).get("duration").asText())
-        assertEquals(999, policies.get(0).get("limit").asInt())
+        assertTrue(json!!.isArray)
+        val first = json.first()
+        assertTrue(first.has("rate_limit_policy"))
+        val rlp = first.get("rate_limit_policy")
+        assertEquals(50, rlp.get("evaluation").get("limit").asInt())
+        assertEquals(300, rlp.get("production").get("limit").asInt())
     }
 
     @Test
     @Order(29)
-    fun `sa update with rate limit policy inline json`() {
+    fun `model-info update with rate limit policy inline json`() {
         executeCommand(
-            SaCommand(),
+            ModelInfoCommand(),
             "create",
-            "--org-id", "1",
-            "--name", "SA To Update With Inline Rate Limit",
-            "--endpoint", baseUrl,
-            "--user", "admin@dashboard.divyam.ai",
-            "--password", testPassword,
-            "--format", "json"
-        )
-
-        val createJson = parseJson()
-        val saId = createJson!!.get("id").asText()
-        outContent.reset()
-
-        val inline =
-            "[{\"provider_id\":7,\"model_id\":8,\"unit\":\"tokens\",\"duration\":\"hour\",\"limit\":42}]"
-        val exitCode = executeCommand(
-            SaCommand(),
-            "update",
-            "--id", saId,
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
+            "--provider-name", "openai",
+            "--model-names", "gpt-4.1-mini",
+            "--provider-base-url", "https://api.openai.com/v1",
+            "--provider-api-key", "test-key",
+            "--service-account-id", testServiceAccountId
+        )
+        val createArr = parseJson()
+        val modelInfoId = createArr!!.first().get("id").asInt()
+        outContent.reset()
+
+        val inline =
+            "{\"evaluation\":{\"unit\":\"tokens\",\"duration\":\"minute\",\"limit\":11}," +
+                "\"training\":{\"unit\":\"requests\",\"duration\":\"hour\",\"limit\":22}," +
+                "\"production\":{\"unit\":\"tokens\",\"duration\":\"day\",\"limit\":33}}"
+        val exitCode = executeCommand(
+            ModelInfoCommand(),
+            "update",
+            "--id", modelInfoId.toString(),
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
             "--rate-limit-policy", inline
         )
 
@@ -996,28 +1026,31 @@ class DivyamCliTest {
         val json = parseJson()
         assertNotNull(json)
         assertTrue(json!!.has("rate_limit_policy"))
-        val policies = json.get("rate_limit_policy")
-        assertTrue(policies.isArray)
-        assertEquals(1, policies.size())
-        assertEquals(7, policies.get(0).get("provider_id").asInt())
-        assertEquals(42, policies.get(0).get("limit").asInt())
+        assertEquals(11, json.get("rate_limit_policy").get("evaluation").get("limit").asInt())
     }
 
     @Test
     @Order(30)
-    fun `sa create fails when mixing rate limit policy file and inline`() {
-        val policyPath = "src/test/data/sample_rate_limit_policy.json"
+    fun `model-info create fails when mixing rate limit policy file and inline`() {
+        val policyPath = sampleModelRateLimitPolicyPath()
         val exitCode = executeCommand(
-            SaCommand(),
+            ModelInfoCommand(),
             "create",
-            "--org-id", "1",
-            "--name", "SA Mixed Rate Limit",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--format", "json",
+            "--org-id", "1",
+            "--provider-name", "openai",
+            "--model-names", "gpt-4.1-mini",
+            "--provider-base-url", "https://api.openai.com/v1",
+            "--provider-api-key", "test-key",
+            "--service-account-id", testServiceAccountId,
             "--rate-limit-policy-file", policyPath,
-            "--rate-limit-policy", "[{\"provider_id\":1,\"model_id\":1,\"unit\":\"requests\",\"duration\":\"minute\",\"limit\":1}]"
+            "--rate-limit-policy",
+            "{\"evaluation\":{\"unit\":\"requests\",\"duration\":\"minute\",\"limit\":1}," +
+                "\"training\":{\"unit\":\"requests\",\"duration\":\"minute\",\"limit\":1}," +
+                "\"production\":{\"unit\":\"requests\",\"duration\":\"minute\",\"limit\":1}}"
         )
 
         assertFalse(exitCode == 0) { "Expected non-zero exit when mixing rate limit file and inline" }
