@@ -11,7 +11,9 @@ installation, user and developer docs.
 ## OpenSpec
 
 - Project context: `openspec/project.md`
-- Agent guidance: `openspec/AGENTS.md`
+- Capability/module specs: `openspec/specs/`
+- Cursor commands: `.cursor/commands/opsx-*.md`
+- Claude commands: `.claude/commands/opsx/*.md`
 
 ---
 
