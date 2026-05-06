@@ -10,7 +10,7 @@ installation, user and developer docs.
 
 ## OpenSpec
 
-- Project context: `openspec/project.md`
+- Project context: `openspec/config.yaml` (`context:`)
 - Capability/module specs: `openspec/specs/`
 - Cursor commands: `.cursor/commands/opsx-*.md`
 - Claude commands: `.claude/commands/opsx/*.md`
