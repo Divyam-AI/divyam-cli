@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Divyam",
-    "version": "0.1.105"
+    "version": "0.1.194"
   },
   "paths": {
     "/v1/orgs/": {
@@ -1537,7 +1537,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "default": true,
+              "default": false,
               "title": "Mock Model"
             }
           }
@@ -1599,7 +1599,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "default": true,
+              "default": false,
               "title": "Mock Model"
             }
           }
@@ -1661,7 +1661,7 @@
             "required": false,
             "schema": {
               "type": "boolean",
-              "default": true,
+              "default": false,
               "title": "Mock Model"
             }
           }
@@ -1715,11 +1715,12 @@
         "type": "string",
         "enum": [
           "file",
+          "router_logs_fs",
           "router_logs"
         ],
         "title": "DatasetSource"
       },
-      "DecryptedModelProviderInfo": {
+      "DecryptedModelProviderInfo-Input": {
         "properties": {
           "id": {
             "type": "integer",
@@ -1777,6 +1778,102 @@
           "per_n_tokens": {
             "type": "integer",
             "title": "Per N Tokens"
+          },
+          "rate_limit_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateLimitPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "provider",
+          "model",
+          "api_key",
+          "endpoint",
+          "api_type",
+          "supported_modalities",
+          "model_configs",
+          "pricing",
+          "currency",
+          "per_n_tokens"
+        ],
+        "title": "DecryptedModelProviderInfo"
+      },
+      "DecryptedModelProviderInfo-Output": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "provider": {
+            "type": "string",
+            "title": "Provider"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "base_model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Model Name"
+          },
+          "api_key": {
+            "type": "string",
+            "title": "Api Key"
+          },
+          "endpoint": {
+            "type": "string",
+            "title": "Endpoint"
+          },
+          "api_type": {
+            "$ref": "#/components/schemas/ModelApiType"
+          },
+          "supported_modalities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supported Modalities"
+          },
+          "model_configs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Model Configs"
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/TextPricing"
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          },
+          "per_n_tokens": {
+            "type": "integer",
+            "title": "Per N Tokens"
+          },
+          "rate_limit_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateLimitPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -3709,7 +3806,7 @@
           },
           "model_provider_list": {
             "items": {
-              "$ref": "#/components/schemas/DecryptedModelProviderInfo"
+              "$ref": "#/components/schemas/DecryptedModelProviderInfo-Input"
             },
             "type": "array",
             "title": "Model Provider List",
@@ -3743,7 +3840,7 @@
           },
           "model_provider_list": {
             "items": {
-              "$ref": "#/components/schemas/DecryptedModelProviderInfo"
+              "$ref": "#/components/schemas/DecryptedModelProviderInfo-Output"
             },
             "type": "array",
             "title": "Model Provider List",
@@ -4097,8 +4194,6 @@
             "$ref": "#/components/schemas/TrainingParams",
             "default": {
               "run": true,
-              "epochs": 2000,
-              "device": "cpu",
               "model_params": {
 
               },
@@ -4136,8 +4231,6 @@
             "$ref": "#/components/schemas/TrainingParams",
             "default": {
               "run": true,
-              "epochs": 2000,
-              "device": "cpu",
               "model_params": {
 
               },
@@ -4389,16 +4482,6 @@
             "type": "boolean",
             "title": "Run",
             "default": true
-          },
-          "epochs": {
-            "type": "integer",
-            "title": "Epochs",
-            "default": 2000
-          },
-          "device": {
-            "type": "string",
-            "title": "Device",
-            "default": "cpu"
           },
           "model_params": {
             "additionalProperties": true,
