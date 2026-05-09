@@ -11,6 +11,7 @@ import ai.divyam.data.model.Eval
 import ai.divyam.data.model.EvalCreateRequest
 import ai.divyam.data.model.EvalUpdateRequest
 import ai.divyam.data.model.Message
+import ai.divyam.data.model.ModelApiType
 import ai.divyam.data.model.ModelProviderInfo
 import ai.divyam.data.model.ModelProviderInfoCreation
 import ai.divyam.data.model.ModelProviderInfoUpdation
@@ -304,7 +305,7 @@ fun Application.configureRouting(password: String) {
                         isOrgAdmin = request.isOrgAdmin,
                         isAdmin = request.isAdmin ?: false,
                         securityPolicy = request.securityPolicy,
-                        retryFallbackPolicy = request.retryFallbackPolicy
+                        retryFallbackPolicy = request.retryFallbackPolicy,
                     )
 
                     MockDataStore.serviceAccounts[sa.id] = sa
@@ -368,8 +369,10 @@ fun Application.configureRouting(password: String) {
                         currency = request.currency,
                         perNTokens = request.perNTokens,
                         isActive = true,
-                        isSelectionEnabled = true,
-                        baseModelName = request.baseModelName ?: request.nameModel
+                        isSelectionEnabled = request.isSelectionEnabled ?: true,
+                        baseModelName = request.baseModelName ?: request.nameModel,
+                        apiType = request.apiType ?: ModelApiType.COMPLETIONS,
+                        rateLimitPolicy = request.rateLimitPolicy,
                     )
 
                     MockDataStore.modelInfos[id] = modelInfo
@@ -448,7 +451,13 @@ fun Application.configureRouting(password: String) {
                         currency = updateRequest.currency
                             ?: existingInfo.currency,
                         perNTokens = updateRequest.perNTokens
-                            ?: existingInfo.perNTokens
+                            ?: existingInfo.perNTokens,
+                        isActive = updateRequest.isActive ?: existingInfo.isActive,
+                        isSelectionEnabled = updateRequest.isSelectionEnabled
+                            ?: existingInfo.isSelectionEnabled,
+                        apiType = updateRequest.apiType ?: existingInfo.apiType,
+                        rateLimitPolicy = updateRequest.rateLimitPolicy
+                            ?: existingInfo.rateLimitPolicy,
                     )
 
                     MockDataStore.modelInfos[modelInfoId] = updatedInfo
@@ -554,7 +563,7 @@ fun Application.configureRouting(password: String) {
                             securityPolicy = updateRequest.securityPolicy
                                 ?: existingAccount.securityPolicy,
                             retryFallbackPolicy = updateRequest.retryFallbackPolicy
-                                ?: existingAccount.retryFallbackPolicy
+                                ?: existingAccount.retryFallbackPolicy,
                         )
                         MockDataStore.serviceAccounts[serviceAccountId] =
                             updatedAccount

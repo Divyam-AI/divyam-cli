@@ -103,6 +103,25 @@ class ModelInfoCreateCommand : BaseCommand() {
     )
     var isSelectionEnabled: Boolean? = null
 
+    @Option(
+        names = ["--rate-limit-policy-file"],
+        description = [
+            "Optional: JSON file with rate_limit_policy (evaluation, training, production workload sections). " +
+                "Mutually exclusive with --rate-limit-policy"
+        ],
+    )
+    var rateLimitPolicyFile: File? = null
+
+    @Option(
+        names = ["--rate-limit-policy"],
+        description = [
+            "Optional: Inline JSON for rate_limit_policy with workload sections. Example: " +
+                "{\"evaluation\":{\"unit\":\"requests\",\"duration\":\"minute\",\"limit\":100}...}. " +
+                "Mutually exclusive with --rate-limit-policy-file"
+        ],
+    )
+    var rateLimitPolicyInline: String? = null
+
     override fun execute(): Int {
         // TODO: Is allowing same model info, provider info tuple to be
         //  re-added. is this expected?
@@ -114,6 +133,14 @@ class ModelInfoCreateCommand : BaseCommand() {
             val pricingStore = pricingStore(modelPricingYaml)
 
             val pricingErrorModelList = mutableListOf<Map<String, Any?>>()
+
+            val rateLimitPolicy = resolveModelRateLimitPolicy(
+                getJsonMapper(),
+                ModelRateLimitPolicyCliInput(
+                    rateLimitPolicyFile = rateLimitPolicyFile,
+                    rateLimitPolicyInline = rateLimitPolicyInline,
+                ),
+            )
 
             val mInfos = mutableListOf<ModelProviderInfo>()
             for (modelNameInput in modelNames) {
@@ -171,7 +198,8 @@ class ModelInfoCreateCommand : BaseCommand() {
                         perNTokens = modelPricing.perNTokens,
                         configsModel = modelConfigsJson,
                         supportedModalities = supportedModalities,
-                        isSelectionEnabled = isSelectionEnabled
+                        isSelectionEnabled = isSelectionEnabled,
+                        rateLimitPolicy = rateLimitPolicy,
                     )
                 )
 

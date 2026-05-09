@@ -9,7 +9,6 @@ import ai.divyam.cli.base.HasSecurityPolicy
 import ai.divyam.data.model.IpVerificationStrategy
 import ai.divyam.data.model.ModelAPIAuthMode
 import ai.divyam.data.model.OptimizationGoal
-import ai.divyam.data.model.RetryFallbackPolicy
 import ai.divyam.data.model.ServiceAccountCreateRequest
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
@@ -177,7 +176,24 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
                 Map::class.java
             ) as Map<String, Double>
         }
-        val retryFallbackPolicy = resolveRetryFallbackPolicy()
+        val retryFallbackPolicy = resolveRetryFallbackPolicy(
+            getJsonMapper(),
+            RetryFallbackPolicyCliInput(
+                retryFallbackPolicyFile = retryFallbackPolicyFile,
+                retryFallbackPolicyInline = retryFallbackPolicyInline,
+                retryDelayS = retryDelayS,
+                retryDelayMultiplier = retryDelayMultiplier,
+                maxRetries = maxRetries,
+                maxRequestLatencyS = maxRequestLatencyS,
+                maxFallbackHops = maxFallbackHops,
+                circuitBreakerRequestThreshold = circuitBreakerRequestThreshold,
+                circuitBreakerFailureThresholdPct = circuitBreakerFailureThresholdPct,
+                circuitBreakerDurationS = circuitBreakerDurationS,
+                circuitBreakerSlidingWindowTimeS = circuitBreakerSlidingWindowTimeS,
+                circuitBreakerSlidingWindowResolutionS = circuitBreakerSlidingWindowResolutionS,
+            ),
+            baseRetryPolicy = null,
+        )
         val created = runBlocking {
             val resolvedOrgId = getOrgId(orgId)
             divyamClient.createServiceAccount(
@@ -194,57 +210,11 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
                     optimizationGoal = optimizationGoal
                         ?: OptimizationGoal.HIGH_QUALITY,
                     securityPolicy = createSecurityPolicy(),
-                    retryFallbackPolicy = retryFallbackPolicy
+                    retryFallbackPolicy = retryFallbackPolicy,
                 )
             )
         }
         printObjs(created)
         return 0
     }
-
-    /**
-     * Resolves retry/fallback policy from exactly one source: file, inline JSON, or individual arguments (mutually exclusive).
-     */
-    private fun resolveRetryFallbackPolicy(): RetryFallbackPolicy? {
-        val fromFile = retryFallbackPolicyFile != null
-        val fromInline = retryFallbackPolicyInline != null
-        val fromIndividual = hasAnyRetryFallbackIndividualArg()
-        when {
-            fromFile && (fromInline || fromIndividual) ->
-                throw IllegalArgumentException("Use only one of: --retry-fallback-policy-file, --retry-fallback-policy, or individual --retry-*/--circuit-breaker-* arguments")
-            fromInline && fromIndividual ->
-                throw IllegalArgumentException("Use only one of: --retry-fallback-policy-file, --retry-fallback-policy, or individual --retry-*/--circuit-breaker-* arguments")
-        }
-        retryFallbackPolicyFile?.let { file ->
-            if (file.exists()) {
-                return getJsonMapper().readValue(file, RetryFallbackPolicy::class.java)
-            }
-            throw IllegalArgumentException("Retry fallback policy file not found: ${file.absolutePath}")
-        }
-        retryFallbackPolicyInline?.let { json ->
-            return getJsonMapper().readValue(json, RetryFallbackPolicy::class.java)
-        }
-        if (fromIndividual) {
-            return RetryFallbackPolicy(
-                retryDelayS = retryDelayS,
-                retryDelayMultiplier = retryDelayMultiplier,
-                maxRetries = maxRetries,
-                maxRequestLatencyS = maxRequestLatencyS,
-                maxFallbackHops = maxFallbackHops,
-                circuitBreakerRequestThreshold = circuitBreakerRequestThreshold,
-                circuitBreakerFailureThresholdPct = circuitBreakerFailureThresholdPct,
-                circuitBreakerDurationS = circuitBreakerDurationS,
-                circuitBreakerSlidingWindowTimeS = circuitBreakerSlidingWindowTimeS,
-                circuitBreakerSlidingWindowResolutionS = circuitBreakerSlidingWindowResolutionS,
-            )
-        }
-        return null
-    }
-
-    private fun hasAnyRetryFallbackIndividualArg(): Boolean =
-        retryDelayS != null || retryDelayMultiplier != null || maxRetries != null ||
-            maxRequestLatencyS != null || maxFallbackHops != null ||
-            circuitBreakerRequestThreshold != null || circuitBreakerFailureThresholdPct != null ||
-            circuitBreakerDurationS != null || circuitBreakerSlidingWindowTimeS != null ||
-            circuitBreakerSlidingWindowResolutionS != null
 }
