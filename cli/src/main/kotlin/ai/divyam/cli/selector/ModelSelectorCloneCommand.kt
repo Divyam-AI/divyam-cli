@@ -176,8 +176,10 @@ class ModelSelectorCloneCommand : BaseCommand() {
             // Create the cloned selector with the same configuration
             val clonedName = name ?: "${sourceSelector.name}_clone"
             val createRequest = ModelSelectorCreateRequest(
-                orgId = sourceSelector.orgId,
-                serviceAccountId = sourceSelector.serviceAccountId,
+                orgId = sourceSelector.orgId ?: getOrgId(orgId),
+                serviceAccountId = requireNotNull(sourceSelector.serviceAccountId) {
+                    "Source selector has no service account id"
+                },
                 name = clonedName,
                 config = configInput,
                 endpoint = sourceSelector.endpoint
