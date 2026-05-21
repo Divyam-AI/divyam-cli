@@ -120,16 +120,73 @@ divyam model-info create \
   --model-configs-json '{"project_id":"customer-vertex-project","location":"us-central1","target_principal":"divyam-vertex-runner@customer-vertex-project.iam.gserviceaccount.com"}'
 ```
 
-Customer GCP:
+### Customer GCP setup (impersonation)
 
-1. Create target SA; grant `roles/aiplatform.user` on the project.
-2. Grant Divyam’s source identity `roles/iam.serviceAccountTokenCreator` on the target SA.
+Set these in your shell (replace values for your environment):
 
 ```bash
-gcloud iam service-accounts add-iam-policy-binding \
-  "divyam-vertex-runner@customer-vertex-project.iam.gserviceaccount.com" \
-  --member="serviceAccount:divyam-router@divyam-prod.iam.gserviceaccount.com" \
+export VERTEX_PROJECT_ID="customer-vertex-project"          # GCP project with Vertex AI enabled
+export VERTEX_SA_NAME="divyam-vertex-runner"                # New SA account ID (no @domain)
+export DIVYAM_RUNTIME_SA="router-controller-prod-sa@divyam-production.iam.gserviceaccount.com"  # Divyam hosted SA (from your onboarding contact)
+export VERTEX_LOCATION="us-central1"
+
+export VERTEX_SA_EMAIL="${VERTEX_SA_NAME}@${VERTEX_PROJECT_ID}.iam.gserviceaccount.com"
+```
+
+**Step 1 — Select project and enable APIs**
+
+```bash
+gcloud config set project "$VERTEX_PROJECT_ID"
+
+gcloud services enable aiplatform.googleapis.com iam.googleapis.com
+```
+
+**Step 2 — Create the Vertex service account**
+
+Skip if the account already exists.
+
+```bash
+gcloud iam service-accounts create "$VERTEX_SA_NAME" \
+  --project="$VERTEX_PROJECT_ID" \
+  --display-name="Divyam Vertex runner"
+```
+
+**Step 3 — Grant Vertex AI access to the service account**
+
+```bash
+gcloud projects add-iam-policy-binding "$VERTEX_PROJECT_ID" \
+  --member="serviceAccount:${VERTEX_SA_EMAIL}" \
+  --role="roles/aiplatform.user"
+```
+
+**Step 4 — Allow Divyam to impersonate the service account**
+
+Grants Divyam’s runtime service account permission to obtain tokens for your Vertex SA (`target_principal` in `model-info create`).
+
+```bash
+gcloud iam service-accounts add-iam-policy-binding "$VERTEX_SA_EMAIL" \
+  --project="$VERTEX_PROJECT_ID" \
+  --member="serviceAccount:${DIVYAM_RUNTIME_SA}" \
   --role="roles/iam.serviceAccountTokenCreator"
+```
+
+**Step 5 — Register the model in Divyam**
+
+Use the same project, location, and SA email as above:
+
+```bash
+divyam model-info create \
+  --org-id 1 \
+  --service-account-id "<sa-id>" \
+  --provider-name google \
+  --model-names gemini-2.0-flash \
+  --api-type GEMINI \
+  --provider-base-url "" \
+  --model-configs-json "{
+    \"project_id\": \"${VERTEX_PROJECT_ID}\",
+    \"location\": \"${VERTEX_LOCATION}\",
+    \"target_principal\": \"${VERTEX_SA_EMAIL}\"
+  }"
 ```
 
 ---
