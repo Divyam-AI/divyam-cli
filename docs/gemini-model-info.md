@@ -94,44 +94,31 @@ Customer GCP: grant Divyam’s runtime service account `roles/aiplatform.user` o
 
 ## 4) Vertex AI with impersonation (customer service principal / WIF)
 
-Divyam’s ADC (or optional source SA key) impersonates the customer’s Vertex service account.
+Divyam’s ADC (or optional source SA key) impersonates the customer’s Vertex service account. Complete the GCP steps below, then register the model with `divyam model-info create`.
 
-```bash
-divyam model-info create \
-  --org-id 1 \
-  --service-account-id "<sa-id>" \
-  --provider-name google \
-  --model-names gemini-2.0-flash \
-  --api-type GEMINI \
-  --provider-base-url "" \
-  --model-configs-json '{
-    "project_id": "customer-vertex-project",
-    "location": "us-central1",
-    "target_principal": "divyam-vertex-runner@customer-vertex-project.iam.gserviceaccount.com"
-  }'
-```
-
-Optional source SA JSON instead of ADC:
-
-```bash
-divyam model-info create \
-  ... \
-  --provider-api-key-file /path/to/source-sa.json \
-  --model-configs-json '{"project_id":"customer-vertex-project","location":"us-central1","target_principal":"divyam-vertex-runner@customer-vertex-project.iam.gserviceaccount.com"}'
-```
-
-### Customer GCP setup (impersonation)
+### Environment variables
 
 Set these in your shell (replace values for your environment):
 
 ```bash
 export VERTEX_PROJECT_ID="customer-vertex-project"          # GCP project with Vertex AI enabled
-export VERTEX_SA_NAME="divyam-vertex-runner"                # New SA account ID (no @domain)
+export VERTEX_SA_NAME="divyam-vertex-runner"                # SA account ID (no @domain)
 export DIVYAM_RUNTIME_SA="router-controller-prod-sa@divyam-production.iam.gserviceaccount.com"  # Divyam hosted SA (from your onboarding contact)
 export VERTEX_LOCATION="us-central1"
 
 export VERTEX_SA_EMAIL="${VERTEX_SA_NAME}@${VERTEX_PROJECT_ID}.iam.gserviceaccount.com"
+
+export MODEL_CONFIGS_JSON=$(cat <<EOF
+{
+  "project_id": "${VERTEX_PROJECT_ID}",
+  "location": "${VERTEX_LOCATION}",
+  "target_principal": "${VERTEX_SA_EMAIL}"
+}
+EOF
+)
 ```
+
+### Customer GCP setup
 
 **Step 1 — Select project and enable APIs**
 
@@ -161,7 +148,7 @@ gcloud projects add-iam-policy-binding "$VERTEX_PROJECT_ID" \
 
 **Step 4 — Allow Divyam to impersonate the service account**
 
-Grants Divyam’s runtime service account permission to obtain tokens for your Vertex SA (`target_principal` in `model-info create`).
+Grants Divyam’s runtime service account permission to obtain tokens for your Vertex SA (`target_principal` in `MODEL_CONFIGS_JSON`).
 
 ```bash
 gcloud iam service-accounts add-iam-policy-binding "$VERTEX_SA_EMAIL" \
@@ -170,9 +157,9 @@ gcloud iam service-accounts add-iam-policy-binding "$VERTEX_SA_EMAIL" \
   --role="roles/iam.serviceAccountTokenCreator"
 ```
 
-**Step 5 — Register the model in Divyam**
+### Register the model in Divyam
 
-Use the same project, location, and SA email as above:
+**With Divyam ADC (omit API key):**
 
 ```bash
 divyam model-info create \
@@ -182,11 +169,23 @@ divyam model-info create \
   --model-names gemini-2.0-flash \
   --api-type GEMINI \
   --provider-base-url "" \
-  --model-configs-json "{
-    \"project_id\": \"${VERTEX_PROJECT_ID}\",
-    \"location\": \"${VERTEX_LOCATION}\",
-    \"target_principal\": \"${VERTEX_SA_EMAIL}\"
-  }"
+  --model-configs-json "$MODEL_CONFIGS_JSON"
+```
+
+**Optional — source SA JSON instead of Divyam ADC:**
+
+```bash
+export SOURCE_SA_KEY_FILE="/path/to/source-sa.json"
+
+divyam model-info create \
+  --org-id 1 \
+  --service-account-id "<sa-id>" \
+  --provider-name google \
+  --model-names gemini-2.0-flash \
+  --api-type GEMINI \
+  --provider-api-key-file "$SOURCE_SA_KEY_FILE" \
+  --provider-base-url "" \
+  --model-configs-json "$MODEL_CONFIGS_JSON"
 ```
 
 ---
