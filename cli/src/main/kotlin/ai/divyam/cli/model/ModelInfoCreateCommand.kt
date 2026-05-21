@@ -41,15 +41,32 @@ class ModelInfoCreateCommand : BaseCommand() {
 
     @Option(
         names = ["--provider-api-key"],
-        description = ["Required: Provider API Key to make the calls while proxying requests"],
+        description = [
+            "Provider credential: OpenAI/Azure API key; Gemini AI Studio key (AIza...); " +
+                "or Vertex service-account JSON string. Omit for Vertex ADC/impersonation " +
+                "(see docs/gemini-model-info.md). Mutually exclusive with --provider-api-key-file."
+        ],
         interactive = true,
         arity = "0..1"
     )
     private var providerApiKey: String? = null
 
     @Option(
+        names = ["--provider-api-key-file"],
+        description = [
+            "Path to a file whose contents are sent as api_key_model (e.g. Vertex SA JSON). " +
+                "Mutually exclusive with --provider-api-key."
+        ]
+    )
+    private var providerApiKeyFile: File? = null
+
+    @Option(
         names = ["--provider-base-url"],
-        description = ["Required: Base URL to use for provider"],
+        description = [
+            "Base URL for provider. OpenAI: https://api.openai.com/v1. " +
+                "Gemini OpenAI-compat: https://generativelanguage.googleapis.com/v1beta/openai. " +
+                "Vertex native GEMINI: use empty string. See docs/gemini-model-info.md."
+        ],
         required = true
     )
     private lateinit var providerBaseUrl: String
@@ -75,8 +92,10 @@ class ModelInfoCreateCommand : BaseCommand() {
     // TODO: Apply to all models in list? Also name sounds strange.
     @Option(
         names = ["--model-configs-json"],
-        description = ["Optional JSON " +
-                "string of model configs"]
+        description = [
+            "JSON string of model configs. For Google Vertex: project_id, location, " +
+                "optional target_principal (impersonation). See docs/gemini-model-info.md."
+        ]
     )
     private var modelConfigsJson: String = "{}"
 
@@ -103,11 +122,41 @@ class ModelInfoCreateCommand : BaseCommand() {
     )
     var isSelectionEnabled: Boolean? = null
 
+    private fun resolveProviderApiKey(): String {
+        if (providerApiKeyFile != null && providerApiKey != null) {
+            throw Exception("Use only one of --provider-api-key or --provider-api-key-file")
+        }
+        providerApiKeyFile?.let { file ->
+            if (!file.isFile) {
+                throw Exception("Provider API key file does not exist: ${file.absolutePath}")
+            }
+            return file.readText(Charsets.UTF_8).trim()
+        }
+        return providerApiKey?.trim() ?: ""
+    }
+
+    private fun isGoogleVertexConfig(configsJson: String): Boolean {
+        if (providerName != "google") {
+            return false
+        }
+        return try {
+            val node = getJsonMapper().readTree(configsJson)
+            node.has("project_id") || node.has("location") || node.has("target_principal")
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     override fun execute(): Int {
         // TODO: Is allowing same model info, provider info tuple to be
         //  re-added. is this expected?
-        if (providerApiKey == null) {
-            throw Exception("Provider API Key is required")
+        val resolvedApiKey = resolveProviderApiKey()
+        if (resolvedApiKey.isEmpty() && !isGoogleVertexConfig(modelConfigsJson)) {
+            throw Exception(
+                "Provider API key is required unless provider is google with Vertex " +
+                    "settings in --model-configs-json (project_id/location). " +
+                    "See docs/gemini-model-info.md."
+            )
         }
 
         val mInfos = runBlocking {
@@ -160,7 +209,7 @@ class ModelInfoCreateCommand : BaseCommand() {
                         nameProvider = providerName,
                         endpoint = providerBaseUrl,
                         apiType = apiType,
-                        apiKeyModel = providerApiKey!!,
+                        apiKeyModel = resolvedApiKey,
                         nameModel = modelName,
                         baseModelName = baseModelName,
                         textPricing = TextPricing(
