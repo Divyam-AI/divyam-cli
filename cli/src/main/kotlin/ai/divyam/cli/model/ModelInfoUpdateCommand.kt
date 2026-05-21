@@ -66,8 +66,8 @@ class ModelInfoUpdateCommand : BaseCommand() {
 
     @Option(
         names = ["--provider-api-key"],
-        description = ["Optional: Provider API Key to make the calls while " +
-                "proxying requests"],
+        description = ["Optional: Provider credential (API key or Vertex SA JSON). " +
+                "See docs/gemini-model-info.md for Google/Gemini."],
         interactive = true,
         arity = "0..1"
     )
@@ -105,8 +105,8 @@ class ModelInfoUpdateCommand : BaseCommand() {
     // TODO: Apply to all models in list? Also name sounds strange.
     @Option(
         names = ["--model-configs-json"],
-        description = ["Optional: JSON " +
-                "string of model configs"]
+        description = ["Optional: JSON string of model configs (e.g. Vertex project_id, " +
+                "location, target_principal). See docs/gemini-model-info.md."]
     )
     private var modelConfigsJson: String? = null
 
