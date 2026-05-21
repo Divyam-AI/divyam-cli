@@ -44,21 +44,12 @@ class ModelInfoCreateCommand : BaseCommand() {
         description = [
             "Provider credential: OpenAI/Azure API key; Gemini AI Studio key (AIza...); " +
                 "or Vertex service-account JSON string. Omit for Vertex ADC/impersonation " +
-                "(see docs/gemini-model-info.md). Mutually exclusive with --provider-api-key-file."
+                "(see docs/gemini-model-info.md)."
         ],
         interactive = true,
         arity = "0..1"
     )
     private var providerApiKey: String? = null
-
-    @Option(
-        names = ["--provider-api-key-file"],
-        description = [
-            "Path to a file whose contents are sent as api_key_model (e.g. Vertex SA JSON). " +
-                "Mutually exclusive with --provider-api-key."
-        ]
-    )
-    private var providerApiKeyFile: File? = null
 
     @Option(
         names = ["--provider-base-url"],
@@ -122,19 +113,6 @@ class ModelInfoCreateCommand : BaseCommand() {
     )
     var isSelectionEnabled: Boolean? = null
 
-    private fun resolveProviderApiKey(): String {
-        if (providerApiKeyFile != null && providerApiKey != null) {
-            throw Exception("Use only one of --provider-api-key or --provider-api-key-file")
-        }
-        providerApiKeyFile?.let { file ->
-            if (!file.isFile) {
-                throw Exception("Provider API key file does not exist: ${file.absolutePath}")
-            }
-            return file.readText(Charsets.UTF_8).trim()
-        }
-        return providerApiKey?.trim() ?: ""
-    }
-
     private fun isGoogleVertexConfig(configsJson: String): Boolean {
         if (providerName != "google") {
             return false
@@ -150,7 +128,7 @@ class ModelInfoCreateCommand : BaseCommand() {
     override fun execute(): Int {
         // TODO: Is allowing same model info, provider info tuple to be
         //  re-added. is this expected?
-        val resolvedApiKey = resolveProviderApiKey()
+        val resolvedApiKey = providerApiKey?.trim() ?: ""
         if (resolvedApiKey.isEmpty() && !isGoogleVertexConfig(modelConfigsJson)) {
             throw Exception(
                 "Provider API key is required unless provider is google with Vertex " +

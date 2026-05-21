@@ -11,8 +11,7 @@ Common flags:
 | `--provider-name google` | `name_provider` |
 | `--model-names` | `name_model` (comma-separated) |
 | `--api-type` | `GEMINI` or `COMPLETIONS` |
-| `--provider-api-key` | `api_key_model` (API key or SA JSON; omit for Vertex ADC) |
-| `--provider-api-key-file` | Read `api_key_model` from a file (e.g. SA JSON) |
+| `--provider-api-key` | `api_key_model` (API key or SA JSON string; omit for Vertex ADC) |
 | `--provider-base-url` | `endpoint` |
 | `--model-configs-json` | `configs_model` (JSON string) |
 
@@ -56,7 +55,8 @@ No GCP setup required; create a key at [Google AI Studio](https://aistudio.googl
 
 ```bash
 # One-time GCP (customer project): enable Vertex, create SA, grant roles/aiplatform.user, download key.
-# See router docs for full gcloud commands.
+
+export VERTEX_SA_KEY_JSON=$(cat /path/to/vertex-key.json)
 
 divyam model-info create \
   --org-id 1 \
@@ -64,12 +64,12 @@ divyam model-info create \
   --provider-name google \
   --model-names gemini-2.0-flash \
   --api-type GEMINI \
-  --provider-api-key-file /path/to/vertex-key.json \
+  --provider-api-key "$VERTEX_SA_KEY_JSON" \
   --provider-base-url "" \
   --model-configs-json '{"project_id":"my-vertex-project","location":"us-central1"}'
 ```
 
-`--provider-api-key-file` sends the file contents as `api_key_model`. You can pass the JSON inline with `--provider-api-key` instead (single line).
+Pass the service account JSON as the `--provider-api-key` value (file contents or a single-line JSON string).
 
 ---
 
@@ -94,7 +94,7 @@ Customer GCP: grant Divyam’s runtime service account `roles/aiplatform.user` o
 
 ## 4) Vertex AI with impersonation (customer service principal / WIF)
 
-Divyam’s ADC (or optional source SA key) impersonates the customer’s Vertex service account. Complete the GCP steps below, then register the model with `divyam model-info create`.
+Divyam’s ADC impersonates the customer’s Vertex service account. Complete the GCP steps below, then register the model with `divyam model-info create`.
 
 ### Environment variables
 
@@ -159,7 +159,7 @@ gcloud iam service-accounts add-iam-policy-binding "$VERTEX_SA_EMAIL" \
 
 ### Register the model in Divyam
 
-**With Divyam ADC (omit API key):**
+Omit `--provider-api-key` so Divyam uses ADC to impersonate `target_principal`:
 
 ```bash
 divyam model-info create \
@@ -168,22 +168,6 @@ divyam model-info create \
   --provider-name google \
   --model-names gemini-2.0-flash \
   --api-type GEMINI \
-  --provider-base-url "" \
-  --model-configs-json "$MODEL_CONFIGS_JSON"
-```
-
-**Optional — source SA JSON instead of Divyam ADC:**
-
-```bash
-export SOURCE_SA_KEY_FILE="/path/to/source-sa.json"
-
-divyam model-info create \
-  --org-id 1 \
-  --service-account-id "<sa-id>" \
-  --provider-name google \
-  --model-names gemini-2.0-flash \
-  --api-type GEMINI \
-  --provider-api-key-file "$SOURCE_SA_KEY_FILE" \
   --provider-base-url "" \
   --model-configs-json "$MODEL_CONFIGS_JSON"
 ```
