@@ -71,9 +71,8 @@ class ModelSelectorCloneCommand : BaseCommand() {
     private var endDate: String? = null
 
     @Option(
-        names = ["--candidate-model-ids"],
-        description = ["Optional: Candidate model ids for selector training and evaluation stages, " +
-                "as a comma-separated list of integers."],
+        names = ["--candidate-models", "--candidates", "-m"],
+        description = ["Optional: Candidate models to use for the cloned selector as a comma separated list of provider:model pairs"],
         required = false
     )
     private var candidateModels: String? = null
@@ -108,8 +107,7 @@ class ModelSelectorCloneCommand : BaseCommand() {
     private var calibrationDatasetName: String? = null
 
     private fun requiresSourceConfigOverrides(): Boolean =
-        candidateModels != null ||
-            datasetName != null ||
+        datasetName != null ||
             trainDatasetName != null ||
             evalDatasetName != null ||
             calibrationDatasetName != null
@@ -175,8 +173,8 @@ class ModelSelectorCloneCommand : BaseCommand() {
     /**
      * Applies optional clone-time overrides onto the selector training config JSON.
      *
-     * Only the flags that were explicitly passed (non-null properties) are applied; if none of the
-     * override flags are set, the original JSON is returned unchanged.
+     * Only dataset override flags that were explicitly passed (non-null properties) are applied;
+     * if none are set, the original JSON is returned unchanged.
      *
      * @param configJson The original config JSON string
      * @param jsonMapper The Jackson ObjectMapper to use for JSON manipulation
@@ -189,12 +187,6 @@ class ModelSelectorCloneCommand : BaseCommand() {
 
         // Parse JSON into a mutable tree so we can surgically update nested fields.
         val configNode = jsonMapper.readTree(configJson) as ObjectNode
-
-        // If requested, update candidate model ids in both training and evaluation stages.
-        candidateModels?.let { candidateModelsString ->
-            val candidateModelIds = SelectorCommandUtils.parseCandidateModelIds(candidateModelsString)!!
-            SelectorCommandUtils.patchCandidateModelIds(configNode, jsonMapper, candidateModelIds)
-        }
 
         // If requested, update dataset names in the `datasets` section.
         datasetName?.let {
@@ -242,7 +234,7 @@ class ModelSelectorCloneCommand : BaseCommand() {
             if (requiresSourceConfigOverrides() && sourceSelector.config == null) {
                 throw IllegalArgumentException(
                     "Source selector (ID: $fromSelectorId) has no configuration. " +
-                            "Config overrides (--candidate-model-ids, dataset name flags) " +
+                            "Config overrides (dataset name flags) " +
                             "require the source selector to have an existing config."
                 )
             }
@@ -278,7 +270,8 @@ class ModelSelectorCloneCommand : BaseCommand() {
                 },
                 name = clonedName,
                 config = configInput,
-                endpoint = sourceSelector.endpoint
+                endpoint = sourceSelector.endpoint,
+                candidateModels = SelectorCommandUtils.parseCandidateModels(candidateModels)
             )
             divyamClient.createModelSelector(
                 modelSelectorCreateRequest = createRequest
