@@ -6,7 +6,6 @@ package ai.divyam.cli.selector
 
 import ai.divyam.cli.base.BaseCommand
 import ai.divyam.data.model.ModelSelectorCreateRequest
-import ai.divyam.data.model.ModelSelectorState
 import ai.divyam.data.model.SelectorTrainingConfigurationInput
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -71,6 +70,50 @@ class ModelSelectorCloneCommand : BaseCommand() {
     )
     private var endDate: String? = null
 
+    @Option(
+        names = ["--candidate-model-ids"],
+        description = ["Optional: Candidate model ids for selector training and evaluation stages, " +
+                "as a comma-separated list of integers."],
+        required = false
+    )
+    private var candidateModels: String? = null
+
+    @Option(
+        names = ["--dataset-name"],
+        description = ["Optional: Sets datasets.train_ds.name. Applied after --recreate-dataset if both are set. " +
+                "Use --train-dataset-name, --eval-dataset-name, or --calibration-dataset-name to target a specific dataset."],
+        required = false
+    )
+    private var datasetName: String? = null
+
+    @Option(
+        names = ["--train-dataset-name"],
+        description = ["Optional: Sets datasets.train_ds.name explicitly."],
+        required = false
+    )
+    private var trainDatasetName: String? = null
+
+    @Option(
+        names = ["--eval-dataset-name"],
+        description = ["Optional: Sets datasets.eval_ds.name."],
+        required = false
+    )
+    private var evalDatasetName: String? = null
+
+    @Option(
+        names = ["--calibration-dataset-name"],
+        description = ["Optional: Sets datasets.calibration_ds.name."],
+        required = false
+    )
+    private var calibrationDatasetName: String? = null
+
+    private fun requiresSourceConfigOverrides(): Boolean =
+        candidateModels != null ||
+            datasetName != null ||
+            trainDatasetName != null ||
+            evalDatasetName != null ||
+            calibrationDatasetName != null
+
     /**
      * Updates the config JSON with a new train_ds section for dataset recreation.
      *
@@ -105,7 +148,8 @@ class ModelSelectorCloneCommand : BaseCommand() {
         // Generate unique dataset name using serviceAccountId, dates, and random hash
         val saIdPart = serviceAccountId ?: "no_sa"
         val randomHash = UUID.randomUUID().toString().take(8)
-        val datasetName = "train_${saIdPart}_${resolvedStartDate.toLocalDate().format(dateOnlyFormatter)}_${resolvedEndDate.toLocalDate().format(dateOnlyFormatter)}_$randomHash"
+        val generatedTrainDatasetName =
+            "train_${saIdPart}_${resolvedStartDate.toLocalDate().format(dateOnlyFormatter)}_${resolvedEndDate.toLocalDate().format(dateOnlyFormatter)}_$randomHash"
 
         // Create or get datasets node
         val datasetsNode = (configNode.get("datasets") as? ObjectNode)
@@ -113,7 +157,7 @@ class ModelSelectorCloneCommand : BaseCommand() {
 
         // Create new train_ds object
         val trainDsNode = jsonMapper.createObjectNode()
-        trainDsNode.put("name", datasetName)
+        trainDsNode.put("name", generatedTrainDatasetName)
         trainDsNode.put("source", "router_logs")
         trainDsNode.put("reuse_existing", true)
 
@@ -125,6 +169,48 @@ class ModelSelectorCloneCommand : BaseCommand() {
 
         // Set train_ds in datasets
         datasetsNode.set<ObjectNode>("train_ds", trainDsNode)
+        return jsonMapper.writeValueAsString(configNode)
+    }
+
+    /**
+     * Applies optional clone-time overrides onto the selector training config JSON.
+     *
+     * Only the flags that were explicitly passed (non-null properties) are applied; if none of the
+     * override flags are set, the original JSON is returned unchanged.
+     *
+     * @param configJson The original config JSON string
+     * @param jsonMapper The Jackson ObjectMapper to use for JSON manipulation
+     * @return Updated config JSON string with all requested overrides applied
+     */
+    private fun applyConfigOverrides(configJson: String, jsonMapper: ObjectMapper): String {
+        if (!requiresSourceConfigOverrides()) {
+            return configJson
+        }
+
+        // Parse JSON into a mutable tree so we can surgically update nested fields.
+        val configNode = jsonMapper.readTree(configJson) as ObjectNode
+
+        // If requested, update candidate model ids in both training and evaluation stages.
+        candidateModels?.let { candidateModelsString ->
+            val candidateModelIds = SelectorCommandUtils.parseCandidateModelIds(candidateModelsString)!!
+            SelectorCommandUtils.patchCandidateModelIds(configNode, jsonMapper, candidateModelIds)
+        }
+
+        // If requested, update dataset names in the `datasets` section.
+        datasetName?.let {
+            SelectorCommandUtils.patchDatasetName(configNode, "train_ds", it)
+        }
+        trainDatasetName?.let {
+            SelectorCommandUtils.patchDatasetName(configNode, "train_ds", it)
+        }
+        evalDatasetName?.let {
+            SelectorCommandUtils.patchDatasetName(configNode, "eval_ds", it)
+        }
+        calibrationDatasetName?.let {
+            SelectorCommandUtils.patchDatasetName(configNode, "calibration_ds", it)
+        }
+
+        // Serialize the modified JSON tree back into a string for type conversion (Output -> Input).
         return jsonMapper.writeValueAsString(configNode)
     }
 
@@ -153,6 +239,14 @@ class ModelSelectorCloneCommand : BaseCommand() {
                 )
             }
 
+            if (requiresSourceConfigOverrides() && sourceSelector.config == null) {
+                throw IllegalArgumentException(
+                    "Source selector (ID: $fromSelectorId) has no configuration. " +
+                            "Config overrides (--candidate-model-ids, dataset name flags) " +
+                            "require the source selector to have an existing config."
+                )
+            }
+
             // Convert config from Output to Input format using JSON serialization
             // Note: Output and Input types have different JSON property names that need mapping
             val configInput: SelectorTrainingConfigurationInput? = sourceSelector.config?.let { configOutput ->
@@ -169,6 +263,8 @@ class ModelSelectorCloneCommand : BaseCommand() {
                         endDate = endDate
                     )
                 }
+
+                configJson = applyConfigOverrides(configJson, jsonMapper)
 
                 jsonMapper.readValue(configJson, SelectorTrainingConfigurationInput::class.java)
             }

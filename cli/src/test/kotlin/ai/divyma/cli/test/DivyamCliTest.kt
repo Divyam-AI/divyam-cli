@@ -1348,6 +1348,44 @@ class DivyamCliTest {
         assertEquals(1, exitCode)
     }
 
+    @Test
+    @Order(47)
+    fun `selector clone config override without source config fails`() {
+        val createExitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Source Selector Without Config",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default"
+        )
+
+        assertEquals(0, createExitCode)
+        val createJson = parseJson()
+        val sourceSelectorId = createJson!!.get("id").asInt()
+
+        outContent.reset()
+
+        val cloneExitCode = executeCommand(
+            ModelSelectorCommand(),
+            "clone",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--from-id", sourceSelectorId.toString(),
+            "--train-dataset-name", "custom_train_ds",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(1, cloneExitCode)
+    }
+
     // ============================================
     // Eval CRUD Tests (Requires SA)
     // ============================================
