@@ -53,7 +53,7 @@ client = OpenAI(base_url="https://api.divyam.ai/v1", api_key="divyam-v1-********
 client.chat.completions.create(model="openai:gpt-4o", messages=[...])
 ```
 
-The router is now a transparent passthrough. Same responses as before, with full logging and only added routing latency.
+The router is now a transparent passthrough, returning the same responses as before with full logging. Watch requests arrive in real time on your [dashboards](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards).
 
 **Optional request headers** for analytics and multi-turn evals:
 
@@ -114,18 +114,17 @@ Example: a **Tutor Eval** scoring tutor answers on Correctness and Understandabi
 
 Repeat for the Understandability judge.
 
-> 🖼️ **Screenshot slot:** evalm8 → Judges, creating the Correctness LLM judge (inputs, template, pointwise scale). `assets/evalm8/03-judge.png`
+> 🖼️ **Screenshot slot:** evalm8 → Judges (Correctness LLM judge: inputs, template, pointwise scale)
 
 **d. Assemble the eval** in the Eval builder: name it (e.g. `Tutor Eval`), select the rubric, and for each dimension wire its judge (set `judge_id`, pick the judge, leave config and pipeline blank).
 
-> 🖼️ **Screenshot slot:** evalm8 → Eval builder, rubric selected with a judge wired per dimension. `assets/evalm8/04-eval-builder.png`
+> 🖼️ **Screenshot slot:** evalm8 → Eval builder (rubric selected, a judge wired per dimension)
 
 **e. Import datasets** under Connectors: import your raw dataset by creating a connection.
 
 > 🖼️ **Screenshot slot:** evalm8 → Connectors
 > ![1783316804446](image/Router-Evalm8-Integration-Guide/1783316804446.png)
 
-**
 ---
 
 ## Step 3: Connect the eval to the router
@@ -167,7 +166,7 @@ divyam eval update --id <eval-id> --is-primary true
 
 Sampled traffic is now scored against your rubric, and scores show up in your [dashboards](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards) as quality trends per model.
 
-> 🖼️ **Screenshot slot:** evalm8 → eval results / scores view (per-dimension pass/fail and reasoning). `assets/evalm8/06-results.png`
+> 🖼️ **Screenshot slot:** evalm8 → eval results / scores (per-dimension scores per model)
 
 ---
 
@@ -188,11 +187,15 @@ divyam selector create --name tutor-selector \
   -m "openai:gpt-4o,openai:gpt-4o-mini" \
   -x default --eval-id <eval-id>
 
-# 3. Tune the cost/quality trade-off (0.0 = max quality, 1.0 = max savings).
-divyam selector update --id <selector-id> --lambda 0.5
-
-# 4. The selector trains and validates in shadow. Promote it when ready.
+# 3. The selector trains and validates in shadow. Promote it when ready.
 divyam selector update --id <selector-id> --to-prod
+```
+
+Tuning is automated by the selector training workflow. Check the candidate's performance on the [training dashboard](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards), and override the cost/quality trade-off only if needed (`--lambda`, where `0.0` is max quality and `1.0` is max savings):
+
+```bash
+# Optional: override the automatic trade-off.
+divyam selector update --id <selector-id> --lambda 0.5
 ```
 
 Roll out gradually by splitting traffic on the service account (percent of traffic kept on the incumbent vs. bypassing the selector):
@@ -201,7 +204,7 @@ Roll out gradually by splitting traffic on the service account (percent of traff
 divyam sa update --traffic-allocation-config '{"control": 10.0, "selector_disabled": 80.0}'
 ```
 
-The selector now routes each request to the model that meets your quality bar at the lowest cost, and evalm8 keeps scoring live traffic so you can see the impact.
+The selector now routes each request to the model that meets your quality bar at the lowest cost. Monitor routing decisions and model split on your [dashboards](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards), while evalm8 keeps scoring live traffic so you can see the impact.
 
 ---
 
