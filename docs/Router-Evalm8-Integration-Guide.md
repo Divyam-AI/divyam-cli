@@ -16,8 +16,7 @@ Your app ──▶ Divyam Router ──▶ chosen model (OpenAI, Gemini, Claude,
 
 | Use | URL |
 | --- | --- |
-| App traffic (OpenAI `base_url`) | `https://api.divyam.ai/v1` |
-| CLI / control plane | `https://api.divyam.ai` |
+| Router API | `https://api.divyam.ai` |
 | evalm8 service | `https://evalm8.divyam.ai` |
 
 ---
