@@ -303,9 +303,11 @@ Sampled traffic is now scored against your rubric, and scores show up in your [d
 
 > Wiki: [Setup Model Routing](https://github.com/Divyam-AI/divyam-cli/wiki/Setup-Model-Routing) · [Safely Remove a Model](https://github.com/Divyam-AI/divyam-cli/wiki/Safely-Remove-a-Model)
 
-Once the eval is live, use it to move to a better or cheaper model without guesswork. Routing is driven by a **selector**: a policy trained on your traffic and scored by your eval. Prerequisites: the eval from Step 3, and at least two candidate models registered.
+Once the eval is live, use it to move to a better or cheaper model without guesswork. Routing is driven by a **selector**: a policy trained on your traffic and scored by your eval, which the router serves only after you promote it. Prerequisites: the eval from Step 3, and at least two candidate models registered.
 
-> **Order matters.** A selector trains only on traffic in its own bucket, never on the `control` bucket. Create the selector and set its traffic allocation *before* you send traffic through the router, otherwise there is no data to train on.
+> **Order matters.** A selector trains on your logged traffic but never on the `control` bucket (a held-out baseline). Route some traffic out of `control` before you send it, otherwise there is nothing to train on.
+
+The selector moves through `TRAINED` → `SHADOW` (staged, not served) → `PROD` (serving live traffic).
 
 **1. Register the candidate model(s)** you want to consider.
 
@@ -326,37 +328,44 @@ export DIVYAM_SELECTOR=<selector-id>
 
 Use `-c <config.yaml>` instead of `-x` to drive it from a config file (see the wiki's `sample-selector-config.yaml`).
 
-**3. Set traffic allocation before sending any traffic.** Route a share into the selector's bucket so its decisions are logged for training. Keep a percent on the incumbent (`control`) and, optionally, a percent bypassing routing (`selector_disabled`).
+**3. Set traffic allocation before sending traffic.** Route traffic out of pure `control` so the selector has data to learn from. It is not serving yet, so it is not in the split.
 
 ```bash
-divyam sa update --traffic-allocation-config \
-  '{"control": 10.0, "selector_disabled": 80.0, "'"$DIVYAM_SELECTOR"'": 10.0}'
+divyam sa update --traffic-allocation-config '{"control": 10.0, "selector_disabled": 90.0}'
 ```
 
-**4. Send real traffic through the router.** Use your application, or `divyam chat`, so the selector's bucket collects the request/response data it learns from. Traffic that lands in `control` does not count toward training.
+**4. Send real traffic through the router** (your application, or `divyam chat`). This logged, non-`control` traffic is what the selector trains on.
 
 ```bash
 divyam chat --model-name openai:gpt-4o
 ```
 
-**5. Train, then check state.** Once enough traffic is collected, the selector training workflow runs on it. Track progress on the [training dashboard](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards) and confirm the selector reads `TRAINED`.
+**5. Let it train.** The pipeline advances through its stages to `TRAINED`. Track it on the [training dashboard](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards).
 
 ```bash
-divyam selector get --id $DIVYAM_SELECTOR
+divyam selector get --id $DIVYAM_SELECTOR   # state progresses to TRAINED
 ```
 
-**6. Tune the cost/quality trade-off (optional).** Training picks a sensible default. Override only if the dashboard suggests it, where `0.0` is max quality and `1.0` is max savings.
+**6. Stage it in shadow.** Set the cost/quality lambda. This advances the trained selector to `SHADOW`, where it is validated against your traffic but does not serve live requests and is not in the traffic split (`0.0` is max quality, `1.0` is max savings).
 
 ```bash
 divyam selector update --id $DIVYAM_SELECTOR --lambda 0.5
 # or split the two goals
 divyam selector update --id $DIVYAM_SELECTOR --high-quality-lambda 0.8 --cost-savings-lambda 0.2
+divyam selector get --id $DIVYAM_SELECTOR    # state: SHADOW
 ```
 
-**7. Promote and ramp.** Promote the trained selector to production, then raise its share in the allocation config as it proves out. Monitor routing decisions and the model split on your [dashboards](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards).
+**7. Promote shadow to production.** Only a `SHADOW` selector can be promoted.
 
 ```bash
 divyam selector update --id $DIVYAM_SELECTOR --to-prod
+```
+
+**8. Give it live traffic and ramp.** Now that it is `PROD`, add its share to the allocation and raise it as it proves out. Monitor routing decisions and the model split on your [dashboards](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards).
+
+```bash
+divyam sa update --traffic-allocation-config \
+  '{"control": 10.0, "selector_disabled": 80.0, "'"$DIVYAM_SELECTOR"'": 10.0}'
 ```
 
 evalm8 keeps scoring live traffic throughout, so you see the quality and cost impact as you ramp.
@@ -368,7 +377,7 @@ evalm8 keeps scoring live traffic throughout, so you see the quality and cost im
 ```bash
 divyam eval ls                              # your registered evals
 divyam model-info ls                        # registered providers and models
-divyam selector get --id $DIVYAM_SELECTOR   # state: TRAINED, PROD, INACTIVE, ...
+divyam selector get --id $DIVYAM_SELECTOR   # state: TRAINED, SHADOW, PROD, INACTIVE, ...
 ```
 
 Retire a selector with `divyam selector update --id $DIVYAM_SELECTOR --retire`. To pull a model out of rotation cleanly, follow [Safely Remove a Model](https://github.com/Divyam-AI/divyam-cli/wiki/Safely-Remove-a-Model).
