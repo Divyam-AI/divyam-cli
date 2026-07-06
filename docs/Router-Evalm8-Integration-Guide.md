@@ -88,11 +88,13 @@ Example: a **Tutor Eval** scoring tutor answers on Correctness and Understandabi
 }
 ```
 
-> 🖼️ **Screenshot slot:** evalm8 → Rubric builder, showing the Tutor Effectiveness dimensions and pass threshold. `assets/evalm8/01-rubric.png`
+> 🖼️ **Screenshot slot:** evalm8 → Rubric builder
+> ![1783316382879](image/Router-Evalm8-Integration-Guide/1783316382879.png)
 
 **b. Model providers**: add the models you want to test.
 
-> 🖼️ **Screenshot slot:** evalm8 → Model providers, adding a provider and its models. `assets/evalm8/02-model-providers.png`
+> 🖼️ **Screenshot slot:** evalm8 → Model providers
+> ![1783316571405](image/Router-Evalm8-Integration-Guide/1783316571405.png)
 
 **c. Judges**: one LLM judge per dimension.
 
@@ -118,10 +120,12 @@ Repeat for the Understandability judge.
 
 > 🖼️ **Screenshot slot:** evalm8 → Eval builder, rubric selected with a judge wired per dimension. `assets/evalm8/04-eval-builder.png`
 
-**e. Import datasets** under Datasets: upload your `raw` (source traffic), `train`, and `test` `.jsonl` splits.
+**e. Import datasets** under Connectors: import your raw dataset by creating a connection.
 
-> 🖼️ **Screenshot slot:** evalm8 → Datasets, the raw / train / test upload sections. `assets/evalm8/05-datasets.png`
+> 🖼️ **Screenshot slot:** evalm8 → Connectors
+> ![1783316804446](image/Router-Evalm8-Integration-Guide/1783316804446.png)
 
+**
 ---
 
 ## Step 3: Connect the eval to the router
