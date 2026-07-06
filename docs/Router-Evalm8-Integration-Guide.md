@@ -72,9 +72,9 @@ divyam sa update --traffic-allocation-config '{"control": 10.0, "selector_disabl
 
 ## Step 2: Build an eval in evalm8
 
-**Access first:** Divyam provisions your service account and its API key, so ask your Global Admin for them. The account must be added to the org with the **Evaluator** project role (Settings → Project Roles). Then sign in to evalm8 (`https://evalm8.divyam.ai`) and switch to your project.
+**Access first:** Divyam provisions the service accounts and API keys you need, one for the router and one for evalm8, so ask your Global Admin for them. Your account must be added to the org with the **Evaluator** project role (Settings → Project Roles). Then sign in to evalm8 (`https://evalm8.divyam.ai`) and switch to your project.
 
-Register a **Connection** so evalm8 can reach your router and models: Integrations → Connections → Create New Connection. Pick **DivyamConnection**, set the Base URL, paste the service account API key from Divyam, click Test Connection, then Register.
+Register a **Connection** so evalm8 can reach your router and models: Integrations → Connections → Create New Connection. Pick **DivyamConnection**, set the Base URL, paste your **router** service account API key, click Test Connection, then Register.
 
 <details><summary>🖼️ evalm8 → Create Connection</summary>
 
@@ -301,6 +301,8 @@ divyam eval create --name evalm8 --granularity LLM_REQUEST_RESPONSE --state ACTI
   }'
 ```
 
+> The `api_key` above is your **evalm8** service account key, obtained from Divyam. It lets the router's evaluator call evalm8, and it is different from your router service account key (the one you paste into the evalm8 Connection in Step 2).
+
 <details><summary>Field reference: <code>--class-init-config</code></summary>
 
 | Field | Meaning |
@@ -309,7 +311,7 @@ divyam eval create --name evalm8 --granularity LLM_REQUEST_RESPONSE --state ACTI
 | `org` / `project` | your evalm8 workspace and project |
 | `eval_name` | the eval you built in Step 2 |
 | `eval_ref` | version to use (`latest` or a pinned ref) |
-| `api_key` | evalm8 API key |
+| `api_key` | evalm8 service account API key from Divyam (not the router key used in the Step 2 Connection) |
 
 </details>
 
