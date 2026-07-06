@@ -1,9 +1,5 @@
 # Divyam Router + evalm8: Route on Quality
 
-**Router** is an OpenAI-compatible gateway. Point your app at it and it picks the best model per request against your cost, latency, and quality targets. No app rewrite, just a base-URL swap.
-
-**evalm8** is where you define what "good" means: rubrics and LLM judges that score model responses. Register an evalm8 eval with the router and those scores become the quality signal that drives model selection.
-
 You drive both from the `divyam` CLI. Full command reference and per-topic guides live in the [divyam CLI wiki](https://github.com/Divyam-AI/divyam-cli/wiki). New to the CLI? Start with [Installation](https://github.com/Divyam-AI/divyam-cli/wiki/Installation).
 
 ```text
@@ -70,11 +66,21 @@ The router is now a transparent passthrough, returning the same responses as bef
 
 ## Step 2: Build an eval in evalm8
 
-> Best results come from real traffic. Seed the dataset from your router logs, hand-annotate a small sample, then let the judges scale that labeling to the full set.
+Sign in to evalm8 (`https://evalm8.divyam.ai`), open your org and project, then register a **Connection** so evalm8 can reach your router and models: Integrations → Connections → Create New Connection. Pick **DivyamConnection**, set the Base URL, paste your API key, click Test Connection, then Register.
 
-Example: a **Tutor Eval** scoring tutor answers on Correctness and Understandability.
+<details><summary>🖼️ evalm8 → Create Connection</summary>
 
-**a. Rubric** defines the dimensions, scales, and pass threshold.
+![Create Connection](image/Router-Evalm8-Integration-Guide/connection.png)
+
+</details>
+
+The eval is built in three phases: **define** it once, **evaluate** raw traffic with the LLM judge, then build a **golden dataset** from human annotations to sharpen the judge. Example throughout: a **Tutor Eval** scoring tutor answers on Correctness and Understandability.
+
+### Phase 1: Define (one-time)
+
+**a. Rubric** (Evaluation → Rubrics) sets the dimensions, scales, and pass threshold.
+
+<details><summary>Rubric definition (JSON)</summary>
 
 ```json
 {
@@ -88,42 +94,165 @@ Example: a **Tutor Eval** scoring tutor answers on Correctness and Understandabi
 }
 ```
 
-> 🖼️ **Screenshot slot:** evalm8 → Rubric builder
-> ![1783316382879](image/Router-Evalm8-Integration-Guide/1783316382879.png)
+</details>
 
-**b. Model providers**: add the models you want to test.
+<details><summary>🖼️ evalm8 → Rubric builder</summary>
 
-> 🖼️ **Screenshot slot:** evalm8 → Model providers
-> ![1783316571405](image/Router-Evalm8-Integration-Guide/1783316571405.png)
+![Rubric builder](image/Router-Evalm8-Integration-Guide/1783316382879.png)
 
-**c. Judges**: one LLM judge per dimension.
+</details>
+
+**b. Model providers** (Integrations → Model Providers): add the models the judges and your candidates run on.
+
+<details><summary>🖼️ evalm8 → Model providers</summary>
+
+![Model providers](image/Router-Evalm8-Integration-Guide/1783316571405.png)
+
+</details>
+
+**c. Judges** (Evaluation → Judges): one LLM judge per dimension. The judge name becomes its slug ID (`Correctness JUDGE` becomes `correctness-judge`), which the eval references. Use origin `bespoke` for a fixed prompt, or `fine_tuned` so the judge learns from your golden dataset over time. The template holds the 1-to-5 scoring guide and reads `{{query}}` and `{{response}}`.
+
+<details><summary>Judge definition (JSON)</summary>
 
 ```json
 {
   "type": "llm",
-  "origin": "bespoke",
-  "name": "Correctness Judge",
+  "origin": "fine_tuned",
+  "name": "Correctness JUDGE",
   "inputs": [
     {"name": "query",    "target_type": "string", "description": "The prompt sent to the model."},
     {"name": "response", "target_type": "string", "description": "The model response to evaluate."}
   ],
-  "template": "You are an expert evaluator assessing the correctness of a model response to a given query.",
+  "template": "You are an expert evaluator assessing the correctness of a model response. Score 1 to 5, then explain briefly. Query: {{query}} Response: {{response}}",
   "mode": {"type": "pointwise", "scale": {"type": "integer", "min": 1, "max": 5}}
 }
 ```
 
-Repeat for the Understandability judge.
+</details>
 
-> 🖼️ **Screenshot slot:** evalm8 → Judges (Correctness LLM judge: inputs, template, pointwise scale)
+<details><summary>🖼️ evalm8 → Judge builder</summary>
 
-**d. Assemble the eval** in the Eval builder: name it (e.g. `Tutor Eval`), select the rubric, and for each dimension wire its judge (set `judge_id`, pick the judge, leave config and pipeline blank).
+![Judge builder](image/Router-Evalm8-Integration-Guide/judge-builder.png)
 
-> 🖼️ **Screenshot slot:** evalm8 → Eval builder (rubric selected, a judge wired per dimension)
+</details>
 
-**e. Import datasets** under Connectors: import your raw dataset by creating a connection.
+**d. Eval** (Evaluation → Evals): name it, select the rubric, and for each dimension click Configure Judge, set `judge_id` to the judge slug, and paste the pipeline. The pipeline runs per trace: pick the last LLM span, guard against missing spans, extract `query` and `response` from `llm.input_messages` and `llm.output_messages`, then call the judge for a 1-to-5 score. No ground-truth field is needed, so it works on raw production traces.
 
-> 🖼️ **Screenshot slot:** evalm8 → Connectors
-> ![1783316804446](image/Router-Evalm8-Integration-Guide/1783316804446.png)
+<details><summary>Eval pipeline (JSON, abbreviated)</summary>
+
+```json
+{
+  "steps": [
+    { "id": "correctness_prompt_prefix", "type": "static",
+      "result": "You are an expert evaluator assessing correctness..." },
+    { "id": "llm_span", "type": "select",
+      "selector": { "type": "cel",
+        "expression": "[last(sortByKey(trace.spans.filter(s, s[\"openinference.span.kind\"] == \"LLM\"), \"end_time\"))[\"span_id\"]]" } },
+    { "id": "guard_llm_span", "type": "guard",
+      "condition": { "type": "cel", "condition": "size(trace.spans) > 0" },
+      "on_fail": { "result": { "reason": "No LLM span found.", "score": 1 } } },
+    { "id": "extracted_inputs", "type": "extract",
+      "resolver": { "type": "cel", "mapping": {
+        "query": "trace.spans[0].attributes[\"llm.input_messages\"][0][\"message.content\"]",
+        "response": "trace.spans[0].attributes[\"llm.output_messages\"][0][\"message.content\"]"
+      } } },
+    { "id": "correctness_score", "type": "call",
+      "judge_id": "correctness-judge",
+      "input_mapping": {
+        "query":    { "type": "declarative", "value": "extracted_inputs.query" },
+        "response": { "type": "declarative", "value": "extracted_inputs.response" }
+      } }
+  ]
+}
+```
+
+The Understandability pipeline is identical except `judge_id` is `understandability-judge`.
+
+</details>
+
+<details><summary>🖼️ evalm8 → Eval builder</summary>
+
+![Eval builder](image/Router-Evalm8-Integration-Guide/eval-builder.png)
+
+</details>
+
+### Phase 2: Evaluate raw traffic
+
+**e. Import the raw dataset** (Data → Datasets → Raw): upload `raw.jsonl`. Each record is a trace with at least one LLM span carrying `llm.input_messages` and `llm.output_messages`.
+
+<details><summary>Required trace structure (JSON)</summary>
+
+```json
+{
+  "trace_id": "uuid",
+  "spans": [
+    {
+      "kind": "LLM",
+      "attributes": {
+        "llm.model_name": "gemini-2.5-flash-lite",
+        "llm.input_messages":  [{ "message.role": "user",      "message.content": "your question here" }],
+        "llm.output_messages": [{ "message.role": "assistant", "message.content": "model response here" }]
+      }
+    }
+  ]
+}
+```
+
+</details>
+
+**f. Run Evaluate Dataset** (Workflows → Evaluate Dataset): pick the eval and the raw dataset, then Run. It scores every trace 1 to 5 (shown normalised 0 to 1) with judge reasoning, visible in the Evaluations tab.
+
+<details><summary>🖼️ evalm8 → Evaluate Dataset (running)</summary>
+
+![Evaluate Dataset](image/Router-Evalm8-Integration-Guide/evaluate-run.png)
+
+</details>
+
+<details><summary>What the normalised scores mean</summary>
+
+| Displayed | Raw | Meaning |
+| --- | --- | --- |
+| 0.00 | n/a | Pipeline guard exited before the judge (usually missing `llm.input_messages` or `llm.output_messages`) |
+| 0.25 | 1 | Completely incorrect or incomprehensible |
+| 0.50 | 2 | Mostly incorrect or mostly unclear |
+| 0.75 | 3 | Partially correct or partially clear |
+| 0.88 | 4 | Mostly correct or mostly clear |
+| 1.00 | 5 | Perfectly correct or exceptionally clear |
+
+</details>
+
+### Phase 3: Golden dataset (human annotation)
+
+**g. Run Create Eval Golden Dataset** (Workflows → Create Eval Golden Dataset): pick the eval and raw dataset, then Run. It samples traces, creates an annotation task, and pauses at **Await Data Annotation** for human reviewers.
+
+<details><summary>🖼️ evalm8 → Create Eval Golden Dataset (completed)</summary>
+
+![Golden Dataset workflow](image/Router-Evalm8-Integration-Guide/golden-dataset.png)
+
+</details>
+
+**h. Annotate in Argilla**: each record shows the `query`, the `response`, and the judge's pre-scored suggestion as a starting point. Enter your own score (1 to 5) and reasoning, then **Submit** each record (drafts do not advance the workflow). Submitted labels become the train and test splits.
+
+<details><summary>🖼️ Argilla → annotation task</summary>
+
+![Argilla annotation](image/Router-Evalm8-Integration-Guide/argilla-annotation.png)
+
+</details>
+
+**i. Refine Eval (optional)** (Workflows → Refine Eval): fine-tunes a `fine_tuned` judge on the golden train and test splits, so automated scores track human judgement more closely each cycle. Repeat Phases 2 and 3 as you gather more labels.
+
+> The evalm8 UI walkthrough for Refine Eval is not documented yet.
+
+<details><summary>Common issues</summary>
+
+| Symptom | Fix |
+| --- | --- |
+| All traces score 0.00 or 1 | Pipeline guard is failing. Confirm `llm.input_messages` and `llm.output_messages` exist in the span. |
+| `JudgeNotFound` in a trace | `judge_id` must match the judge slug exactly (`correctness-judge`, not `correctness`). |
+| Annotation count stuck | Records must be **Submitted** in Argilla, not saved as draft. |
+| `No trainable LLM judges found` on Refine | Run Evaluate Dataset first, and use a `fine_tuned` judge with completed golden splits. |
+
+</details>
 
 ---
 
@@ -146,7 +275,7 @@ divyam eval create --name evalm8 --granularity LLM_REQUEST_RESPONSE --state ACTI
   }'
 ```
 
-`--class-init-config` fields:
+<details><summary>Field reference: <code>--class-init-config</code></summary>
 
 | Field | Meaning |
 | --- | --- |
@@ -155,6 +284,8 @@ divyam eval create --name evalm8 --granularity LLM_REQUEST_RESPONSE --state ACTI
 | `eval_name` | the eval you built in Step 2 |
 | `eval_ref` | version to use (`latest` or a pinned ref) |
 | `api_key` | evalm8 API key |
+
+</details>
 
 `--granularity LLM_REQUEST_RESPONSE` scores each request/response pair. Use `TURN_BASED` or `SESSION_BASED` for multi-turn or full-session scoring (see the header requirements in Step 1).
 
@@ -166,57 +297,81 @@ divyam eval update --id <eval-id> --is-primary true
 
 Sampled traffic is now scored against your rubric, and scores show up in your [dashboards](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards) as quality trends per model.
 
-> 🖼️ **Screenshot slot:** evalm8 → eval results / scores (per-dimension scores per model)
-
 ---
 
 ## Step 4: Route on quality
 
 > Wiki: [Setup Model Routing](https://github.com/Divyam-AI/divyam-cli/wiki/Setup-Model-Routing) · [Safely Remove a Model](https://github.com/Divyam-AI/divyam-cli/wiki/Safely-Remove-a-Model)
 
-Use the eval to move to a better or cheaper model, safely.
+Once the eval is live, use it to move to a better or cheaper model without guesswork. Routing is driven by a **selector**: a policy trained on your traffic and scored by your eval. Prerequisites: the eval from Step 3, and at least two candidate models registered.
+
+> **Order matters.** A selector trains only on traffic in its own bucket, never on the `control` bucket. Create the selector and set its traffic allocation *before* you send traffic through the router, otherwise there is no data to train on.
+
+**1. Register the candidate model(s)** you want to consider.
 
 ```bash
-# 1. Register the candidate you want to try.
 divyam model-info create --provider-name openai \
   --provider-base-url https://api.openai.com/v1 \
   --provider-api-key <key> --model-names gpt-4o-mini
+```
 
-# 2. Create a selector across candidates, scored by your eval.
+**2. Create the selector** across the candidates, linked to your eval.
+
+```bash
 divyam selector create --name tutor-selector \
   -m "openai:gpt-4o,openai:gpt-4o-mini" \
-  -x default --eval-id <eval-id>
-
-# 3. The selector trains and validates in shadow. Promote it when ready.
-divyam selector update --id <selector-id> --to-prod
+  -x message_history --eval-id <eval-id>
+export DIVYAM_SELECTOR=<selector-id>
 ```
 
-Tuning is automated by the selector training workflow. Check the candidate's performance on the [training dashboard](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards), and override the cost/quality trade-off only if needed (`--lambda`, where `0.0` is max quality and `1.0` is max savings):
+Use `-c <config.yaml>` instead of `-x` to drive it from a config file (see the wiki's `sample-selector-config.yaml`).
+
+**3. Set traffic allocation before sending any traffic.** Route a share into the selector's bucket so its decisions are logged for training. Keep a percent on the incumbent (`control`) and, optionally, a percent bypassing routing (`selector_disabled`).
 
 ```bash
-# Optional: override the automatic trade-off.
-divyam selector update --id <selector-id> --lambda 0.5
+divyam sa update --traffic-allocation-config \
+  '{"control": 10.0, "selector_disabled": 80.0, "'"$DIVYAM_SELECTOR"'": 10.0}'
 ```
 
-Roll out gradually by splitting traffic on the service account (percent of traffic kept on the incumbent vs. bypassing the selector):
+**4. Send real traffic through the router.** Use your application, or `divyam chat`, so the selector's bucket collects the request/response data it learns from. Traffic that lands in `control` does not count toward training.
 
 ```bash
-divyam sa update --traffic-allocation-config '{"control": 10.0, "selector_disabled": 80.0}'
+divyam chat --model-name openai:gpt-4o
 ```
 
-The selector now routes each request to the model that meets your quality bar at the lowest cost. Monitor routing decisions and model split on your [dashboards](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards), while evalm8 keeps scoring live traffic so you can see the impact.
+**5. Train, then check state.** Once enough traffic is collected, the selector training workflow runs on it. Track progress on the [training dashboard](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards) and confirm the selector reads `TRAINED`.
+
+```bash
+divyam selector get --id $DIVYAM_SELECTOR
+```
+
+**6. Tune the cost/quality trade-off (optional).** Training picks a sensible default. Override only if the dashboard suggests it, where `0.0` is max quality and `1.0` is max savings.
+
+```bash
+divyam selector update --id $DIVYAM_SELECTOR --lambda 0.5
+# or split the two goals
+divyam selector update --id $DIVYAM_SELECTOR --high-quality-lambda 0.8 --cost-savings-lambda 0.2
+```
+
+**7. Promote and ramp.** Promote the trained selector to production, then raise its share in the allocation config as it proves out. Monitor routing decisions and the model split on your [dashboards](https://github.com/Divyam-AI/divyam-cli/wiki/Access-your-Dashboards).
+
+```bash
+divyam selector update --id $DIVYAM_SELECTOR --to-prod
+```
+
+evalm8 keeps scoring live traffic throughout, so you see the quality and cost impact as you ramp.
 
 ---
 
 ## Inspect and manage
 
 ```bash
-divyam eval ls                          # your registered evals
-divyam model-info ls                    # registered providers and models
-divyam selector get --id <selector-id>  # selector state (SHADOW, PROD, ...)
+divyam eval ls                              # your registered evals
+divyam model-info ls                        # registered providers and models
+divyam selector get --id $DIVYAM_SELECTOR   # state: TRAINED, PROD, INACTIVE, ...
 ```
 
-Retire a selector with `divyam selector update --id <selector-id> --retire`. To pull a model out of rotation cleanly, follow [Safely Remove a Model](https://github.com/Divyam-AI/divyam-cli/wiki/Safely-Remove-a-Model).
+Retire a selector with `divyam selector update --id $DIVYAM_SELECTOR --retire`. To pull a model out of rotation cleanly, follow [Safely Remove a Model](https://github.com/Divyam-AI/divyam-cli/wiki/Safely-Remove-a-Model).
 
 ---
 
