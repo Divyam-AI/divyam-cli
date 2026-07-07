@@ -469,12 +469,12 @@ provenance.
 
 <details><summary>Common issues</summary>
 
-| Symptom                                   | Fix                                                                                                  |
-|-------------------------------------------|------------------------------------------------------------------------------------------------------|
-| All traces score 0.00 or 1                | Pipeline guard is failing. Confirm `llm.input_messages` and `llm.output_messages` exist in the span. |
-| `JudgeNotFound` in a trace                | `judge_id` must match the judge slug exactly (`correctness-judge`, not `correctness`).               |
-| Annotation count stuck                    | Records must be **Submitted** in Argilla, not saved as draft.                                        |
-| `No trainable LLM judges found` on Refine | Run Evaluate Dataset first, and use a `fine_tuned` judge with completed golden splits.               |
+| Symptom                                           | Fix                                                                                                  |
+|---------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| All traces score 0.00 or 1                        | Pipeline guard is failing. Confirm `llm.input_messages` and `llm.output_messages` exist in the span. |
+| `JudgeNotFound` in a trace                        | `judge_id` must match the judge slug exactly (`correctness-judge`, not `correctness`).               |
+| Annotation count stuck in `Await For Annotations` | Records must be **Submitted** in Argilla, not saved as draft.                                        |
+| `No trainable LLM judges found` on Refine         | Run Evaluate Dataset first, and use a `fine_tuned` judge with completed golden splits.               |
 
 </details>
 
