@@ -1,0 +1,197 @@
+name: Publish Homebrew Cask Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Published release version (X.Y.Z)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  release-metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+    steps:
+      - name: Validate published release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='${{ inputs.version }}'
+          version=${version#v}
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Version must be X.Y.Z; received: $version" >&2
+            exit 1
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+
+  verify-published-cask:
+    needs: release-metadata
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-latest
+
+    env:
+      RELEASE_VERSION: ${{ needs.release-metadata.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download and verify published release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir release-assets
+          cd release-assets
+          gh release download "v$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --pattern '*'
+          shasum -a 256 -c SHA256SUMS
+
+      - name: Render Cask from published checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          arm64_sha=$(awk '$2 ~ /-macos-arm64\\.zip$/ {print $1}' release-assets/SHA256SUMS)
+          x86_64_sha=$(awk '$2 ~ /-macos-x86_64\\.zip$/ {print $1}' release-assets/SHA256SUMS)
+          test -n "$arm64_sha"
+          test -n "$x86_64_sha"
+          ./.github/scripts/render-homebrew-cask.sh \
+            "$RELEASE_VERSION" \
+            "$arm64_sha" \
+            "$x86_64_sha" \
+            "$RUNNER_TEMP/divyam-cli.rb"
+
+      - name: Install generated Cask from published URLs
+        run: ./.github/scripts/smoke-test-published-homebrew-cask.sh "$RUNNER_TEMP/divyam-cli.rb" "$RELEASE_VERSION"
+
+  open-homebrew-cask-pr:
+    needs: [release-metadata, verify-published-cask]
+    runs-on: macos-latest
+    env:
+      RELEASE_VERSION: ${{ needs.release-metadata.outputs.version }}
+      HOMEBREW_CASK_APP_ID: ${{ secrets.HOMEBREW_CASK_APP_ID }}
+      HOMEBREW_CASK_APP_PRIVATE_KEY: ${{ secrets.HOMEBREW_CASK_APP_PRIVATE_KEY }}
+      HOMEBREW_CASK_PR_TOKEN: ${{ secrets.HOMEBREW_CASK_PR_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Homebrew automation credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for credential in \
+            HOMEBREW_CASK_APP_ID \
+            HOMEBREW_CASK_APP_PRIVATE_KEY \
+            HOMEBREW_CASK_PR_TOKEN; do
+            if [[ -z "${!credential}" ]]; then
+              echo "Missing required Cask automation secret: $credential" >&2
+              exit 1
+            fi
+          done
+
+      - name: Create a fork-scoped GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.HOMEBREW_CASK_APP_ID }}
+          private-key: ${{ secrets.HOMEBREW_CASK_APP_PRIVATE_KEY }}
+          owner: Divyam-AI
+          repositories: homebrew-cask
+
+      - name: Download and verify published release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir release-assets
+          cd release-assets
+          gh release download "v$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --pattern '*'
+          shasum -a 256 -c SHA256SUMS
+
+      - name: Check out the Divyam-owned Cask fork
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tap_root="$(brew --repository)/Library/Taps/divyam-ai"
+          tap_path="$tap_root/homebrew-cask"
+          mkdir -p "$tap_root"
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/Divyam-AI/homebrew-cask.git" "$tap_path"
+          git -C "$tap_path" remote add upstream https://github.com/Homebrew/homebrew-cask.git
+          git -C "$tap_path" fetch --depth=1 upstream main
+          git -C "$tap_path" checkout -B main upstream/main
+          echo "TAP_PATH=$tap_path" >> "$GITHUB_ENV"
+
+      - name: Render the official Cask definition
+        shell: bash
+        run: |
+          set -euo pipefail
+          arm64_sha=$(awk '$2 ~ /-macos-arm64\\.zip$/ {print $1}' release-assets/SHA256SUMS)
+          x86_64_sha=$(awk '$2 ~ /-macos-x86_64\\.zip$/ {print $1}' release-assets/SHA256SUMS)
+          test -n "$arm64_sha"
+          test -n "$x86_64_sha"
+          cask_path="$TAP_PATH/Casks/d/divyam-cli.rb"
+          if [[ -f "$cask_path" ]]; then
+            cp "$cask_path" "$RUNNER_TEMP/divyam-cli.previous.rb"
+            echo "HAS_PREVIOUS_CASK=true" >> "$GITHUB_ENV"
+          else
+            echo "HAS_PREVIOUS_CASK=false" >> "$GITHUB_ENV"
+          fi
+          ./.github/scripts/render-homebrew-cask.sh \
+            "$RELEASE_VERSION" \
+            "$arm64_sha" \
+            "$x86_64_sha" \
+            "$cask_path"
+
+      - name: Run Homebrew Cask style and audit checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew style "$TAP_PATH/Casks/d/divyam-cli.rb"
+          brew audit --cask --online divyam-ai/homebrew-cask/divyam-cli
+
+      - name: Verify Homebrew Cask upgrade
+        if: env.HAS_PREVIOUS_CASK == 'true'
+        run: |
+          ./.github/scripts/smoke-test-homebrew-cask-upgrade.sh \
+            "$RUNNER_TEMP/divyam-cli.previous.rb" \
+            "$TAP_PATH/Casks/d/divyam-cli.rb" \
+            "$RELEASE_VERSION"
+
+      - name: Create a pull request without writing upstream
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_CASK_PR_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$TAP_PATH"
+          if git diff --quiet -- Casks/d/divyam-cli.rb; then
+            exit 0
+          fi
+          branch="divyam-cli-v$RELEASE_VERSION"
+          git switch -c "$branch"
+          git config user.name "divyam-homebrew[bot]"
+          git config user.email "divyam-homebrew[bot]@users.noreply.github.com"
+          git add Casks/d/divyam-cli.rb
+          git commit -m "divyam-cli $RELEASE_VERSION"
+          git push --set-upstream origin "$branch"
+          gh pr create \
+            --repo Homebrew/homebrew-cask \
+            --head "Divyam-AI:$branch" \
+            --base main \
+            --title "divyam-cli $RELEASE_VERSION" \
+            --body "Updates divyam-cli to $RELEASE_VERSION with verified GitHub Release checksums."
