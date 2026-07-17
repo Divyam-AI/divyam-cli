@@ -5,7 +5,8 @@ import com.netflix.gradle.plugins.packaging.SystemPackagingTask
 import com.netflix.gradle.plugins.rpm.Rpm
 import org.gradle.api.GradleException
 import org.gradle.api.Project
-import org.gradle.api.tasks.bundling.Zip
+import org.gradle.api.tasks.bundling.Compression
+import org.gradle.api.tasks.bundling.Tar
 import org.redline_rpm.header.Os
 import org.redline_rpm.header.RpmType
 import java.io.File
@@ -224,7 +225,7 @@ fun Project.configurePackaging(
         }
     }
 
-    val caskArch = when (System.getProperty("os.arch")) {
+    val macosArch = when (System.getProperty("os.arch")) {
         "aarch64", "arm64" -> "arm64"
         "x86_64", "amd64" -> "x86_64"
         else -> throw GradleException(
@@ -232,30 +233,36 @@ fun Project.configurePackaging(
         )
     }
 
-    tasks.register("caskArchive", Zip::class.java) {
+    tasks.register("installerArchive", Tar::class.java) {
         dependsOn("nativeCompile")
 
         group = "distribution"
-        description = "Packages the signed Divyam CLI binary for Homebrew Cask"
+        description = "Packages the Divyam CLI binary for the direct installer"
 
         archiveBaseName.set(divyamPackageName)
         archiveVersion.set(sanitizedVersion)
-        archiveClassifier.set("macos-$caskArch")
+        archiveClassifier.set("darwin-$macosArch")
+        archiveExtension.set("tar.gz")
+        compression = Compression.GZIP
+
+        val archiveRoot = "$divyamPackageName-$sanitizedVersion"
 
         from(tasks.named("nativeCompile")) {
             include(divyamAppName)
+            into("$archiveRoot/bin")
         }
 
         from(rootDir) {
             include("LICENSE")
+            into(archiveRoot)
         }
 
-        filesMatching(divyamAppName) {
+        filesMatching("**/$divyamAppName") {
             permissions {
                 unix("rwxr-xr-x")
             }
         }
 
-        destinationDirectory.set(layout.buildDirectory.dir("distributions/cask"))
+        destinationDirectory.set(layout.buildDirectory.dir("distributions/installer"))
     }
 }
