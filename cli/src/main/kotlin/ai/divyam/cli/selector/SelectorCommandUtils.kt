@@ -6,11 +6,50 @@ package ai.divyam.cli.selector
 
 import ai.divyam.data.model.ModelSelectorCandidateModel
 import com.fasterxml.jackson.databind.node.ObjectNode
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 /**
  * Utility functions shared across selector commands.
  */
 object SelectorCommandUtils {
+    private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+
+    /**
+     * Applies explicit day boundaries to the training dataset source.
+     *
+     * A start date is inclusive from midnight and an end date is inclusive through
+     * 23:59:59, matching selector clone dataset recreation semantics.
+     */
+    fun patchTrainDatasetDateRange(
+        configNode: ObjectNode,
+        startDate: LocalDate?,
+        endDate: LocalDate?
+    ) {
+        if (startDate == null && endDate == null) {
+            return
+        }
+
+        require(startDate == null || endDate == null || !startDate.isAfter(endDate)) {
+            "--start-date must be on or before --end-date"
+        }
+
+        val datasets = configNode.get("datasets") as? ObjectNode
+            ?: throw IllegalArgumentException("config has no datasets")
+        val trainDataset = datasets.get("train_ds") as? ObjectNode
+            ?: throw IllegalArgumentException("config has no datasets.train_ds")
+        val sourceSpecs = (trainDataset.get("source_specs") as? ObjectNode)
+            ?: configNode.objectNode().also { trainDataset.set<ObjectNode>("source_specs", it) }
+
+        startDate?.let { sourceSpecs.put("start_date", it.atStartOfDay().format(dateTimeFormatter)) }
+        endDate?.let {
+            sourceSpecs.put(
+                "end_date",
+                it.atStartOfDay().plusDays(1).minusSeconds(1).format(dateTimeFormatter)
+            )
+        }
+    }
+
     /**
      * Updates the name of a dataset entry in selector training configuration JSON.
      *

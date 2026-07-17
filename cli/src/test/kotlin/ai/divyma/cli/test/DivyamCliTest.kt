@@ -1197,6 +1197,30 @@ class DivyamCliTest {
     }
 
     @Test
+    @Order(35)
+    fun `selector create with config file date range`() {
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Test Selector with Date Range",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--config-file", "src/test/data/selector-config.json",
+            "--start-date", "2026-07-01",
+            "--end-date", "2026-07-31"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertEquals("Test Selector with Date Range", json!!.get("name").asText())
+    }
+
+    @Test
     @Order(36)
     fun `selector get`() {
         val createExitCode = executeCommand(
