@@ -31,7 +31,7 @@ class EvalListCommand : SaSpecificCommand() {
         names = ["--primary-only"],
         description = [$$"Optional: Lists only primary evals."]
     )
-    private var primaryOnly = false
+    private var primaryOnly: Boolean? = null
 
     override fun execute(): Int {
         runBlocking {
