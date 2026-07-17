@@ -8,11 +8,13 @@ import ai.divyam.cli.base.BaseCommand
 import ai.divyam.data.model.ModelSelectorCreateRequest
 import ai.divyam.data.model.ModelSelectorState
 import ai.divyam.data.model.SelectorTrainingConfigurationInput
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.io.File
+import java.time.LocalDate
 
 @CommandLine.Command(name = "create", description = ["Create a selector"])
 class ModelSelectorCreateCommand : BaseCommand() {
@@ -67,6 +69,18 @@ class ModelSelectorCreateCommand : BaseCommand() {
     )
     private var candidateModels: String? = null
 
+    @Option(
+        names = ["--start-date"],
+        description = ["Optional: Inclusive start date for datasets.train_ds.source_specs (format: YYYY-MM-DD). Requires --config-file."],
+    )
+    private var startDate: String? = null
+
+    @Option(
+        names = ["--end-date"],
+        description = ["Optional: Inclusive end date for datasets.train_ds.source_specs (format: YYYY-MM-DD). Requires --config-file."],
+    )
+    private var endDate: String? = null
+
     override fun execute(): Int {
         validateOptions()
         val newModelSelector = runBlocking {
@@ -96,6 +110,10 @@ class ModelSelectorCreateCommand : BaseCommand() {
                 "Either a config file (-c/--config-file) or an extractor strategy (-x/--extractor-strategy) must be provided"
             )
         }
+
+        if (configFile == null && (startDate != null || endDate != null)) {
+            throw IllegalArgumentException("--start-date and --end-date require --config-file")
+        }
     }
 
     private fun readConfigFile(configFile: File?): SelectorTrainingConfigurationInput? {
@@ -105,7 +123,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
             throw IllegalArgumentException("Config file does not exist: ${file.absolutePath}")
         }
 
-        return when (val extension = file.extension.lowercase()) {
+        val config = when (val extension = file.extension.lowercase()) {
             "yaml", "yml" -> getYamlMapper().readValue<SelectorTrainingConfigurationInput>(
                 file
             )
@@ -118,5 +136,24 @@ class ModelSelectorCreateCommand : BaseCommand() {
                 "Unsupported config file format: $extension. Use .yaml, .yml, or .json"
             )
         }
+
+        if (startDate == null && endDate == null) {
+            return config
+        }
+
+        val jsonMapper = getJsonMapper()
+        val configNode = jsonMapper.valueToTree<ObjectNode>(config)
+        SelectorCommandUtils.patchTrainDatasetDateRange(
+            configNode = configNode,
+            startDate = startDate?.let { parseDate("--start-date", it) },
+            endDate = endDate?.let { parseDate("--end-date", it) }
+        )
+        return jsonMapper.treeToValue(configNode, SelectorTrainingConfigurationInput::class.java)
+    }
+
+    private fun parseDate(optionName: String, value: String): LocalDate = try {
+        LocalDate.parse(value)
+    } catch (exception: Exception) {
+        throw IllegalArgumentException("$optionName must use YYYY-MM-DD: $value", exception)
     }
 }
