@@ -266,6 +266,15 @@ jobs:
           ./.github/scripts/smoke-test-installer.sh scripts/install.sh "$archive" "$RELEASE_VERSION"
           ./.github/scripts/test-installer-upgrade.sh scripts/install.sh
 
+      - name: Smoke test Homebrew Cask
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=$(find dist -type f -name "divyam-cli-${RELEASE_VERSION}-darwin-${{ matrix.arch }}.tar.gz" -print -quit)
+          test -n "$archive"
+          chmod +x scripts/render-homebrew-cask.sh .github/scripts/smoke-test-homebrew-cask.sh
+          ./.github/scripts/smoke-test-homebrew-cask.sh scripts/render-homebrew-cask.sh "$archive" "$RELEASE_VERSION"
+
   docker-images:
     runs-on: ubuntu-22.04
     needs: [release-metadata, linux-build]
@@ -394,6 +403,13 @@ jobs:
           find release-artifacts -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.pkg' -o -name 'divyam-cli-*.tar.gz' \) -exec cp {} release-files/ \;
           test -f "release-files/divyam-cli-${RELEASE_VERSION}-darwin-arm64.tar.gz"
           test -f "release-files/divyam-cli-${RELEASE_VERSION}-darwin-x86_64.tar.gz"
+          chmod +x scripts/render-homebrew-cask.sh .github/scripts/verify-homebrew-cask.sh
+          ./.github/scripts/verify-homebrew-cask.sh \
+            scripts/render-homebrew-cask.sh \
+            "$RELEASE_VERSION" \
+            "release-files/divyam-cli-${RELEASE_VERSION}-darwin-arm64.tar.gz" \
+            "release-files/divyam-cli-${RELEASE_VERSION}-darwin-x86_64.tar.gz" \
+            release-files/divyam-cli.rb
           cp scripts/install.sh release-files/install.sh
           printf '%s\n' "$RELEASE_VERSION" > release-files/latest-version
           (
@@ -437,9 +453,118 @@ jobs:
           set -euo pipefail
           ./.github/scripts/smoke-test-published-installer.sh "$RELEASE_VERSION"
 
-  post-release:
+  publish-homebrew-cask:
+    name: Publish Homebrew Cask
     runs-on: ubuntu-22.04
     needs: [release, published-installer-smoke-tests]
+    if: needs.release.result == 'success' && needs.published-installer-smoke-tests.result == 'success'
+    permissions:
+      contents: read
+
+    env:
+      RELEASE_VERSION: ${{ needs.release.outputs.version }}
+      TAP_REPOSITORY: Divyam-AI/homebrew-tap
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require a public Homebrew tap
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata=$(curl --fail --silent --show-error \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/$TAP_REPOSITORY")
+          test "$(jq --raw-output .private <<< "$metadata")" = false
+
+      - name: Require Homebrew tap automation configuration
+        env:
+          APP_CLIENT_ID: ${{ vars.DIVYAM_HOMEBREW_TAP_APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.DIVYAM_HOMEBREW_TAP_APP_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$APP_CLIENT_ID"
+          test -n "$APP_PRIVATE_KEY"
+
+      - name: Create short-lived tap token
+        id: tap-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.DIVYAM_HOMEBREW_TAP_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DIVYAM_HOMEBREW_TAP_APP_PRIVATE_KEY }}
+          owner: Divyam-AI
+          repositories: homebrew-tap
+          permission-contents: write
+
+      - name: Download and verify published Cask archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          gh release download "v$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --dir release-assets \
+            --pattern SHA256SUMS \
+            --pattern "divyam-cli-$RELEASE_VERSION-darwin-arm64.tar.gz" \
+            --pattern "divyam-cli-$RELEASE_VERSION-darwin-x86_64.tar.gz"
+
+          for asset in \
+            "divyam-cli-$RELEASE_VERSION-darwin-arm64.tar.gz" \
+            "divyam-cli-$RELEASE_VERSION-darwin-x86_64.tar.gz"; do
+            expected=$(awk -v asset="$asset" '$2 == asset {print $1; exit}' release-assets/SHA256SUMS)
+            actual=$(shasum -a 256 "release-assets/$asset" | awk '{print $1}')
+            test -n "$expected"
+            test "$actual" = "$expected"
+          done
+
+      - name: Render verified Cask
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/render-homebrew-cask.sh .github/scripts/verify-homebrew-cask.sh
+          ./.github/scripts/verify-homebrew-cask.sh \
+            scripts/render-homebrew-cask.sh \
+            "$RELEASE_VERSION" \
+            "release-assets/divyam-cli-$RELEASE_VERSION-darwin-arm64.tar.gz" \
+            "release-assets/divyam-cli-$RELEASE_VERSION-darwin-x86_64.tar.gz" \
+            release-assets/divyam-cli.rb
+
+      - name: Check out Homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.TAP_REPOSITORY }}
+          token: ${{ steps.tap-token.outputs.token }}
+          path: homebrew-tap
+          persist-credentials: false
+
+      - name: Update Homebrew Cask
+        working-directory: homebrew-tap
+        env:
+          APP_SLUG: ${{ steps.tap-token.outputs.app-slug }}
+          GH_TOKEN: ${{ steps.tap-token.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p Casks
+          cp ../release-assets/divyam-cli.rb Casks/divyam-cli.rb
+          ruby -c Casks/divyam-cli.rb >/dev/null
+
+          if git diff --quiet -- Casks/divyam-cli.rb; then
+            exit 0
+          fi
+
+          bot_id=$(gh api "/users/$APP_SLUG[bot]" --jq .id)
+          git config user.name "$APP_SLUG[bot]"
+          git config user.email "$bot_id+$APP_SLUG[bot]@users.noreply.github.com"
+          gh auth setup-git
+          git add Casks/divyam-cli.rb
+          git commit -m "divyam-cli $RELEASE_VERSION"
+          git push origin HEAD:main
+
+  post-release:
+    runs-on: ubuntu-22.04
+    needs: [release, published-installer-smoke-tests, publish-homebrew-cask]
     if: success()
     permissions:
       contents: write
