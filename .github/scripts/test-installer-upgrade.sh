@@ -87,7 +87,8 @@ run_installer() {
         bash "$installer_path" --yes
 }
 
-run_installer
+initial_output=$(run_installer)
+printf '%s\n' "$initial_output" | grep -F 'Installing Divyam CLI 1.2.3.' >/dev/null
 launcher="$home_dir/.local/bin/divyam"
 "$launcher" version | grep -F 'Version: 1.2.3' >/dev/null
 
@@ -104,8 +105,13 @@ fi
 shasum -a 256 "$web_root/releases/download/v1.2.4/$archive_name" \
     | sed "s#  $web_root/releases/download/v1.2.4/#  #" \
     > "$web_root/releases/download/v1.2.4/SHA256SUMS"
-run_installer
+update_output=$(run_installer)
+printf '%s\n' "$update_output" | grep -F 'Updating Divyam CLI from 1.2.3 to 1.2.4.' >/dev/null
 "$launcher" version | grep -F 'Version: 1.2.4' >/dev/null
+
+rm "$web_root/releases/download/v1.2.4/$archive_name" "$web_root/releases/download/v1.2.4/SHA256SUMS"
+already_installed_output=$(run_installer)
+printf '%s\n' "$already_installed_output" | grep -F 'Divyam CLI 1.2.4 is already installed' >/dev/null
 
 env HOME="$home_dir" bash "$installer_path" --uninstall --yes
 test ! -e "$launcher"

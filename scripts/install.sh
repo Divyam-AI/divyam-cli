@@ -83,6 +83,26 @@ is_version() {
     [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 }
 
+is_newer_version() {
+    local candidate=$1
+    local installed=$2
+    local candidate_major candidate_minor candidate_patch
+    local installed_major installed_minor installed_patch
+
+    IFS=. read -r candidate_major candidate_minor candidate_patch <<< "$candidate"
+    IFS=. read -r installed_major installed_minor installed_patch <<< "$installed"
+
+    if ((10#$candidate_major != 10#$installed_major)); then
+        ((10#$candidate_major > 10#$installed_major))
+        return
+    fi
+    if ((10#$candidate_minor != 10#$installed_minor)); then
+        ((10#$candidate_minor > 10#$installed_minor))
+        return
+    fi
+    ((10#$candidate_patch > 10#$installed_patch))
+}
+
 is_on_path() {
     case ":${PATH:-}:" in
         *":$install_dir:"*) return 0 ;;
@@ -187,48 +207,76 @@ archive_url="${DIVYAM_ARCHIVE_URL:-$release_base_url/download/v$requested_versio
 checksums_url="${DIVYAM_CHECKSUMS_URL:-$release_base_url/download/v$requested_version/SHA256SUMS}"
 release_dir="$data_dir/releases/$requested_version"
 launcher="$install_dir/divyam"
+active_version=""
 
 if [[ -e "$launcher" || -L "$launcher" ]]; then
     if [[ ! -L "$launcher" ]] || [[ "$(readlink "$launcher")" != "$data_dir/releases/"* ]]; then
         fatal "refusing to replace unmanaged executable: $launcher"
     fi
+
+    launcher_target=$(readlink "$launcher")
+    candidate_version=${launcher_target#"$data_dir/releases/"}
+    candidate_version=${candidate_version%/bin/divyam}
+    if [[ "$launcher_target" == "$data_dir/releases/$candidate_version/bin/divyam" ]] && is_version "$candidate_version"; then
+        active_version=$candidate_version
+    fi
 fi
 
-confirm "Divyam CLI $requested_version for macOS $architecture will be installed at $launcher."
+if [[ "$active_version" == "$requested_version" ]]; then
+    existing_binary="$release_dir/bin/divyam"
+    [[ -x "$existing_binary" ]] || fatal "installed Divyam CLI $requested_version is incomplete: $existing_binary"
+    "$existing_binary" --help >/dev/null
+    "$existing_binary" version | grep -F "Version: $requested_version" >/dev/null
+    echo "Divyam CLI $requested_version is already installed at $launcher."
+    exit 0
+fi
+
+operation="Installing Divyam CLI $requested_version."
+if [[ -n "$active_version" ]]; then
+    if is_newer_version "$requested_version" "$active_version"; then
+        operation="Updating Divyam CLI from $active_version to $requested_version."
+    else
+        operation="Switching Divyam CLI from $active_version to $requested_version."
+    fi
+fi
+
+echo "$operation"
+confirm "Install location: $launcher"
 mkdir -p "$install_dir" "$data_dir/releases" || fatal "cannot create Divyam CLI install directories"
-
-work_dir=$(mktemp -d)
-cleanup() {
-    rm -rf "$work_dir"
-}
-trap cleanup EXIT
-
-archive_path="$work_dir/$archive_name"
-checksums_path="$work_dir/SHA256SUMS"
-
-echo "Downloading Divyam CLI $requested_version for macOS $architecture..."
-download_file "$archive_url" "$archive_path"
-download_file "$checksums_url" "$checksums_path"
-
-expected_checksum=$(awk -v archive="$archive_name" '$2 == archive { print $1; exit }' "$checksums_path")
-[[ "$expected_checksum" =~ ^[a-f0-9]{64}$ ]] || fatal "no valid SHA-256 checksum for $archive_name"
-
-actual_checksum=$(shasum -a 256 "$archive_path" | awk '{ print $1 }')
-[[ "$actual_checksum" == "$expected_checksum" ]] || fatal "SHA-256 verification failed for $archive_name"
-
-tar -xzf "$archive_path" -C "$work_dir"
-archive_root="$work_dir/divyam-cli-$requested_version"
-binary_path="$archive_root/bin/divyam"
-[[ -x "$binary_path" ]] || fatal "release archive does not contain an executable divyam binary"
-"$binary_path" --help >/dev/null
-"$binary_path" version | grep -F "Version: $requested_version" >/dev/null
 
 if [[ -d "$release_dir" ]]; then
     existing_binary="$release_dir/bin/divyam"
     [[ -x "$existing_binary" ]] || fatal "existing release directory is incomplete: $release_dir"
     "$existing_binary" --help >/dev/null
     "$existing_binary" version | grep -F "Version: $requested_version" >/dev/null
+    echo "Using existing Divyam CLI $requested_version release."
 else
+    work_dir=$(mktemp -d)
+    cleanup() {
+        rm -rf "$work_dir"
+    }
+    trap cleanup EXIT
+
+    archive_path="$work_dir/$archive_name"
+    checksums_path="$work_dir/SHA256SUMS"
+
+    echo "Downloading Divyam CLI $requested_version for macOS $architecture..."
+    download_file "$archive_url" "$archive_path"
+    download_file "$checksums_url" "$checksums_path"
+
+    expected_checksum=$(awk -v archive="$archive_name" '$2 == archive { print $1; exit }' "$checksums_path")
+    [[ "$expected_checksum" =~ ^[a-f0-9]{64}$ ]] || fatal "no valid SHA-256 checksum for $archive_name"
+
+    actual_checksum=$(shasum -a 256 "$archive_path" | awk '{ print $1 }')
+    [[ "$actual_checksum" == "$expected_checksum" ]] || fatal "SHA-256 verification failed for $archive_name"
+
+    tar -xzf "$archive_path" -C "$work_dir"
+    archive_root="$work_dir/divyam-cli-$requested_version"
+    binary_path="$archive_root/bin/divyam"
+    [[ -x "$binary_path" ]] || fatal "release archive does not contain an executable divyam binary"
+    "$binary_path" --help >/dev/null
+    "$binary_path" version | grep -F "Version: $requested_version" >/dev/null
+
     mv "$archive_root" "$release_dir"
 fi
 

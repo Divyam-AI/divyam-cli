@@ -88,7 +88,8 @@ assert_failure '--version cannot be used with --uninstall' run_installer --unins
 assert_failure '--uninstall cannot be used with --version' run_installer --version "$version" --uninstall
 assert_failure 'interactive confirmation requires a terminal; rerun with --yes' run_installer
 
-run_installer --yes
+install_output=$(run_installer --yes)
+printf '%s\n' "$install_output" | grep -F "Installing Divyam CLI $version." >/dev/null
 
 launcher="$install_dir/divyam"
 test -L "$launcher"
@@ -99,7 +100,9 @@ test -x "$data_dir/releases/$version/bin/divyam"
 grep -Fqx '# Added by Divyam CLI installer' "$home_dir/.zshrc"
 test -z "$(find "$installer_tmp_dir" -mindepth 1 -maxdepth 1 -print -quit)"
 
-run_installer --version "$version" -y
+rm "$release_root/$archive_name" "$release_root/SHA256SUMS"
+already_installed_output=$(run_installer --version "$version" -y)
+printf '%s\n' "$already_installed_output" | grep -F "Divyam CLI $version is already installed" >/dev/null
 
 assert_failure 'interactive confirmation requires a terminal; rerun with --yes' run_installer --uninstall
 run_installer --uninstall --yes
