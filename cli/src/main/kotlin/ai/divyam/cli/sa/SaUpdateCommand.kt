@@ -24,10 +24,9 @@ import java.io.File
 class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
     @Option(
         names = ["--id"],
-        description = ["Required: service accounts id for the service account to update"],
-        required = true
+        description = ["Optional: service account id to update. If omitted, uses the current config."],
     )
-    private lateinit var id: String
+    private var id: String? = null
 
     @Option(
         names = ["--name"],
@@ -206,7 +205,7 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
      */
     fun getAndUpdateLocalServiceAccount(): ServiceAccount {
         var sa = runBlocking {
-            divyamClient.getServiceAccount(serviceAccountId = id)
+            divyamClient.getServiceAccount(serviceAccountId = getSaId(id))
         }
 
         name?.let { sa = sa.copy(name = it.trim()) }
