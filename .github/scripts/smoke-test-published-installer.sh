@@ -23,3 +23,6 @@ launcher="$home_dir/.local/bin/divyam"
 test -L "$launcher"
 "$launcher" --help >/dev/null
 "$launcher" version | grep -F "Version: $version" >/dev/null
+
+env HOME="$home_dir" bash "$installer_path" --uninstall
+test ! -e "$launcher"
