@@ -4,6 +4,13 @@ permissions:
   contents: read
   checks: write
 
+env:
+  HOMEBREW_TAP_REPOSITORY: Divyam-AI/homebrew-tap
+
+concurrency:
+  group: ${{ (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')) && 'divyam-cli-release' || format('divyam-cli-ci-{0}', github.event.pull_request.number || github.ref) }}
+  cancel-in-progress: false
+
 on:
   workflow_dispatch:
     inputs:
@@ -252,7 +259,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8.0.1
         with:
           name: macos-packages-${{ matrix.arch }}
           path: dist/
@@ -274,6 +281,15 @@ jobs:
           test -n "$archive"
           chmod +x scripts/render-homebrew-cask.sh .github/scripts/smoke-test-homebrew-cask.sh
           ./.github/scripts/smoke-test-homebrew-cask.sh scripts/render-homebrew-cask.sh "$archive" "$RELEASE_VERSION"
+
+      - name: Smoke test PKG installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkg=$(find dist -type f -name "divyam-cli-${RELEASE_VERSION}.${{ matrix.arch }}.pkg" -print -quit)
+          test -n "$pkg"
+          chmod +x .github/scripts/smoke-test-macos-pkg.sh
+          ./.github/scripts/smoke-test-macos-pkg.sh "$pkg" "$RELEASE_VERSION"
 
   docker-images:
     runs-on: ubuntu-22.04
@@ -357,9 +373,55 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  homebrew-cask-preflight:
+    name: Homebrew Cask Release Preflight
+    runs-on: ubuntu-22.04
+    needs: release-metadata
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+
+    steps:
+      - name: Require a public Homebrew tap
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata=$(curl --fail --silent --show-error \
+            -H 'Accept: application/vnd.github+json' \
+            "https://api.github.com/repos/$HOMEBREW_TAP_REPOSITORY")
+          test "$(jq --raw-output .private <<< "$metadata")" = false
+
+      - name: Require Homebrew tap automation configuration
+        env:
+          APP_CLIENT_ID: ${{ vars.DIVYAM_HOMEBREW_TAP_APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.DIVYAM_HOMEBREW_TAP_APP_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$APP_CLIENT_ID"
+          test -n "$APP_PRIVATE_KEY"
+
+      - name: Verify tap write capability
+        id: tap-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.DIVYAM_HOMEBREW_TAP_APP_CLIENT_ID }}
+          private-key: ${{ secrets.DIVYAM_HOMEBREW_TAP_APP_PRIVATE_KEY }}
+          owner: Divyam-AI
+          repositories: homebrew-tap
+          permission-contents: write
+
+      - name: Verify tap access
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.HOMEBREW_TAP_REPOSITORY }}
+          token: ${{ steps.tap-token.outputs.token }}
+          path: homebrew-tap-preflight
+          persist-credentials: false
+
   release:
     runs-on: ubuntu-22.04
-    needs: [release-metadata, linux-build, macos-build, macos-smoke-tests, docker-images]
+    needs: [header-check, release-metadata, linux-build, macos-build, macos-smoke-tests, docker-images, homebrew-cask-preflight]
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
@@ -463,29 +525,9 @@ jobs:
 
     env:
       RELEASE_VERSION: ${{ needs.release.outputs.version }}
-      TAP_REPOSITORY: Divyam-AI/homebrew-tap
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Require a public Homebrew tap
-        shell: bash
-        run: |
-          set -euo pipefail
-          metadata=$(curl --fail --silent --show-error \
-            -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/repos/$TAP_REPOSITORY")
-          test "$(jq --raw-output .private <<< "$metadata")" = false
-
-      - name: Require Homebrew tap automation configuration
-        env:
-          APP_CLIENT_ID: ${{ vars.DIVYAM_HOMEBREW_TAP_APP_CLIENT_ID }}
-          APP_PRIVATE_KEY: ${{ secrets.DIVYAM_HOMEBREW_TAP_APP_PRIVATE_KEY }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$APP_CLIENT_ID"
-          test -n "$APP_PRIVATE_KEY"
 
       - name: Create short-lived tap token
         id: tap-token
@@ -533,7 +575,7 @@ jobs:
       - name: Check out Homebrew tap
         uses: actions/checkout@v4
         with:
-          repository: ${{ env.TAP_REPOSITORY }}
+          repository: ${{ env.HOMEBREW_TAP_REPOSITORY }}
           token: ${{ steps.tap-token.outputs.token }}
           path: homebrew-tap
           persist-credentials: false
@@ -562,9 +604,36 @@ jobs:
           git commit -m "divyam-cli $RELEASE_VERSION"
           git push origin HEAD:main
 
+  published-homebrew-cask-smoke-tests:
+    name: Published Homebrew Cask Smoke Tests (macOS)
+    needs: [release-metadata, release, publish-homebrew-cask]
+    if: success()
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-latest
+
+    env:
+      RELEASE_VERSION: ${{ needs.release-metadata.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the published Homebrew Cask
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/smoke-test-published-homebrew-cask.sh
+          ./.github/scripts/smoke-test-published-homebrew-cask.sh "$RELEASE_VERSION"
+
   post-release:
     runs-on: ubuntu-22.04
-    needs: [release, published-installer-smoke-tests, publish-homebrew-cask]
+    needs: [release, published-installer-smoke-tests, publish-homebrew-cask, published-homebrew-cask-smoke-tests]
     if: success()
     permissions:
       contents: write
