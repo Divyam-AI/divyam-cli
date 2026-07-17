@@ -36,9 +36,10 @@ class ModelSelectorGetCommand : BaseCommand() {
                 divyamClient.getModelSelectorById(
                     orgId = resolvedOrgId,
                     modelSelectorId = id
-                )
+            )
             val skipKeys = if (details) setOf("endpoint") else setOf("config", "endpoint")
-            printObjs(selector, skipKeys = skipKeys)
+            val includeKeys = if (details) setOf("config") else emptySet()
+            printObjs(selector, skipKeys = skipKeys, includeKeys = includeKeys)
         }
         return 0
     }

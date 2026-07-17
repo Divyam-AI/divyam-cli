@@ -27,7 +27,8 @@ object Printing {
     fun printObjs(
         objs: Any,
         outputFormat: OutputFormat,
-        skipKeys: Set<String> = emptySet()
+        skipKeys: Set<String> = emptySet(),
+        includeKeys: Set<String> = emptySet()
     ) {
         when (outputFormat) {
             OutputFormat.TEXT -> {
@@ -39,37 +40,54 @@ object Printing {
                 ObjectAsciiTablePrinter.printTable(list, skipKeys)
             }
             OutputFormat.JSON -> {
-                val sanitizedObjs = if (skipKeys.isEmpty()) objs else removeRootKeys(objs, skipKeys)
+                val sanitizedObjs = sanitizeRootKeys(objs, skipKeys, includeKeys)
                 printJson(sanitizedObjs)
             }
             OutputFormat.YAML -> {
-                val sanitizedObjs = if (skipKeys.isEmpty()) objs else removeRootKeys(objs, skipKeys)
+                val sanitizedObjs = sanitizeRootKeys(objs, skipKeys, includeKeys)
                 printYaml(sanitizedObjs)
             }
         }
     }
 
-    private fun removeRootKeys(objs: Any, skipKeys: Set<String>): Any {
+    private fun sanitizeRootKeys(
+        objs: Any,
+        skipKeys: Set<String>,
+        includeKeys: Set<String>
+    ): Any {
         val mapper = getJsonMapper()
 
-        fun sanitize(node: JsonNode): JsonNode {
-            if (!node.isObject) return node
+        fun sanitize(obj: Any?): JsonNode {
+            val node = mapper.valueToTree<JsonNode>(obj)
+            if (!node.isObject || obj == null) return node
+
             val objectNode = node.deepCopy<ObjectNode>()
+            includeKeys.forEach { key ->
+                findField(obj.javaClass, key)?.let { field ->
+                    field.isAccessible = true
+                    objectNode.set<JsonNode>(key, mapper.valueToTree(field.get(obj)))
+                }
+            }
             skipKeys.forEach { objectNode.remove(it) }
             return objectNode
         }
 
         return when (objs) {
-            is List<*> -> objs.map {
-                val node = mapper.valueToTree<JsonNode>(it)
-                sanitize(node)
-            }
+            is List<*> -> objs.map(::sanitize)
+            else -> sanitize(objs)
+        }
+    }
 
-            else -> {
-                val node = mapper.valueToTree<JsonNode>(objs)
-                sanitize(node)
+    private fun findField(type: Class<*>, name: String): java.lang.reflect.Field? {
+        var current: Class<*>? = type
+        while (current != null) {
+            try {
+                return current.getDeclaredField(name)
+            } catch (_: NoSuchFieldException) {
+                current = current.superclass
             }
         }
+        return null
     }
 
     fun getJsonMapper(): ObjectMapper {
