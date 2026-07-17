@@ -40,7 +40,7 @@ class ModelSelectorListCommand : BaseCommand() {
                     serviceAccountId = resolvedServiceAccountId,
                     modelSelectorState = states
                 )
-            printObjs(selectors, skipKeys = setOf("config"))
+            printObjs(selectors, skipKeys = setOf("config", "endpoint"))
         }
         return 0
     }

@@ -23,6 +23,12 @@ class ModelSelectorGetCommand : BaseCommand() {
     )
     private var orgId: Int? = null
 
+    @CommandLine.Option(
+        names = ["--details"],
+        description = ["Include selector config and training details."],
+    )
+    private var details = false
+
     override fun execute(): Int {
         runBlocking {
             val resolvedOrgId = getOrgId(orgId)
@@ -31,7 +37,8 @@ class ModelSelectorGetCommand : BaseCommand() {
                     orgId = resolvedOrgId,
                     modelSelectorId = id
                 )
-            printObjs(selector, skipKeys = setOf("config"))
+            val skipKeys = if (details) setOf("endpoint") else setOf("config", "endpoint")
+            printObjs(selector, skipKeys = skipKeys)
         }
         return 0
     }
