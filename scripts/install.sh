@@ -9,6 +9,7 @@ data_dir="${DIVYAM_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/divyam}"
 requested_version="${DIVYAM_VERSION:-}"
 modify_path="${DIVYAM_NO_MODIFY_PATH:-0}"
 mode="install"
+version_option_used=0
 
 fatal() {
     echo "divyam installer: $*" >&2
@@ -17,7 +18,7 @@ fatal() {
 
 usage() {
     cat <<'EOF'
-Usage: install.sh [--version X.Y.Z] [--uninstall] [--help]
+Usage: install.sh [--version X.Y.Z] [--uninstall] [--help|-h]
 
 Environment:
   DIVYAM_INSTALL_DIR       Directory containing the divyam launcher.
@@ -88,6 +89,8 @@ configure_path() {
             ;;
     esac
 
+    mkdir -p "$(dirname "$profile")"
+
     if [[ -f "$profile" ]] && grep -Fqx "$marker" "$profile"; then
         return
     fi
@@ -118,10 +121,13 @@ while (($#)); do
     case "$1" in
         --version)
             (($# >= 2)) || fatal "--version requires X.Y.Z"
+            [[ "$mode" != "uninstall" ]] || fatal "--version cannot be used with --uninstall"
             requested_version=$2
+            version_option_used=1
             shift 2
             ;;
         --uninstall)
+            ((version_option_used == 0)) || fatal "--uninstall cannot be used with --version"
             mode="uninstall"
             shift
             ;;
