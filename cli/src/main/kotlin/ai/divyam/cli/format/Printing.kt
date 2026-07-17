@@ -28,7 +28,8 @@ object Printing {
         objs: Any,
         outputFormat: OutputFormat,
         skipKeys: Set<String> = emptySet(),
-        includeKeys: Set<String> = emptySet()
+        includeKeys: Set<String> = emptySet(),
+        redactKeys: Set<String> = emptySet()
     ) {
         when (outputFormat) {
             OutputFormat.TEXT -> {
@@ -37,14 +38,14 @@ object Printing {
                 } else {
                     listOfNotNull(objs)
                 }
-                ObjectAsciiTablePrinter.printTable(list, skipKeys)
+                ObjectAsciiTablePrinter.printTable(list, skipKeys, redactKeys)
             }
             OutputFormat.JSON -> {
-                val sanitizedObjs = sanitizeRootKeys(objs, skipKeys, includeKeys)
+                val sanitizedObjs = sanitizeRootKeys(objs, skipKeys, includeKeys, redactKeys)
                 printJson(sanitizedObjs)
             }
             OutputFormat.YAML -> {
-                val sanitizedObjs = sanitizeRootKeys(objs, skipKeys, includeKeys)
+                val sanitizedObjs = sanitizeRootKeys(objs, skipKeys, includeKeys, redactKeys)
                 printYaml(sanitizedObjs)
             }
         }
@@ -53,7 +54,8 @@ object Printing {
     private fun sanitizeRootKeys(
         objs: Any,
         skipKeys: Set<String>,
-        includeKeys: Set<String>
+        includeKeys: Set<String>,
+        redactKeys: Set<String>
     ): Any {
         val mapper = getJsonMapper()
 
@@ -69,7 +71,7 @@ object Printing {
                 }
             }
             skipKeys.forEach { objectNode.remove(it) }
-            return objectNode
+            return OutputRedactor.redactJson(objectNode, redactKeys)
         }
 
         return when (objs) {

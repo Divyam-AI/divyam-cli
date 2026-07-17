@@ -10,6 +10,18 @@ import picocli.CommandLine
 
 @CommandLine.Command(name = "get", description = ["Get selector by id"])
 class ModelSelectorGetCommand : BaseCommand() {
+    private val detailRedactKeys = setOf(
+        "api_key",
+        "apiKey",
+        "api_key_model",
+        "apiKeyModel",
+        "api_token",
+        "apiToken",
+        "password",
+        "authorization",
+        "secret"
+    )
+
     @CommandLine.Option(
         names = ["--id"],
         description = ["Required: model selector id to get"],
@@ -39,7 +51,12 @@ class ModelSelectorGetCommand : BaseCommand() {
             )
             val skipKeys = if (details) setOf("endpoint") else setOf("config", "endpoint")
             val includeKeys = if (details) setOf("config") else emptySet()
-            printObjs(selector, skipKeys = skipKeys, includeKeys = includeKeys)
+            printObjs(
+                selector,
+                skipKeys = skipKeys,
+                includeKeys = includeKeys,
+                redactKeys = if (details) detailRedactKeys else emptySet()
+            )
         }
         return 0
     }
