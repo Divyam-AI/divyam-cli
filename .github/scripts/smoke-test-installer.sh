@@ -86,8 +86,9 @@ assert_failure '--version requires X.Y.Z' run_installer --version
 assert_failure 'release version must be X.Y.Z; received: 1.2' run_installer --version 1.2
 assert_failure '--version cannot be used with --uninstall' run_installer --uninstall --version "$version"
 assert_failure '--uninstall cannot be used with --version' run_installer --version "$version" --uninstall
+assert_failure 'interactive confirmation requires a terminal; rerun with --yes' run_installer
 
-run_installer
+run_installer --yes
 
 launcher="$install_dir/divyam"
 test -L "$launcher"
@@ -98,9 +99,10 @@ test -x "$data_dir/releases/$version/bin/divyam"
 grep -Fqx '# Added by Divyam CLI installer' "$home_dir/.zshrc"
 test -z "$(find "$installer_tmp_dir" -mindepth 1 -maxdepth 1 -print -quit)"
 
-run_installer --version "$version"
+run_installer --version "$version" -y
 
-run_installer --uninstall
+assert_failure 'interactive confirmation requires a terminal; rerun with --yes' run_installer --uninstall
+run_installer --uninstall --yes
 test ! -e "$launcher"
 test ! -e "$data_dir/releases"
 test -f "$home_dir/.zshrc"

@@ -10,6 +10,7 @@ requested_version="${DIVYAM_VERSION:-}"
 modify_path="${DIVYAM_NO_MODIFY_PATH:-0}"
 mode="install"
 version_option_used=0
+assume_yes=0
 
 fatal() {
     echo "divyam installer: $*" >&2
@@ -18,13 +19,32 @@ fatal() {
 
 usage() {
     cat <<'EOF'
-Usage: install.sh [--version X.Y.Z] [--uninstall] [--help|-h]
+Usage: install.sh [--version X.Y.Z] [--uninstall] [--yes|-y] [--help|-h]
 
 Environment:
   DIVYAM_INSTALL_DIR       Directory containing the divyam launcher.
   DIVYAM_DATA_DIR          Directory containing installed Divyam releases.
   DIVYAM_NO_MODIFY_PATH=1  Do not add the install directory to a shell profile.
 EOF
+}
+
+confirm() {
+    local action=$1
+    local response
+
+    ((assume_yes == 1)) && return
+
+    if ! printf '%s\nContinue? [y/N] ' "$action" > /dev/tty || ! IFS= read -r response < /dev/tty; then
+        fatal "interactive confirmation requires a terminal; rerun with --yes"
+    fi
+
+    case "$response" in
+        y|Y|yes|Yes|YES) ;;
+        *)
+            echo "Divyam CLI operation cancelled."
+            exit 0
+            ;;
+    esac
 }
 
 download_file() {
@@ -131,6 +151,10 @@ while (($#)); do
             mode="uninstall"
             shift
             ;;
+        --yes|-y)
+            assume_yes=1
+            shift
+            ;;
         --help|-h)
             usage
             exit 0
@@ -140,11 +164,10 @@ while (($#)); do
 done
 
 if [[ "$mode" == "uninstall" ]]; then
+    confirm "Divyam CLI will remove managed files from $install_dir and $data_dir/releases."
     uninstall
     exit 0
 fi
-
-mkdir -p "$install_dir" "$data_dir/releases"
 
 if [[ -z "$requested_version" ]]; then
     version_file=$(mktemp)
@@ -170,6 +193,9 @@ if [[ -e "$launcher" || -L "$launcher" ]]; then
         fatal "refusing to replace unmanaged executable: $launcher"
     fi
 fi
+
+confirm "Divyam CLI $requested_version for macOS $architecture will be installed at $launcher."
+mkdir -p "$install_dir" "$data_dir/releases" || fatal "cannot create Divyam CLI install directories"
 
 work_dir=$(mktemp -d)
 cleanup() {

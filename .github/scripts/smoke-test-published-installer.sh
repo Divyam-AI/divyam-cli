@@ -17,12 +17,12 @@ curl --fail --location --silent --show-error \
     -o "$installer_path"
 
 home_dir="$tmp_dir/home"
-env HOME="$home_dir" SHELL=/bin/zsh bash "$installer_path" --version "$version"
+env HOME="$home_dir" SHELL=/bin/zsh bash "$installer_path" --version "$version" --yes
 
 launcher="$home_dir/.local/bin/divyam"
 test -L "$launcher"
 "$launcher" --help >/dev/null
 "$launcher" version | grep -F "Version: $version" >/dev/null
 
-env HOME="$home_dir" bash "$installer_path" --uninstall
+env HOME="$home_dir" bash "$installer_path" --uninstall --yes
 test ! -e "$launcher"

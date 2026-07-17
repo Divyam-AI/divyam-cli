@@ -84,7 +84,7 @@ run_installer() {
         HOME="$home_dir" \
         SHELL=/bin/zsh \
         DIVYAM_RELEASE_BASE_URL="http://127.0.0.1:$port/releases" \
-        bash "$installer_path"
+        bash "$installer_path" --yes
 }
 
 run_installer
@@ -107,5 +107,5 @@ shasum -a 256 "$web_root/releases/download/v1.2.4/$archive_name" \
 run_installer
 "$launcher" version | grep -F 'Version: 1.2.4' >/dev/null
 
-env HOME="$home_dir" bash "$installer_path" --uninstall
+env HOME="$home_dir" bash "$installer_path" --uninstall --yes
 test ! -e "$launcher"
