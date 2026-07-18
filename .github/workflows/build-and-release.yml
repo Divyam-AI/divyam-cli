@@ -222,7 +222,7 @@ jobs:
           set -euo pipefail
           archive="cli/build/distributions/installer/divyam-cli-${RELEASE_VERSION}-darwin-${{ matrix.arch }}.tar.gz"
           test -f "$archive"
-          ./.github/scripts/verify-installer-archive.sh "$archive" "$RELEASE_VERSION"
+          ./.github/scripts/test-macos-artifacts.sh verify-archive "$archive" "$RELEASE_VERSION"
 
       - name: Prepare macOS artifacts
         shell: bash
@@ -270,8 +270,8 @@ jobs:
           set -euo pipefail
           archive=$(find dist -type f -name "divyam-cli-${RELEASE_VERSION}-darwin-${{ matrix.arch }}.tar.gz" -print -quit)
           test -n "$archive"
-          ./.github/scripts/smoke-test-installer.sh scripts/install.sh "$archive" "$RELEASE_VERSION"
-          ./.github/scripts/test-installer-upgrade.sh scripts/install.sh
+          ./.github/scripts/test-macos-artifacts.sh direct-installer scripts/install.sh "$archive" "$RELEASE_VERSION"
+          ./.github/scripts/test-macos-artifacts.sh installer-upgrade scripts/install.sh
 
       - name: Smoke test Homebrew Cask
         shell: bash
@@ -279,8 +279,8 @@ jobs:
           set -euo pipefail
           archive=$(find dist -type f -name "divyam-cli-${RELEASE_VERSION}-darwin-${{ matrix.arch }}.tar.gz" -print -quit)
           test -n "$archive"
-          chmod +x scripts/render-homebrew-cask.sh .github/scripts/smoke-test-homebrew-cask.sh
-          ./.github/scripts/smoke-test-homebrew-cask.sh scripts/render-homebrew-cask.sh "$archive" "$RELEASE_VERSION"
+          chmod +x scripts/render-homebrew-cask.sh .github/scripts/test-homebrew-cask.sh
+          ./.github/scripts/test-homebrew-cask.sh local scripts/render-homebrew-cask.sh "$archive" "$RELEASE_VERSION"
 
       - name: Smoke test PKG installer
         shell: bash
@@ -288,8 +288,8 @@ jobs:
           set -euo pipefail
           pkg=$(find dist -type f -name "divyam-cli-${RELEASE_VERSION}.${{ matrix.arch }}.pkg" -print -quit)
           test -n "$pkg"
-          chmod +x .github/scripts/smoke-test-macos-pkg.sh
-          ./.github/scripts/smoke-test-macos-pkg.sh "$pkg" "$RELEASE_VERSION"
+          chmod +x .github/scripts/test-macos-artifacts.sh
+          ./.github/scripts/test-macos-artifacts.sh pkg "$pkg" "$RELEASE_VERSION"
 
   docker-images:
     runs-on: ubuntu-22.04
@@ -465,8 +465,8 @@ jobs:
           find release-artifacts -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.pkg' -o -name 'divyam-cli-*.tar.gz' \) -exec cp {} release-files/ \;
           test -f "release-files/divyam-cli-${RELEASE_VERSION}-darwin-arm64.tar.gz"
           test -f "release-files/divyam-cli-${RELEASE_VERSION}-darwin-x86_64.tar.gz"
-          chmod +x scripts/render-homebrew-cask.sh .github/scripts/verify-homebrew-cask.sh
-          ./.github/scripts/verify-homebrew-cask.sh \
+          chmod +x scripts/render-homebrew-cask.sh .github/scripts/test-homebrew-cask.sh
+          ./.github/scripts/test-homebrew-cask.sh verify \
             scripts/render-homebrew-cask.sh \
             "$RELEASE_VERSION" \
             "release-files/divyam-cli-${RELEASE_VERSION}-darwin-arm64.tar.gz" \
@@ -513,7 +513,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./.github/scripts/smoke-test-published-installer.sh "$RELEASE_VERSION"
+          ./.github/scripts/test-published-installer.sh "$RELEASE_VERSION"
 
   publish-homebrew-cask:
     name: Publish Homebrew Cask
@@ -564,8 +564,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          chmod +x scripts/render-homebrew-cask.sh .github/scripts/verify-homebrew-cask.sh
-          ./.github/scripts/verify-homebrew-cask.sh \
+          chmod +x scripts/render-homebrew-cask.sh .github/scripts/test-homebrew-cask.sh
+          ./.github/scripts/test-homebrew-cask.sh verify \
             scripts/render-homebrew-cask.sh \
             "$RELEASE_VERSION" \
             "release-assets/divyam-cli-$RELEASE_VERSION-darwin-arm64.tar.gz" \
@@ -628,8 +628,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          chmod +x .github/scripts/smoke-test-published-homebrew-cask.sh
-          ./.github/scripts/smoke-test-published-homebrew-cask.sh "$RELEASE_VERSION"
+          chmod +x .github/scripts/test-published-homebrew-cask.sh
+          ./.github/scripts/test-published-homebrew-cask.sh "$RELEASE_VERSION"
 
   post-release:
     runs-on: ubuntu-22.04

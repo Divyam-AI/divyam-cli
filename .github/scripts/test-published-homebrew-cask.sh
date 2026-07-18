@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-version=${1:?usage: smoke-test-published-homebrew-cask.sh <version>}
+version=${1:?usage: test-published-homebrew-cask.sh <version>}
 cask_reference=${DIVYAM_HOMEBREW_CASK_REFERENCE:-Divyam-AI/tap/divyam-cli}
 tap_name=${DIVYAM_HOMEBREW_TAP_NAME:-Divyam-AI/tap}
 tap_name_lower=$(printf '%s' "$tap_name" | tr '[:upper:]' '[:lower:]')

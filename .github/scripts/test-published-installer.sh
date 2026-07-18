@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-version=${1:?usage: smoke-test-published-installer.sh <version>}
+version=${1:?usage: test-published-installer.sh <version>}
 repository=${GITHUB_REPOSITORY:-Divyam-AI/divyam-cli}
 tmp_dir=$(mktemp -d)
 
