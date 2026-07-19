@@ -130,9 +130,9 @@ object MockDataStore {
     val users = mutableMapOf<String, User>() // keyed by emailId
     val serviceAccounts =
         mutableMapOf<String, ServiceAccount>() // keyed by serviceAccount.id
-    val modelInfos = mutableMapOf<Int, ModelProviderInfo>() // keyed by id
-    val modelSelectors =
-        mutableMapOf<Int, ModelSelector>() // keyed by id (int as models expect)
+    val modelInfos = mutableMapOf<Int, ModelProviderInfo>()
+    val modelSelectors = mutableMapOf<Int, ModelSelector>()
+    var lastModelSelectorCreateRequest: ModelSelectorCreateRequest? = null
     val evals =
         mutableMapOf<String, MutableMap<Int, Eval>>() // keyed by serviceAccountId -> (evalId -> Eval)
 
@@ -686,13 +686,13 @@ fun Application.configureRouting(password: String) {
                 post("") {
                     val createRequest =
                         call.receive<ModelSelectorCreateRequest>()
+                    MockDataStore.lastModelSelectorCreateRequest = createRequest
                     val id =
                         MockDataStore.modelSelectorIdCounter.getAndIncrement()
                     val createdAtInt =
                         (System.currentTimeMillis() / 1000).toInt()
-                    // Note: config, evalId, candidateModels, extractorStrategy are accepted 
-                    // but the mock doesn't fully persist them (config types differ between Input/Output)
-                    // State is not part of create request per API spec - always defaults to REQUESTED
+                    // The mock does not persist all create fields because input and output configs differ.
+                    // The API defaults a selector's state to REQUESTED.
                     val selector = ModelSelector(
                         id = id,
                         name = createRequest.name,
@@ -821,4 +821,3 @@ fun sha256Hex(input: ByteArray): String {
 
 fun sha256Hex(input: String): String =
     sha256Hex(input.toByteArray(Charsets.UTF_8))
-

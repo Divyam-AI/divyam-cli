@@ -4,6 +4,7 @@
  */
 package ai.divyma.cli.test
 
+import ai.divyam.cli.MockDataStore
 import ai.divyam.cli.ServerCommand
 import ai.divyam.cli.chat.ChatCommand
 import ai.divyam.cli.eval.EvalCommand
@@ -12,6 +13,13 @@ import ai.divyam.cli.org.OrgCommand
 import ai.divyam.cli.sa.SaCommand
 import ai.divyam.cli.selector.ModelSelectorCommand
 import ai.divyam.cli.user.UserCommand
+import ai.divyam.data.model.EvaluationParamsOutput
+import ai.divyam.data.model.ExperimentDatasetInfo
+import ai.divyam.data.model.ExperimentDatasetsOutput
+import ai.divyam.data.model.LLMEvaluatorParams
+import ai.divyam.data.model.SelectorTrainingConfigurationOutput
+import ai.divyam.data.model.SourceSpec
+import ai.divyam.data.model.StageWiseParamsOutput
 import java.nio.file.Files
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -1256,6 +1264,32 @@ class DivyamCliTest {
         assertEquals(0, createExitCode)
         val createJson = parseJson()
         val sourceSelectorId = createJson!!.get("id").asInt()
+        val sourceEvalId = 987
+        val sourceSelector = requireNotNull(MockDataStore.modelSelectors[sourceSelectorId])
+        MockDataStore.modelSelectors[sourceSelectorId] = sourceSelector.copy(
+            config = SelectorTrainingConfigurationOutput(
+                datasets = ExperimentDatasetsOutput(
+                    trainDs = ExperimentDatasetInfo(
+                        name = "clone-source",
+                        sourceSpecs = SourceSpec(
+                            startDate = "2026-01-01T00:00:00",
+                            endDate = "2026-01-02T00:00:00"
+                        )
+                    )
+                ),
+                stages = StageWiseParamsOutput(
+                    selectorEvaluation = EvaluationParamsOutput(
+                        extractorStrategy = "default"
+                    )
+                ),
+                evaluator = LLMEvaluatorParams(
+                    evalId = sourceEvalId,
+                    name = "source-eval",
+                    evalClassPath = "Evaluator"
+                )
+            )
+        )
+        MockDataStore.lastModelSelectorCreateRequest = null
 
         outContent.reset()
 
@@ -1280,6 +1314,10 @@ class DivyamCliTest {
         assertEquals("Source Selector For Clone_clone", json.get("name").asText())
         // State defaults to REQUESTED per API spec (state in create request is ignored)
         assertEquals("REQUESTED", json.get("state").asText())
+        assertEquals(
+            sourceEvalId,
+            MockDataStore.lastModelSelectorCreateRequest?.evalId
+        )
     }
 
     @Test
@@ -1697,7 +1735,7 @@ class DivyamCliTest {
     @Order(60)
     fun `connection params resolved from env vars`() {
         withTempHome { _ ->
-            // tempHome has no config — config source is ruled out
+            // The temporary home has no config file.
             setEnv("DIVYAM_ENDPOINT", baseUrl)
             setEnv("DIVYAM_USER", "admin@dashboard.divyam.ai")
             setEnv("DIVYAM_PASSWORD", testPassword)
@@ -1725,7 +1763,7 @@ class DivyamCliTest {
                 user = "admin@dashboard.divyam.ai",
                 password = testPassword
             )
-            // No CLI args, no env vars — config file is the only source
+            // The config file is the only source.
             val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
             assertEquals(0, exitCode)
             val json = parseJson()
@@ -1738,7 +1776,7 @@ class DivyamCliTest {
     @Order(62)
     fun `cli args override env vars for connection params`() {
         withTempHome { _ ->
-            // Env vars point to a wrong host — CLI args must win
+            // CLI arguments take precedence over environment values.
             setEnv("DIVYAM_ENDPOINT", "http://wrong-host:9999")
             setEnv("DIVYAM_USER", "wrong-user@example.com")
             setEnv("DIVYAM_PASSWORD", "wrong-password")
@@ -1767,7 +1805,7 @@ class DivyamCliTest {
     @Order(63)
     fun `env vars override config file for connection params`() {
         withTempHome { tempHome ->
-            // Config file points to a wrong host — env vars must win
+            // Environment values take precedence over the config file.
             writeTestConfig(
                 tempHome,
                 endpoint = "http://wrong-config-host:9999",
@@ -1802,11 +1840,10 @@ class DivyamCliTest {
                 user = "admin@dashboard.divyam.ai",
                 password = testPassword
             )
-            // No DIVYAM_ENDPOINT env var, no --endpoint CLI arg
-            // initialize() defaults endpoint to "https://api.divyam.ai"
+            // No endpoint is supplied by the CLI or environment.
+            // initialize() defaults the endpoint to "https://api.divyam.ai".
             val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
-            // Expect failure — not because endpoint is missing from config, but because
-            // https://api.divyam.ai is unreachable in tests. Exit 1 = network error, not config error.
+            // The test expects a network error, not a missing-endpoint config error.
             assertEquals(1, exitCode)
             val errOutput = errContent.toString()
             assertFalse(
@@ -1829,7 +1866,7 @@ class DivyamCliTest {
                     "--user", "admin@dashboard.divyam.ai",
                     "--password", testPassword,
                     "--format", "json"
-                    // No --org-id CLI arg — DIVYAM_ORG_ID env var supplies it
+                    // DIVYAM_ORG_ID supplies the org ID.
                 )
                 assertEquals(0, exitCode)
                 val json = parseJson()
