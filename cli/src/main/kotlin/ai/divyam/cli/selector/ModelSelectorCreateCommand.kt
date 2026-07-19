@@ -67,6 +67,12 @@ class ModelSelectorCreateCommand : BaseCommand() {
     )
     private var candidateModels: String? = null
 
+    @Option(
+        names = ["--min-dataset-rows"],
+        description = ["Optional: Minimum number of rows the training source dataset must have before training starts"],
+    )
+    private var minDatasetRows: Int? = null
+
     override fun execute(): Int {
         validateOptions()
         val newModelSelector = runBlocking {
@@ -80,7 +86,8 @@ class ModelSelectorCreateCommand : BaseCommand() {
                 config = readConfigFile(configFile),
                 extractorStrategy = extractorStrategy,
                 evalId = evalId,
-                candidateModels = SelectorCommandUtils.parseCandidateModels(candidateModels)
+                candidateModels = SelectorCommandUtils.parseCandidateModels(candidateModels),
+                minDatasetRows = minDatasetRows
             )
             divyamClient.createModelSelector(
                 modelSelectorCreateRequest = modelSelectorCreateRequest

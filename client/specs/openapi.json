@@ -2350,7 +2350,7 @@
             "min_rows": {
               "type": "integer",
               "title": "Min Rows",
-              "default": 0
+              "default": 2000
             },
             "source": {
               "$ref": "#/components/schemas/DatasetSource",
@@ -3220,6 +3220,17 @@
                 }
               ],
               "title": "Extractor Strategy"
+            },
+            "min_dataset_rows": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Dataset Rows"
             }
           },
           "type": "object",
