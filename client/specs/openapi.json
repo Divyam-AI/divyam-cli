@@ -1339,6 +1339,73 @@
           }
         }
       },
+      "/v1/service_accounts/{service_account_id}/evals/{eval_id}/test/": {
+        "post": {
+          "summary": "Test Eval",
+          "operationId": "test_eval",
+          "parameters": [
+            {
+              "name": "service_account_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "string",
+                "title": "Service Account Id"
+              }
+            },
+            {
+              "name": "eval_id",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Eval Id"
+              }
+            },
+            {
+              "name": "org_id",
+              "in": "query",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "title": "Org Id"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvalTestRequest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Successful Response",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/EvalTestResponse"
+                  }
+                }
+              }
+            },
+            "422": {
+              "description": "Validation Error",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "/v1/control/{deployment_id}/usage": {
         "post": {
           "tags": [
@@ -2018,6 +2085,74 @@
             "INACTIVE"
           ],
           "title": "EvalState"
+        },
+        "EvalTestRequest": {
+          "properties": {
+            "record": {
+              "additionalProperties": true,
+              "type": "object",
+              "title": "Record"
+            }
+          },
+          "type": "object",
+          "required": [
+            "record"
+          ],
+          "title": "EvalTestRequest"
+        },
+        "EvalTestResponse": {
+          "properties": {
+            "eval_id": {
+              "type": "integer",
+              "title": "Eval Id"
+            },
+            "granularity": {
+              "$ref": "#/components/schemas/EvalGranularity"
+            },
+            "scores": {
+              "items": {
+                "$ref": "#/components/schemas/EvalTestScore"
+              },
+              "type": "array",
+              "title": "Scores"
+            }
+          },
+          "type": "object",
+          "required": [
+            "eval_id",
+            "granularity",
+            "scores"
+          ],
+          "title": "EvalTestResponse"
+        },
+        "EvalTestScore": {
+          "properties": {
+            "eval_id": {
+              "type": "integer",
+              "title": "Eval Id"
+            },
+            "eval_name": {
+              "type": "string",
+              "title": "Eval Name"
+            },
+            "score": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Score"
+            }
+          },
+          "type": "object",
+          "required": [
+            "eval_id",
+            "eval_name"
+          ],
+          "title": "EvalTestScore"
         },
         "EvalUpdateRequest": {
           "properties": {

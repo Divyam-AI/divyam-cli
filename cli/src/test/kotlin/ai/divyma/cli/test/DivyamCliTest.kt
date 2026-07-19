@@ -7,6 +7,7 @@ package ai.divyma.cli.test
 import ai.divyam.cli.ServerCommand
 import ai.divyam.cli.chat.ChatCommand
 import ai.divyam.cli.eval.EvalCommand
+import ai.divyam.cli.MockDataStore
 import ai.divyam.cli.model.ModelInfoCommand
 import ai.divyam.cli.org.OrgCommand
 import ai.divyam.cli.sa.SaCommand
@@ -1604,6 +1605,54 @@ class DivyamCliTest {
         val json = parseJson()
         assertNotNull(json)
         assertEquals(true, json!!.get("is_primary").asBoolean())
+    }
+
+    @Test
+    @Order(46)
+    fun `eval test`() {
+        executeCommand(
+            EvalCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--name", "Eval Test Command",
+            "--granularity", "LLM_REQUEST_RESPONSE",
+            "--class-name", "TestEval",
+            "--state", "ACTIVE",
+        )
+        val evalId = parseJson()!!.get("id").asInt()
+        val recordFile = Files.createTempFile("eval-test-record", ".json")
+        Files.writeString(
+            recordFile,
+            """{"id":"request-1","timestamp":"2026-07-19T00:00:00Z","traffic_bucket":"selector_disabled"}""",
+        )
+
+        outContent.reset()
+        val exitCode = executeCommand(
+            EvalCommand(),
+            "test",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--id", evalId.toString(),
+            "--record-file", recordFile.toString(),
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertEquals(evalId, json!!.get("eval_id").asInt())
+        assertEquals(1.0, json.get("scores")[0].get("score").asDouble())
+        val requestRecord = MockDataStore.lastEvalTestRequest?.record as Map<*, *>
+        assertEquals("request-1", requestRecord["id"])
+        Files.deleteIfExists(recordFile)
     }
 
     // ============================================

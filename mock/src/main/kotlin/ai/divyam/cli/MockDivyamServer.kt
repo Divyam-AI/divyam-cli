@@ -9,6 +9,9 @@ import ai.divyam.data.model.ChatRequest
 import ai.divyam.data.model.Choice
 import ai.divyam.data.model.Eval
 import ai.divyam.data.model.EvalCreateRequest
+import ai.divyam.data.model.EvalTestRequest
+import ai.divyam.data.model.EvalTestResponse
+import ai.divyam.data.model.EvalTestScore
 import ai.divyam.data.model.EvalUpdateRequest
 import ai.divyam.data.model.Message
 import ai.divyam.data.model.ModelProviderInfo
@@ -135,6 +138,7 @@ object MockDataStore {
         mutableMapOf<Int, ModelSelector>() // keyed by id (int as models expect)
     val evals =
         mutableMapOf<String, MutableMap<Int, Eval>>() // keyed by serviceAccountId -> (evalId -> Eval)
+    var lastEvalTestRequest: EvalTestRequest? = null
 
     val providers =
         mutableMapOf<String, ModelProvider>() // provider name -> provider struct
@@ -623,6 +627,33 @@ fun Application.configureRouting(password: String) {
                     )
                 }
 
+                post("/{serviceAccountId}/evals/{evalId}/test") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
+                            ?: return@post call.respond(HttpStatusCode.BadRequest)
+                    val evalId = call.parameters["evalId"]?.toIntOrNull()
+                        ?: return@post call.respond(HttpStatusCode.BadRequest)
+                    val eval = MockDataStore.evals[serviceAccountId]?.get(evalId)
+                        ?: return@post call.respond(
+                            HttpStatusCode.NotFound,
+                            "Eval not found"
+                        )
+                    MockDataStore.lastEvalTestRequest = call.receive()
+                    call.respond(
+                        EvalTestResponse(
+                            evalId = eval.id,
+                            granularity = eval.granularity,
+                            scores = listOf(
+                                EvalTestScore(
+                                    evalId = eval.id,
+                                    evalName = eval.name,
+                                    score = 1.0,
+                                )
+                            ),
+                        ),
+                    )
+                }
+
                 post("/{serviceAccountId}/evals/{evalId}") {
                     val serviceAccountId =
                         call.parameters["serviceAccountId"]
@@ -821,4 +852,3 @@ fun sha256Hex(input: ByteArray): String {
 
 fun sha256Hex(input: String): String =
     sha256Hex(input.toByteArray(Charsets.UTF_8))
-
