@@ -74,9 +74,9 @@ class ModelSelectorCreateCommand : BaseCommand() {
     @Option(
         names = ["--start-date"],
         description = [
-            "Optional: Inclusive start date for datasets.train_ds.source_specs " +
+            "Optional: Inclusive start date for the selector training-data window " +
                 "(format: YYYY-MM-DD). Use with --end-date and --extractor-strategy " +
-                "to create a router-log config, or override --config-file.",
+                "to create a date-scoped training configuration, or override --config-file.",
         ],
     )
     private var startDate: String? = null
@@ -84,9 +84,9 @@ class ModelSelectorCreateCommand : BaseCommand() {
     @Option(
         names = ["--end-date"],
         description = [
-            "Optional: Inclusive end date for datasets.train_ds.source_specs " +
+            "Optional: Inclusive end date for the selector training-data window " +
                 "(format: YYYY-MM-DD). Use with --start-date and --extractor-strategy " +
-                "to create a router-log config, or override --config-file.",
+                "to create a date-scoped training configuration, or override --config-file.",
         ],
     )
     private var endDate: String? = null
