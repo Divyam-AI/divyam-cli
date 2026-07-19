@@ -71,7 +71,20 @@ class SaTrafficAllocationConfigTest {
         )
 
         assertEquals(0, exitCode)
-        assertAllocation(parseJson())
+        assertAllocation(parseJson(), control = 10.0, selectorDisabled = 90.0)
+    }
+
+    @Test
+    fun `sa create accepts decimal traffic allocation config`() {
+        val exitCode = executeCommand(
+            "create",
+            "--org-id", "1",
+            "--name", "SA With Decimal Traffic Allocation",
+            "--traffic-allocation-config", "{\"control\":10.5,\"selector_disabled\":89.5}",
+        )
+
+        assertEquals(0, exitCode)
+        assertAllocation(parseJson(), control = 10.5, selectorDisabled = 89.5)
     }
 
     @Test
@@ -92,7 +105,28 @@ class SaTrafficAllocationConfigTest {
         )
 
         assertEquals(0, updateExitCode)
-        assertAllocation(parseJson())
+        assertAllocation(parseJson(), control = 10.0, selectorDisabled = 90.0)
+    }
+
+    @Test
+    fun `sa update accepts decimal traffic allocation config`() {
+        val createExitCode = executeCommand(
+            "create",
+            "--org-id", "1",
+            "--name", "SA To Update Decimal Traffic Allocation",
+        )
+        assertEquals(0, createExitCode)
+        val serviceAccountId = parseJson()!!.get("id").asText()
+        outContent.reset()
+
+        val updateExitCode = executeCommand(
+            "update",
+            "--id", serviceAccountId,
+            "--traffic-allocation-config", "{\"control\":10.5,\"selector_disabled\":89.5}",
+        )
+
+        assertEquals(0, updateExitCode)
+        assertAllocation(parseJson(), control = 10.5, selectorDisabled = 89.5)
     }
 
     private fun executeCommand(vararg args: String): Int {
@@ -131,10 +165,10 @@ class SaTrafficAllocationConfigTest {
         return if (output.isEmpty()) null else jacksonObjectMapper().readTree(output)
     }
 
-    private fun assertAllocation(json: JsonNode?) {
+    private fun assertAllocation(json: JsonNode?, control: Double, selectorDisabled: Double) {
         assertNotNull(json)
         val allocation = json!!.get("traffic_allocation_config")
-        assertEquals(10.0, allocation.get("control").asDouble())
-        assertEquals(90.0, allocation.get("selector_disabled").asDouble())
+        assertEquals(control, allocation.get("control").asDouble())
+        assertEquals(selectorDisabled, allocation.get("selector_disabled").asDouble())
     }
 }
