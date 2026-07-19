@@ -8,6 +8,7 @@ import ai.divyam.cli.base.BaseCommand
 import ai.divyam.data.model.ModelSelectorCreateRequest
 import ai.divyam.data.model.ModelSelectorState
 import ai.divyam.data.model.SelectorTrainingConfigurationInput
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.runBlocking
@@ -15,6 +16,7 @@ import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.io.File
 import java.time.LocalDate
+import java.util.UUID
 
 @CommandLine.Command(name = "create", description = ["Create a selector"])
 class ModelSelectorCreateCommand : BaseCommand() {
@@ -71,13 +73,21 @@ class ModelSelectorCreateCommand : BaseCommand() {
 
     @Option(
         names = ["--start-date"],
-        description = ["Optional: Inclusive start date for datasets.train_ds.source_specs (format: YYYY-MM-DD). Requires --config-file."],
+        description = [
+            "Optional: Inclusive start date for datasets.train_ds.source_specs " +
+                "(format: YYYY-MM-DD). Use with --end-date and --extractor-strategy " +
+                "to create a router-log config, or override --config-file.",
+        ],
     )
     private var startDate: String? = null
 
     @Option(
         names = ["--end-date"],
-        description = ["Optional: Inclusive end date for datasets.train_ds.source_specs (format: YYYY-MM-DD). Requires --config-file."],
+        description = [
+            "Optional: Inclusive end date for datasets.train_ds.source_specs " +
+                "(format: YYYY-MM-DD). Use with --start-date and --extractor-strategy " +
+                "to create a router-log config, or override --config-file.",
+        ],
     )
     private var endDate: String? = null
 
@@ -91,7 +101,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
                 serviceAccountId = resolvedServiceAccountId,
                 name = name,
                 endpoint = selectorEndpoint,
-                config = readConfigFile(configFile),
+                config = readConfigFile(configFile, resolvedServiceAccountId),
                 extractorStrategy = extractorStrategy,
                 evalId = evalId,
                 candidateModels = SelectorCommandUtils.parseCandidateModels(candidateModels)
@@ -112,12 +122,21 @@ class ModelSelectorCreateCommand : BaseCommand() {
         }
 
         if (configFile == null && (startDate != null || endDate != null)) {
-            throw IllegalArgumentException("--start-date and --end-date require --config-file")
+            require(startDate != null && endDate != null) {
+                "--start-date and --end-date must be provided together when no config file is supplied"
+            }
         }
     }
 
-    private fun readConfigFile(configFile: File?): SelectorTrainingConfigurationInput? {
-        val file = configFile ?: return null
+    private fun readConfigFile(
+        configFile: File?,
+        serviceAccountId: String,
+    ): SelectorTrainingConfigurationInput? {
+        val file = configFile ?: return if (startDate == null && endDate == null) {
+            null
+        } else {
+            createDateRangeConfig(serviceAccountId)
+        }
 
         if (!file.exists()) {
             throw IllegalArgumentException("Config file does not exist: ${file.absolutePath}")
@@ -151,9 +170,49 @@ class ModelSelectorCreateCommand : BaseCommand() {
         return jsonMapper.treeToValue(configNode, SelectorTrainingConfigurationInput::class.java)
     }
 
+    private fun createDateRangeConfig(serviceAccountId: String): SelectorTrainingConfigurationInput =
+        buildDateRangeConfig(
+            jsonMapper = getJsonMapper(),
+            serviceAccountId = serviceAccountId,
+            extractorStrategy = requireNotNull(extractorStrategy),
+            startDate = parseDate("--start-date", requireNotNull(startDate)),
+            endDate = parseDate("--end-date", requireNotNull(endDate)),
+        )
+
     private fun parseDate(optionName: String, value: String): LocalDate = try {
         LocalDate.parse(value)
     } catch (exception: Exception) {
         throw IllegalArgumentException("$optionName must use YYYY-MM-DD: $value", exception)
+    }
+
+    companion object {
+        internal fun buildDateRangeConfig(
+            jsonMapper: ObjectMapper,
+            serviceAccountId: String,
+            extractorStrategy: String,
+            startDate: LocalDate,
+            endDate: LocalDate,
+        ): SelectorTrainingConfigurationInput {
+            val configNode = jsonMapper.createObjectNode()
+            val trainDataset = configNode.putObject("datasets").putObject("train_ds")
+            trainDataset.put(
+                "name",
+                "train_${serviceAccountId}_${UUID.randomUUID().toString().take(8)}",
+            )
+            trainDataset.put("min_rows", 1)
+            trainDataset.put("source", "router_logs")
+            trainDataset.put("reuse_existing", true)
+            trainDataset.putObject("source_specs").put("ignore_control_bucket", true)
+            configNode.putObject("stages")
+                .putObject("selector_evaluation")
+                .put("extractor_strategy", extractorStrategy)
+
+            SelectorCommandUtils.patchTrainDatasetDateRange(
+                configNode = configNode,
+                startDate = startDate,
+                endDate = endDate,
+            )
+            return jsonMapper.treeToValue(configNode, SelectorTrainingConfigurationInput::class.java)
+        }
     }
 }
