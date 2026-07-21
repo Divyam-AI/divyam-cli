@@ -1271,6 +1271,39 @@ class DivyamCliTest {
 
     @Test
     @Order(36)
+    fun `selector create preserves timestamp offsets in generated configuration`() {
+        MockDataStore.latestModelSelectorCreateRequest = null
+
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Test Selector with Offset Timestamp Config",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default",
+            "--start-date", "2026-07-01T09:00:00+5.30",
+            "--end-date", "2026-07-01T17:30:00+05:30"
+        )
+
+        assertEquals(0, exitCode)
+        assertNotNull(parseJson())
+
+        val request = MockDataStore.latestModelSelectorCreateRequest
+        assertNotNull(request)
+        val sourceSpecs = mapper.valueToTree<JsonNode>(request!!.config)
+            .path("datasets")
+            .path("train_ds")
+            .path("source_specs")
+        assertEquals("2026-07-01T09:00:00+05:30", sourceSpecs.path("start_date").asText())
+        assertEquals("2026-07-01T17:30:00+05:30", sourceSpecs.path("end_date").asText())
+    }
+
+    @Test
+    @Order(36)
     fun `selector get`() {
         val createExitCode = executeCommand(
             ModelSelectorCommand(),
