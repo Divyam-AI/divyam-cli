@@ -19,17 +19,26 @@ verify_archive() {
     test -f "$archive_path"
 
     local archive_root="divyam-cli-$version"
+    local repository_root
+    repository_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
     local expected_entries
-    expected_entries=$(printf '%s\n' \
-        "$archive_root/" \
-        "$archive_root/LICENSE" \
-        "$archive_root/bin/" \
-        "$archive_root/bin/divyam")
+    expected_entries=$(
+        {
+            printf '%s\n' \
+                "$archive_root/" \
+                "$archive_root/LICENSE" \
+                "$archive_root/bin/" \
+                "$archive_root/bin/divyam"
+            if [[ -f "$repository_root/NOTICE" ]]; then
+                printf '%s\n' "$archive_root/NOTICE"
+            fi
+        } | LC_ALL=C sort
+    )
     local actual_entries
     actual_entries=$(tar -tzf "$archive_path" | sed 's#^\./##' | LC_ALL=C sort)
 
     if [[ "$actual_entries" != "$expected_entries" ]]; then
-        echo "Installer archive must contain only LICENSE and bin/divyam" >&2
+        echo "Installer archive has unexpected contents" >&2
         printf '%s\n' "$actual_entries" >&2
         exit 1
     fi
@@ -282,6 +291,8 @@ PY
 smoke_pkg() {
     local pkg_path=${1:?usage: test-macos-artifacts.sh pkg <package.pkg> <version>}
     local version=${2:?usage: test-macos-artifacts.sh pkg <package.pkg> <version>}
+    local repository_root
+    repository_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 
     test -f "$pkg_path"
 
@@ -291,6 +302,12 @@ smoke_pkg() {
         /usr/local/etc/bash_completion.d/divyam
         /usr/local/share/zsh/site-functions/divyam
     )
+    if [[ -f "$repository_root/NOTICE" ]]; then
+        managed_paths+=(
+            /usr/local/share/doc/divyam-cli/LICENSE
+            /usr/local/share/doc/divyam-cli/NOTICE
+        )
+    fi
 
     local managed_path
     for managed_path in "${managed_paths[@]}"; do

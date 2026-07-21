@@ -28,6 +28,20 @@ on:
       - main
 
 jobs:
+  license-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Verify Apache-2.0 license detection
+        if: ${{ hashFiles('NOTICE') != '' }}
+        run: |
+          set -euo pipefail
+          gem install licensee -v 10.0.0 --no-document
+          LICENSEE_BIN="$(ruby -e 'puts Gem::Specification.find_by_name("licensee").full_gem_path')/bin/licensee"
+          "$LICENSEE_BIN" detect . | tee licensee-output.txt
+          grep -F "License:        Apache-2.0" licensee-output.txt
+          grep -F "Confidence:    100.00%" licensee-output.txt
+
   release-metadata:
     runs-on: ubuntu-latest
     outputs:
@@ -153,6 +167,24 @@ jobs:
           else
             ./gradlew clean deb rpm
           fi
+
+      - name: Verify package license notices
+        if: ${{ hashFiles('NOTICE') != '' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DEB=$(find . -type f -name "*.deb" -print -quit)
+          RPM=$(find . -type f -name "*.rpm" -print -quit)
+          test -n "$DEB"
+          test -n "$RPM"
+          for NOTICE in LICENSE NOTICE; do
+            dpkg-deb --fsys-tarfile "$DEB" | tar -tf - | grep -Eq "(^|/)usr/share/doc/divyam-cli/$NOTICE$"
+          done
+          sudo apt-get update
+          sudo apt-get install --yes rpm
+          for NOTICE in LICENSE NOTICE; do
+            rpm -qlp "$RPM" | grep -Fx "/usr/share/doc/divyam-cli/$NOTICE"
+          done
 
       - name: Run cross-distro smoke tests
         run: |
@@ -313,7 +345,7 @@ jobs:
 
       - name: Set repository name
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.ref }}" == refs/tags/* ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" || "$GITHUB_REF_TYPE" == "tag" ]]; then
             echo "REPOSITORY=divyam-public-docker-as1" >> "$GITHUB_ENV"
           else
             echo "REPOSITORY=divyam-docker-dev-as1" >> "$GITHUB_ENV"
@@ -421,7 +453,7 @@ jobs:
 
   release:
     runs-on: ubuntu-22.04
-    needs: [header-check, release-metadata, linux-build, macos-build, macos-smoke-tests, docker-images, homebrew-cask-preflight]
+    needs: [header-check, license-check, release-metadata, linux-build, macos-build, macos-smoke-tests, docker-images, homebrew-cask-preflight]
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
@@ -596,9 +628,10 @@ jobs:
             exit 0
           fi
 
-          bot_id=$(gh api "/users/$APP_SLUG[bot]" --jq .id)
-          git config user.name "$APP_SLUG[bot]"
-          git config user.email "$bot_id+$APP_SLUG[bot]@users.noreply.github.com"
+          bot_login="${APP_SLUG}[bot]"
+          bot_id=$(gh api "/users/$bot_login" --jq .id)
+          git config user.name "$bot_login"
+          git config user.email "$bot_id+$bot_login@users.noreply.github.com"
           gh auth setup-git
           git add Casks/divyam-cli.rb
           git commit -m "divyam-cli $RELEASE_VERSION"

@@ -254,6 +254,7 @@ fun Project.configurePackaging(
 
         from(rootDir) {
             include("LICENSE")
+            include("NOTICE")
             into(archiveRoot)
         }
 
