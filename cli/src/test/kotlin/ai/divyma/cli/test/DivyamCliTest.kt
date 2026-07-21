@@ -4,6 +4,7 @@
  */
 package ai.divyma.cli.test
 
+import ai.divyam.cli.MockDataStore
 import ai.divyam.cli.ServerCommand
 import ai.divyam.cli.chat.ChatCommand
 import ai.divyam.cli.eval.EvalCommand
@@ -1223,6 +1224,8 @@ class DivyamCliTest {
     @Test
     @Order(35)
     fun `selector create with date range without config file`() {
+        MockDataStore.latestModelSelectorCreateRequest = null
+
         val exitCode = executeCommand(
             ModelSelectorCommand(),
             "create",
@@ -1243,6 +1246,27 @@ class DivyamCliTest {
         assertNotNull(json)
         assertTrue(json!!.has("id"))
         assertEquals("Test Selector with Generated Date Range Config", json.get("name").asText())
+
+        val request = MockDataStore.latestModelSelectorCreateRequest
+        assertNotNull(request)
+        assertEquals("default", request!!.extractorStrategy)
+
+        val config = mapper.valueToTree<JsonNode>(request.config)
+        val trainDataset = config.path("datasets").path("train_ds")
+        val sourceSpecs = trainDataset.path("source_specs")
+
+        assertTrue(trainDataset.path("name").asText().startsWith("train_${testServiceAccountId}_"))
+        assertEquals(1, trainDataset.path("min_rows").asInt())
+        assertEquals("router_logs", trainDataset.path("source").asText())
+        assertTrue(trainDataset.path("reuse_existing").asBoolean())
+        assertEquals("2026-07-01T00:00:00", sourceSpecs.path("start_date").asText())
+        assertEquals("2026-07-31T23:59:59", sourceSpecs.path("end_date").asText())
+        assertTrue(sourceSpecs.path("ignore_control_bucket").asBoolean())
+        assertEquals(
+            "default",
+            config.path("stages").path("selector_evaluation")
+                .path("extractor_strategy").asText(),
+        )
     }
 
     @Test
@@ -1746,7 +1770,7 @@ class DivyamCliTest {
     @Order(60)
     fun `connection params resolved from env vars`() {
         withTempHome { _ ->
-            // tempHome has no config — config source is ruled out
+            // The temporary home has no config. Config resolution is ruled out.
             setEnv("DIVYAM_ENDPOINT", baseUrl)
             setEnv("DIVYAM_USER", "admin@dashboard.divyam.ai")
             setEnv("DIVYAM_PASSWORD", testPassword)
@@ -1774,7 +1798,7 @@ class DivyamCliTest {
                 user = "admin@dashboard.divyam.ai",
                 password = testPassword
             )
-            // No CLI args, no env vars — config file is the only source
+            // There are no CLI arguments or environment variables. The config file is the only source.
             val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
             assertEquals(0, exitCode)
             val json = parseJson()
@@ -1787,7 +1811,7 @@ class DivyamCliTest {
     @Order(62)
     fun `cli args override env vars for connection params`() {
         withTempHome { _ ->
-            // Env vars point to a wrong host — CLI args must win
+            // Environment variables point to a wrong host. CLI arguments must win.
             setEnv("DIVYAM_ENDPOINT", "http://wrong-host:9999")
             setEnv("DIVYAM_USER", "wrong-user@example.com")
             setEnv("DIVYAM_PASSWORD", "wrong-password")
@@ -1816,7 +1840,7 @@ class DivyamCliTest {
     @Order(63)
     fun `env vars override config file for connection params`() {
         withTempHome { tempHome ->
-            // Config file points to a wrong host — env vars must win
+            // The config file points to a wrong host. Environment variables must win.
             writeTestConfig(
                 tempHome,
                 endpoint = "http://wrong-config-host:9999",
@@ -1851,11 +1875,9 @@ class DivyamCliTest {
                 user = "admin@dashboard.divyam.ai",
                 password = testPassword
             )
-            // No DIVYAM_ENDPOINT env var, no --endpoint CLI arg
-            // initialize() defaults endpoint to "https://api.divyam.ai"
+            // Without DIVYAM_ENDPOINT or --endpoint, initialize() defaults to https://api.divyam.ai.
             val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
-            // Expect failure — not because endpoint is missing from config, but because
-            // https://api.divyam.ai is unreachable in tests. Exit 1 = network error, not config error.
+            // A network error is expected because api.divyam.ai is unreachable in tests.
             assertEquals(1, exitCode)
             val errOutput = errContent.toString()
             assertFalse(
@@ -1878,7 +1900,7 @@ class DivyamCliTest {
                     "--user", "admin@dashboard.divyam.ai",
                     "--password", testPassword,
                     "--format", "json"
-                    // No --org-id CLI arg — DIVYAM_ORG_ID env var supplies it
+                    // DIVYAM_ORG_ID supplies the org id because the command has no --org-id argument.
                 )
                 assertEquals(0, exitCode)
                 val json = parseJson()
