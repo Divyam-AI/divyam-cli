@@ -1,5 +1,5 @@
 /**
- * Copyright 2025 Divyam.ai
+ * Copyright 2025-2026 DivyamAI Technologies Private Limited
  * SPDX-License-Identifier: Apache-2.0
  */
 package ai.divyam.cli.user
