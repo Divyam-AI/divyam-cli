@@ -5,10 +5,10 @@
 package ai.divyma.cli.selector
 
 import ai.divyam.cli.selector.ModelSelectorCreateCommand
+import ai.divyam.cli.selector.SelectorCommandUtils
 import ai.divyam.client.DivyamClient
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
-import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -23,8 +23,16 @@ class ModelSelectorCreateCommandTest {
             jsonMapper = mapper,
             serviceAccountId = "service-account-id",
             extractorStrategy = "default",
-            startDate = LocalDate.parse("2026-07-01"),
-            endDate = LocalDate.parse("2026-07-31"),
+            startDate = SelectorCommandUtils.TrainingWindowBoundary.parse(
+                "--start-date",
+                "2026-07-01",
+                isEndBoundary = false,
+            ),
+            endDate = SelectorCommandUtils.TrainingWindowBoundary.parse(
+                "--end-date",
+                "2026-07-31",
+                isEndBoundary = true,
+            ),
         )
 
         val configNode = mapper.valueToTree<ObjectNode>(config)

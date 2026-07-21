@@ -7,7 +7,6 @@ package ai.divyma.cli.selector
 import ai.divyam.cli.selector.SelectorCommandUtils
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -23,8 +22,16 @@ class SelectorCommandUtilsTest {
 
         SelectorCommandUtils.patchTrainDatasetDateRange(
             config,
-            LocalDate.parse("2026-07-01"),
-            LocalDate.parse("2026-07-31")
+            SelectorCommandUtils.TrainingWindowBoundary.parse(
+                "--start-date",
+                "2026-07-01",
+                isEndBoundary = false,
+            ),
+            SelectorCommandUtils.TrainingWindowBoundary.parse(
+                "--end-date",
+                "2026-07-31",
+                isEndBoundary = true,
+            ),
         )
 
         val sourceSpecs = config.path("datasets").path("train_ds").path("source_specs")
@@ -34,14 +41,100 @@ class SelectorCommandUtilsTest {
     }
 
     @Test
+    fun `patch train dataset date range preserves full timestamps and offsets`() {
+        val config = mapper.readTree(
+            """{"datasets":{"train_ds":{"source_specs":{}}}}"""
+        ) as ObjectNode
+
+        SelectorCommandUtils.patchTrainDatasetDateRange(
+            config,
+            SelectorCommandUtils.TrainingWindowBoundary.parse(
+                "--start-date",
+                "2026-07-01T09:00:00+5.30",
+                isEndBoundary = false,
+            ),
+            SelectorCommandUtils.TrainingWindowBoundary.parse(
+                "--end-date",
+                "2026-07-01T17:30:00+05:30",
+                isEndBoundary = true,
+            ),
+        )
+
+        val sourceSpecs = config.path("datasets").path("train_ds").path("source_specs")
+        assertEquals("2026-07-01T09:00:00+05:30", sourceSpecs.path("start_date").asText())
+        assertEquals("2026-07-01T17:30:00+05:30", sourceSpecs.path("end_date").asText())
+    }
+
+    @Test
+    fun `timestamp range ordering compares instants across offsets`() {
+        val config = mapper.readTree(
+            """{"datasets":{"train_ds":{"source_specs":{}}}}"""
+        ) as ObjectNode
+
+        SelectorCommandUtils.patchTrainDatasetDateRange(
+            config,
+            SelectorCommandUtils.TrainingWindowBoundary.parse(
+                "--start-date",
+                "2026-07-01T09:00:00+05:30",
+                isEndBoundary = false,
+            ),
+            SelectorCommandUtils.TrainingWindowBoundary.parse(
+                "--end-date",
+                "2026-07-01T04:00:00Z",
+                isEndBoundary = true,
+            ),
+        )
+
+        val sourceSpecs = config.path("datasets").path("train_ds").path("source_specs")
+        assertEquals("2026-07-01T09:00:00+05:30", sourceSpecs.path("start_date").asText())
+        assertEquals("2026-07-01T04:00:00Z", sourceSpecs.path("end_date").asText())
+    }
+
+    @Test
+    fun `timestamp range rejects mixed offset and local values`() {
+        val config = mapper.readTree(
+            """{"datasets":{"train_ds":{"source_specs":{}}}}"""
+        ) as ObjectNode
+
+        val error = assertFailsWith<IllegalArgumentException> {
+            SelectorCommandUtils.patchTrainDatasetDateRange(
+                config,
+                SelectorCommandUtils.TrainingWindowBoundary.parse(
+                    "--start-date",
+                    "2026-07-01T09:00:00+05:30",
+                    isEndBoundary = false,
+                ),
+                SelectorCommandUtils.TrainingWindowBoundary.parse(
+                    "--end-date",
+                    "2026-07-01T17:30:00",
+                    isEndBoundary = true,
+                ),
+            )
+        }
+
+        assertEquals(
+            "--start-date and --end-date must both include UTC offsets when either value includes one",
+            error.message,
+        )
+    }
+
+    @Test
     fun `patch train dataset date range rejects an inverted range`() {
         val config = mapper.readTree("""{"datasets":{"train_ds":{}}}""") as ObjectNode
 
         val error = assertFailsWith<IllegalArgumentException> {
             SelectorCommandUtils.patchTrainDatasetDateRange(
                 config,
-                LocalDate.parse("2026-08-01"),
-                LocalDate.parse("2026-07-31")
+                SelectorCommandUtils.TrainingWindowBoundary.parse(
+                    "--start-date",
+                    "2026-08-01",
+                    isEndBoundary = false,
+                ),
+                SelectorCommandUtils.TrainingWindowBoundary.parse(
+                    "--end-date",
+                    "2026-07-31",
+                    isEndBoundary = true,
+                ),
             )
         }
 

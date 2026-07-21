@@ -15,7 +15,6 @@ import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.io.File
-import java.time.LocalDate
 import java.util.UUID
 
 @CommandLine.Command(name = "create", description = ["Create a selector"])
@@ -75,7 +74,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
         names = ["--start-date"],
         description = [
             "Optional: Inclusive start date for the selector training-data window " +
-                "(format: YYYY-MM-DD). Use with --end-date and --extractor-strategy " +
+                "(format: YYYY-MM-DD or ISO-8601 timestamp). Use with --end-date and --extractor-strategy " +
                 "to create a date-scoped training configuration, or override --config-file.",
         ],
     )
@@ -85,7 +84,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
         names = ["--end-date"],
         description = [
             "Optional: Inclusive end date for the selector training-data window " +
-                "(format: YYYY-MM-DD). Use with --start-date and --extractor-strategy " +
+                "(format: YYYY-MM-DD or ISO-8601 timestamp). Use with --start-date and --extractor-strategy " +
                 "to create a date-scoped training configuration, or override --config-file.",
         ],
     )
@@ -164,8 +163,8 @@ class ModelSelectorCreateCommand : BaseCommand() {
         val configNode = jsonMapper.valueToTree<ObjectNode>(config)
         SelectorCommandUtils.patchTrainDatasetDateRange(
             configNode = configNode,
-            startDate = startDate?.let { parseDate("--start-date", it) },
-            endDate = endDate?.let { parseDate("--end-date", it) }
+            startDate = startDate?.let { parseBoundary("--start-date", it, isEndBoundary = false) },
+            endDate = endDate?.let { parseBoundary("--end-date", it, isEndBoundary = true) }
         )
         return jsonMapper.treeToValue(configNode, SelectorTrainingConfigurationInput::class.java)
     }
@@ -175,23 +174,24 @@ class ModelSelectorCreateCommand : BaseCommand() {
             jsonMapper = getJsonMapper(),
             serviceAccountId = serviceAccountId,
             extractorStrategy = requireNotNull(extractorStrategy),
-            startDate = parseDate("--start-date", requireNotNull(startDate)),
-            endDate = parseDate("--end-date", requireNotNull(endDate)),
+            startDate = parseBoundary("--start-date", requireNotNull(startDate), isEndBoundary = false),
+            endDate = parseBoundary("--end-date", requireNotNull(endDate), isEndBoundary = true),
         )
 
-    private fun parseDate(optionName: String, value: String): LocalDate = try {
-        LocalDate.parse(value)
-    } catch (exception: Exception) {
-        throw IllegalArgumentException("$optionName must use YYYY-MM-DD: $value", exception)
-    }
+    private fun parseBoundary(
+        optionName: String,
+        value: String,
+        isEndBoundary: Boolean,
+    ): SelectorCommandUtils.TrainingWindowBoundary =
+        SelectorCommandUtils.TrainingWindowBoundary.parse(optionName, value, isEndBoundary)
 
     companion object {
         internal fun buildDateRangeConfig(
             jsonMapper: ObjectMapper,
             serviceAccountId: String,
             extractorStrategy: String,
-            startDate: LocalDate,
-            endDate: LocalDate,
+            startDate: SelectorCommandUtils.TrainingWindowBoundary,
+            endDate: SelectorCommandUtils.TrainingWindowBoundary,
         ): SelectorTrainingConfigurationInput {
             val configNode = jsonMapper.createObjectNode()
             val trainDataset = configNode.putObject("datasets").putObject("train_ds")
