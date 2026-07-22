@@ -179,8 +179,10 @@ jobs:
           RPM=$(find . -type f -name "*.rpm" -print -quit)
           test -n "$DEB"
           test -n "$RPM"
+          deb_listing=$(mktemp)
+          dpkg-deb --fsys-tarfile "$DEB" | tar -tf - > "$deb_listing"
           for NOTICE in LICENSE NOTICE; do
-            dpkg-deb --fsys-tarfile "$DEB" | tar -tf - | grep -Eq "(^|/)usr/share/doc/divyam-cli/$NOTICE$"
+            grep -Eq "(^|/)usr/share/doc/divyam-cli/$NOTICE$" "$deb_listing"
           done
           sudo apt-get update
           sudo apt-get install --yes rpm
