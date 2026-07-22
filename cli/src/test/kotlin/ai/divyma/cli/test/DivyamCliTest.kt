@@ -1450,7 +1450,7 @@ class DivyamCliTest {
 
     @Test
     @Order(40)
-    fun `eval create`() {
+    fun `eval create defaults granularity`() {
         val exitCode = executeCommand(
             EvalCommand(),
             "create",
@@ -1461,7 +1461,6 @@ class DivyamCliTest {
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval",
-            "--granularity", "LLM_REQUEST_RESPONSE",
             "--class-name", "TestEval",
             "--state", "ACTIVE",
             "--is-primary", "false"
@@ -1472,6 +1471,7 @@ class DivyamCliTest {
         assertNotNull(json)
         assertTrue(json!!.has("id"))
         assertEquals("Test Eval", json.get("name").asText())
+        assertEquals("LLM_REQUEST_RESPONSE", json.get("granularity").asText())
     }
 
     @Test
@@ -1622,6 +1622,7 @@ class DivyamCliTest {
         assertNotNull(json)
         assertEquals("Updated Eval", json!!.get("name").asText())
         assertEquals("INACTIVE", json.get("state").asText())
+        assertEquals("LLM_REQUEST_RESPONSE", json.get("granularity").asText())
     }
 
     @Test
@@ -1691,6 +1692,33 @@ class DivyamCliTest {
         val json = parseJson()
         assertNotNull(json)
         assertEquals(true, json!!.get("is_primary").asBoolean())
+    }
+
+    @Test
+    @Order(46)
+    fun `eval create preserves explicit granularity`() {
+        listOf("TURN_BASED", "SESSION_BASED").forEach { granularity ->
+            val exitCode = executeCommand(
+                EvalCommand(),
+                "create",
+                "--endpoint", baseUrl,
+                "--user", "admin@dashboard.divyam.ai",
+                "--password", testPassword,
+                "--format", "json",
+                "--org-id", "1",
+                "--service-account-id", testServiceAccountId,
+                "--name", "Test Eval $granularity",
+                "--granularity", granularity,
+                "--class-name", "TestEval",
+                "--state", "ACTIVE"
+            )
+
+            assertEquals(0, exitCode)
+            val json = parseJson()
+            assertNotNull(json)
+            assertEquals(granularity, json!!.get("granularity").asText())
+            outContent.reset()
+        }
     }
 
     // ============================================

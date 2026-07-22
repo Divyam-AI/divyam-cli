@@ -29,10 +29,10 @@ class EvalCreateCommand : SaSpecificCommand() {
 
     @Option(
         names = ["--granularity"],
-        description = [$$"Required: granularity of the eval. ${COMPLETION-CANDIDATES}"],
-        required = true
+        description = [$$"Granularity of the eval. Defaults to LLM_REQUEST_RESPONSE. ${COMPLETION-CANDIDATES}"],
+        defaultValue = "LLM_REQUEST_RESPONSE"
     )
-    private lateinit var granularity: EvalGranularity
+    private var granularity: EvalGranularity = EvalGranularity.LLM_REQUEST_RESPONSE
 
     @Option(
         names = ["--class-name"],
