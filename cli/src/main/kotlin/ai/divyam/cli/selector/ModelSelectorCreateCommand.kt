@@ -75,7 +75,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
         description = [
             "Optional: Start of the selector training-data window. Pair with --end-timestamp. " +
                 "Accepted forms: YYYY-MM-DD (00:00:00), YYYY-MM-DDTHH:mm:ss, " +
-                "YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss+05:30 " +
+                "YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss[+/-]HH:MM " +
                 "(IST example: 2026-07-01T09:00:00+05:30 = 2026-07-01T03:30:00Z). " +
                 "If either boundary uses a UTC offset, both must. Use both flags with --extractor-strategy to create the training configuration, or to override the window in --config-file.",
         ],
@@ -87,7 +87,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
         description = [
             "Optional: End of the selector training-data window. Pair with --start-timestamp. " +
                 "Accepted forms: YYYY-MM-DD (23:59:59), YYYY-MM-DDTHH:mm:ss, " +
-                "YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss+05:30 " +
+                "YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss[+/-]HH:MM " +
                 "(IST example: 2026-07-01T17:30:00+05:30 = 2026-07-01T12:00:00Z). " +
                 "If either boundary uses a UTC offset, both must. Use both flags with --extractor-strategy to create the training configuration, or to override the window in --config-file.",
         ],
