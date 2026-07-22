@@ -108,6 +108,30 @@ class ModelInfoCreateCommand : BaseCommand() {
     private var modelPricingYaml: File? = null
 
     @Option(
+        names = ["--input-price"],
+        description = ["Input price for --per-n-tokens. Requires --output-price."],
+    )
+    private var inputPrice: Double? = null
+
+    @Option(
+        names = ["--output-price"],
+        description = ["Output price for --per-n-tokens. Requires --input-price."],
+    )
+    private var outputPrice: Double? = null
+
+    @Option(
+        names = ["--currency"],
+        description = ["Currency for direct prices. Defaults to USD."],
+    )
+    private var currency: String? = null
+
+    @Option(
+        names = ["--per-n-tokens"],
+        description = ["Token unit for direct prices. Defaults to 1000000."],
+    )
+    private var perNTokens: Int? = null
+
+    @Option(
         names = ["--supported-modalities"],
         description = ["Optional: Comma separated list of supported modalities. " +
                 $$"Valid values are ${COMPLETION-CANDIDATES}"],
@@ -148,8 +172,7 @@ class ModelInfoCreateCommand : BaseCommand() {
     }
 
     override fun execute(): Int {
-        // TODO: Is allowing same model info, provider info tuple to be
-        //  re-added. is this expected?
+        // TODO: Is allowing the same model info and provider info tuple expected?
         val resolvedApiKey = resolveProviderApiKey()
         if (resolvedApiKey.isEmpty() && !isGoogleVertexConfig(modelConfigsJson)) {
             throw Exception(
@@ -160,7 +183,13 @@ class ModelInfoCreateCommand : BaseCommand() {
         }
 
         val mInfos = runBlocking {
-            val pricingStore = pricingStore(modelPricingYaml)
+            val directPricing = resolveDirectPricing(
+                inputPrice = inputPrice,
+                outputPrice = outputPrice,
+                currency = currency,
+                perNTokens = perNTokens,
+            )
+            val pricingStore = if (directPricing == null) pricingStore(modelPricingYaml) else null
 
             val pricingErrorModelList = mutableListOf<Map<String, Any?>>()
 
@@ -174,20 +203,24 @@ class ModelInfoCreateCommand : BaseCommand() {
                     null
                 }
 
-                val modelPricing = try {
-                    pricingStore.getModelPricing(
-                        provider = providerName,
-                        model = modelName
-                    )
-                } catch (e: Exception) {
-                    pricingErrorModelList.add(
-                        mapOf(
-                            "provider" to providerName,
-                            "model" to modelName,
-                            "error" to e.message
+                val modelPricing = if (directPricing == null) {
+                    try {
+                        pricingStore!!.getModelPricing(
+                            provider = providerName,
+                            model = modelName
                         )
-                    )
-                    continue
+                    } catch (e: Exception) {
+                        pricingErrorModelList.add(
+                            mapOf(
+                                "provider" to providerName,
+                                "model" to modelName,
+                                "error" to e.message
+                            )
+                        )
+                        continue
+                    }
+                } else {
+                    null
                 }
 
                 // Validate json.
@@ -212,12 +245,12 @@ class ModelInfoCreateCommand : BaseCommand() {
                         apiKeyModel = resolvedApiKey,
                         nameModel = modelName,
                         baseModelName = baseModelName,
-                        textPricing = TextPricing(
-                            input = modelPricing.textInputPrice,
+                        textPricing = directPricing?.textPricing ?: TextPricing(
+                            input = modelPricing!!.textInputPrice,
                             output = modelPricing.textOutputPrice
                         ),
-                        currency = modelPricing.currency,
-                        perNTokens = modelPricing.perNTokens,
+                        currency = directPricing?.currency ?: modelPricing!!.currency,
+                        perNTokens = directPricing?.perNTokens ?: modelPricing!!.perNTokens,
                         configsModel = modelConfigsJson,
                         supportedModalities = supportedModalities,
                         isSelectionEnabled = isSelectionEnabled
