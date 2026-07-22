@@ -15,6 +15,7 @@ import ai.divyam.data.model.Message
 import ai.divyam.data.model.ResponseCompletedEvent
 import ai.divyam.data.model.ResponseCreatedEvent
 import ai.divyam.data.model.ResponseEvent
+import ai.divyam.data.model.IssuedServiceAccountApiKey
 import ai.divyam.data.model.ResponseMessageContent
 import ai.divyam.data.model.ResponseOutputItem
 import ai.divyam.data.model.ResponseOutputTextDeltaEvent
@@ -22,6 +23,8 @@ import ai.divyam.data.model.ResponseRole
 import ai.divyam.data.model.ResponsesDebugResponse
 import ai.divyam.data.model.ResponsesRequest
 import ai.divyam.data.model.ResponsesResponse
+import ai.divyam.data.model.ServiceAccountApiKeyDeleteResponse
+import ai.divyam.data.model.ServiceAccountApiKeyRecord
 import com.fasterxml.jackson.annotation.JsonAutoDetect
 import com.fasterxml.jackson.annotation.JsonFormat
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
@@ -37,11 +40,17 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.engine.cio.CIOEngineConfig
 import io.ktor.client.plugins.HttpRedirect
 import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.Headers
+import io.ktor.http.HttpStatusCode
+import io.ktor.client.utils.EmptyContent
 import io.ktor.utils.io.readUTF8Line
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.openapitools.client.infrastructure.RequestConfig
+import org.openapitools.client.infrastructure.RequestMethod
+import org.openapitools.client.infrastructure.wrap
 import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
 
@@ -480,6 +489,103 @@ class DivyamClient(
         // Return the completed response (baseResponse might have metadata, usage, etc.)
         return baseResponse?.copy(output = accumulatedOutputs)
             ?: error("No chunks received")
+    }
+
+    suspend fun listServiceAccountApiKeys(
+        serviceAccountId: String,
+        extraHeaders: Map<String, List<String>>? = null
+    ): List<ServiceAccountApiKeyRecord> {
+        val response = serviceAccountApiKeysRequest<List<ServiceAccountApiKeyRecord>>(
+            method = RequestMethod.GET,
+            serviceAccountId = serviceAccountId,
+            extraHeaders = extraHeaders
+        )
+        return response.body()
+    }
+
+    suspend fun createServiceAccountApiKey(
+        serviceAccountId: String,
+        extraHeaders: Map<String, List<String>>? = null
+    ): IssuedServiceAccountApiKey {
+        val response = serviceAccountApiKeysRequest<IssuedServiceAccountApiKey>(
+            method = RequestMethod.POST,
+            serviceAccountId = serviceAccountId,
+            extraHeaders = extraHeaders
+        )
+        return response.body()
+    }
+
+    suspend fun deleteServiceAccountApiKey(
+        serviceAccountId: String,
+        keyId: String,
+        extraHeaders: Map<String, List<String>>? = null
+    ): ServiceAccountApiKeyDeleteResponse {
+        val localVariableAuthNames = listOf("bearer")
+        val localVariableHeaders = mutableMapOf<String, List<String>>()
+        mergeExtraHeaders(localVariableHeaders, extraHeaders)
+        val localVariableConfig = RequestConfig<Unit>(
+            RequestMethod.DELETE,
+            "/v1/service_accounts/{service_account_id}/api_keys/{key_id}/"
+                .replace("{service_account_id}", serviceAccountId)
+                .replace("{key_id}", keyId),
+            query = mutableMapOf(),
+            headers = localVariableHeaders,
+            requiresAuthentication = false,
+        )
+        val response = request(
+            localVariableConfig,
+            EmptyContent,
+            localVariableAuthNames
+        )
+
+        if (response.status != HttpStatusCode.OK && response.status != HttpStatusCode.Created) {
+            error("Error: ${response.status} - ${response.bodyAsText()}")
+        }
+        return mapper.readValue(
+            response.bodyAsText(),
+            ServiceAccountApiKeyDeleteResponse::class.java
+        )
+    }
+
+    private suspend inline fun <reified T : Any> serviceAccountApiKeysRequest(
+        method: RequestMethod,
+        serviceAccountId: String,
+        extraHeaders: Map<String, List<String>>? = null
+    ): org.openapitools.client.infrastructure.HttpResponse<T> {
+        val localVariableAuthNames = listOf("bearer")
+        val localVariableHeaders = mutableMapOf<String, List<String>>()
+        mergeExtraHeaders(localVariableHeaders, extraHeaders)
+        val localVariableConfig = RequestConfig<Any?>(
+            method,
+            "/v1/service_accounts/{service_account_id}/api_keys/"
+                .replace("{service_account_id}", serviceAccountId),
+            query = mutableMapOf(),
+            headers = localVariableHeaders,
+            requiresAuthentication = false,
+        )
+        val response = request(
+            localVariableConfig,
+            EmptyContent,
+            localVariableAuthNames
+        ).wrap<T>()
+
+        if (response.status != 200 && response.status != 201) {
+            error("Error: ${response.status} - ${response.response.body<String>()}")
+        }
+        return response
+    }
+
+    private fun mergeExtraHeaders(
+        target: MutableMap<String, List<String>>,
+        extraHeaders: Map<String, List<String>>?
+    ) {
+        extraHeaders?.forEach { (key, value) ->
+            val existing = target.getOrDefault(key, listOf())
+            val result = mutableListOf<String>()
+            result.addAll(existing)
+            result.addAll(value)
+            target[key] = result
+        }
     }
 }
 

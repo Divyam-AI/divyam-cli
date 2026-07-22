@@ -10,6 +10,7 @@ import ai.divyam.data.model.Choice
 import ai.divyam.data.model.Eval
 import ai.divyam.data.model.EvalCreateRequest
 import ai.divyam.data.model.EvalUpdateRequest
+import ai.divyam.data.model.IssuedServiceAccountApiKey
 import ai.divyam.data.model.Message
 import ai.divyam.data.model.ModelProviderInfo
 import ai.divyam.data.model.ModelProviderInfoCreation
@@ -21,6 +22,8 @@ import ai.divyam.data.model.ModelSelectorUpdateRequest
 import ai.divyam.data.model.OrgInput
 import ai.divyam.data.model.OrgUpdateRequest
 import ai.divyam.data.model.ServiceAccount
+import ai.divyam.data.model.ServiceAccountApiKeyDeleteResponse
+import ai.divyam.data.model.ServiceAccountApiKeyRecord
 import ai.divyam.data.model.ServiceAccountCreateRequest
 import ai.divyam.data.model.ServiceAccountUpdateRequest
 import ai.divyam.data.model.User
@@ -130,6 +133,8 @@ object MockDataStore {
     val users = mutableMapOf<String, User>()
     val serviceAccounts =
         mutableMapOf<String, ServiceAccount>()
+    val serviceAccountApiKeys =
+        mutableMapOf<String, MutableList<ServiceAccountApiKeyRecord>>()
     val modelInfos = mutableMapOf<Int, ModelProviderInfo>()
     val modelSelectors =
         mutableMapOf<Int, ModelSelector>()
@@ -144,6 +149,7 @@ object MockDataStore {
     val evalIdCounter = AtomicInteger(1)
     val modelProviderCounter = AtomicInteger(1)
     val modelSelectorIdCounter = AtomicInteger(1)
+    val serviceAccountApiKeyCounter = AtomicInteger(1)
 
     init {
         // seed sample org
@@ -308,6 +314,14 @@ fun Application.configureRouting(password: String) {
                     )
 
                     MockDataStore.serviceAccounts[sa.id] = sa
+                    MockDataStore.serviceAccountApiKeys[sa.id] = mutableListOf(
+                        ServiceAccountApiKeyRecord(
+                            id = "sak-${MockDataStore.serviceAccountApiKeyCounter.getAndIncrement()}",
+                            serviceAccountId = sa.id,
+                            isPrimary = true,
+                            createdAt = (System.currentTimeMillis() / 1000).toInt()
+                        )
+                    )
                     call.respond(HttpStatusCode.OK, sa)
                 }
 
@@ -562,6 +576,80 @@ fun Application.configureRouting(password: String) {
                     } else call.respond(
                         HttpStatusCode.NotFound,
                         "Service account not found"
+                    )
+                }
+
+                get("/{serviceAccountId}/api_keys") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
+                            ?: return@get call.respond(HttpStatusCode.BadRequest)
+                    if (!MockDataStore.serviceAccounts.containsKey(serviceAccountId)) {
+                        call.respond(HttpStatusCode.NotFound, "Service account not found")
+                        return@get
+                    }
+                    call.respond(
+                        MockDataStore.serviceAccountApiKeys[serviceAccountId]
+                            ?: mutableListOf()
+                    )
+                }
+
+                post("/{serviceAccountId}/api_keys") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
+                            ?: return@post call.respond(HttpStatusCode.BadRequest)
+                    if (!MockDataStore.serviceAccounts.containsKey(serviceAccountId)) {
+                        call.respond(HttpStatusCode.NotFound, "Service account not found")
+                        return@post
+                    }
+                    val keyRecord = ServiceAccountApiKeyRecord(
+                        id = "sak-${MockDataStore.serviceAccountApiKeyCounter.getAndIncrement()}",
+                        serviceAccountId = serviceAccountId,
+                        isPrimary = false,
+                        createdAt = (System.currentTimeMillis() / 1000).toInt()
+                    )
+                    MockDataStore.serviceAccountApiKeys
+                        .getOrPut(serviceAccountId) { mutableListOf() }
+                        .add(keyRecord)
+                    call.respond(
+                        IssuedServiceAccountApiKey(
+                            key = keyRecord,
+                            apiKey = randomString(32)
+                        )
+                    )
+                }
+
+                delete("/{serviceAccountId}/api_keys/{keyId}") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
+                            ?: return@delete call.respond(HttpStatusCode.BadRequest)
+                    val keyId =
+                        call.parameters["keyId"]
+                            ?: return@delete call.respond(HttpStatusCode.BadRequest)
+                    val keys = MockDataStore.serviceAccountApiKeys[serviceAccountId]
+                    val key = keys?.firstOrNull { it.id == keyId }
+                    if (key == null) {
+                        call.respond(
+                            HttpStatusCode.NotFound,
+                            ServiceAccountApiKeyDeleteResponse(
+                                detail = "Service account API key not found"
+                            )
+                        )
+                        return@delete
+                    }
+                    if (key.isPrimary) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            ServiceAccountApiKeyDeleteResponse(
+                                detail = "Primary service account API key can not be deleted"
+                            )
+                        )
+                        return@delete
+                    }
+                    keys.removeIf { it.id == keyId }
+                    call.respond(
+                        ServiceAccountApiKeyDeleteResponse(
+                            detail = "Service account API key deleted"
+                        )
                     )
                 }
 
