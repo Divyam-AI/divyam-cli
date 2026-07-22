@@ -12,6 +12,6 @@ import java.util.concurrent.Callable
     name = "eval",
     description = ["Manage evals"],
     subcommands = [EvalListCommand::class, EvalCreateCommand::class,
-        EvalUpdateCommand::class, EvalGetCommand::class]
+        EvalUpdateCommand::class, EvalGetCommand::class, EvalTestCommand::class]
 )
 class EvalCommand : BaseSubCommand(), Callable<Int>
