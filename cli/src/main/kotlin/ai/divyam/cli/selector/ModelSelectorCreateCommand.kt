@@ -73,9 +73,11 @@ class ModelSelectorCreateCommand : BaseCommand() {
     @Option(
         names = ["--start-timestamp"],
         description = [
-            "Optional: Inclusive start timestamp for the selector training-data window " +
-                "(format: YYYY-MM-DD or ISO-8601 timestamp). Use with --end-timestamp and --extractor-strategy " +
-                "to create a date-scoped training configuration, or override --config-file.",
+            "Optional: Start of the selector training-data window. Pair with --end-timestamp. " +
+                "Accepted forms: YYYY-MM-DD (expands to 00:00:00), YYYY-MM-DDTHH:mm:ss, " +
+                "YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss+05:30 " +
+                "(IST example: 2026-07-01T09:00:00+05:30). If either boundary uses a UTC offset, both must. " +
+                "With --extractor-strategy, both flags create the training configuration; with --config-file, they override its window.",
         ],
     )
     private var startTimestamp: String? = null
@@ -83,9 +85,11 @@ class ModelSelectorCreateCommand : BaseCommand() {
     @Option(
         names = ["--end-timestamp"],
         description = [
-            "Optional: Inclusive end timestamp for the selector training-data window " +
-                "(format: YYYY-MM-DD or ISO-8601 timestamp). Use with --start-timestamp and --extractor-strategy " +
-                "to create a date-scoped training configuration, or override --config-file.",
+            "Optional: End of the selector training-data window. Pair with --start-timestamp. " +
+                "Accepted forms: YYYY-MM-DD (expands to 23:59:59), YYYY-MM-DDTHH:mm:ss, " +
+                "YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss+05:30 " +
+                "(IST example: 2026-07-01T17:30:00+05:30). If either boundary uses a UTC offset, both must. " +
+                "With --extractor-strategy, both flags create the training configuration; with --config-file, they override its window.",
         ],
     )
     private var endTimestamp: String? = null
