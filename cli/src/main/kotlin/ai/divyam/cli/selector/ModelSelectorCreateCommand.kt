@@ -74,12 +74,10 @@ class ModelSelectorCreateCommand : BaseCommand() {
         names = ["--start-timestamp"],
         description = [
             "Optional: Start of the selector training-data window. Pair with --end-timestamp. " +
-                "Accepted forms: YYYY-MM-DD (expands to 00:00:00), YYYY-MM-DDTHH:mm:ss, " +
+                "Accepted forms: YYYY-MM-DD (00:00:00), YYYY-MM-DDTHH:mm:ss, " +
                 "YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss+05:30 " +
-                "(IST example: 2026-07-01T09:00:00+05:30, which means 2026-07-01T03:30:00Z). " +
-                "Prefer explicit UTC offsets when you know the local timezone, because they pin the exact UTC instant. " +
-                "If either boundary uses a UTC offset, both must. " +
-                "With --extractor-strategy, both flags create the training configuration; with --config-file, they override its window.",
+                "(IST example: 2026-07-01T09:00:00+05:30 = 2026-07-01T03:30:00Z). " +
+                "If either boundary uses a UTC offset, both must. Use both flags with --extractor-strategy to create the training configuration, or to override the window in --config-file.",
         ],
     )
     private var startTimestamp: String? = null
@@ -88,12 +86,10 @@ class ModelSelectorCreateCommand : BaseCommand() {
         names = ["--end-timestamp"],
         description = [
             "Optional: End of the selector training-data window. Pair with --start-timestamp. " +
-                "Accepted forms: YYYY-MM-DD (expands to 23:59:59), YYYY-MM-DDTHH:mm:ss, " +
+                "Accepted forms: YYYY-MM-DD (23:59:59), YYYY-MM-DDTHH:mm:ss, " +
                 "YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss+05:30 " +
-                "(IST example: 2026-07-01T17:30:00+05:30, which means 2026-07-01T12:00:00Z). " +
-                "Prefer explicit UTC offsets when you know the local timezone, because they pin the exact UTC instant. " +
-                "If either boundary uses a UTC offset, both must. " +
-                "With --extractor-strategy, both flags create the training configuration; with --config-file, they override its window.",
+                "(IST example: 2026-07-01T17:30:00+05:30 = 2026-07-01T12:00:00Z). " +
+                "If either boundary uses a UTC offset, both must. Use both flags with --extractor-strategy to create the training configuration, or to override the window in --config-file.",
         ],
     )
     private var endTimestamp: String? = null
