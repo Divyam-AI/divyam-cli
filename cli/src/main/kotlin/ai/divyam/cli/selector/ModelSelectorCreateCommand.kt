@@ -71,24 +71,24 @@ class ModelSelectorCreateCommand : BaseCommand() {
     private var candidateModels: String? = null
 
     @Option(
-        names = ["--start-date"],
+        names = ["--start-timestamp"],
         description = [
-            "Optional: Inclusive start date for the selector training-data window " +
-                "(format: YYYY-MM-DD or ISO-8601 timestamp). Use with --end-date and --extractor-strategy " +
+            "Optional: Inclusive start timestamp for the selector training-data window " +
+                "(format: YYYY-MM-DD or ISO-8601 timestamp). Use with --end-timestamp and --extractor-strategy " +
                 "to create a date-scoped training configuration, or override --config-file.",
         ],
     )
-    private var startDate: String? = null
+    private var startTimestamp: String? = null
 
     @Option(
-        names = ["--end-date"],
+        names = ["--end-timestamp"],
         description = [
-            "Optional: Inclusive end date for the selector training-data window " +
-                "(format: YYYY-MM-DD or ISO-8601 timestamp). Use with --start-date and --extractor-strategy " +
+            "Optional: Inclusive end timestamp for the selector training-data window " +
+                "(format: YYYY-MM-DD or ISO-8601 timestamp). Use with --start-timestamp and --extractor-strategy " +
                 "to create a date-scoped training configuration, or override --config-file.",
         ],
     )
-    private var endDate: String? = null
+    private var endTimestamp: String? = null
 
     override fun execute(): Int {
         validateOptions()
@@ -120,9 +120,9 @@ class ModelSelectorCreateCommand : BaseCommand() {
             )
         }
 
-        if (configFile == null && (startDate != null || endDate != null)) {
-            require(startDate != null && endDate != null) {
-                "--start-date and --end-date must be provided together when no config file is supplied"
+        if (configFile == null && (startTimestamp != null || endTimestamp != null)) {
+            require(startTimestamp != null && endTimestamp != null) {
+                "--start-timestamp and --end-timestamp must be provided together when no config file is supplied"
             }
         }
     }
@@ -131,7 +131,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
         configFile: File?,
         serviceAccountId: String,
     ): SelectorTrainingConfigurationInput? {
-        val file = configFile ?: return if (startDate == null && endDate == null) {
+        val file = configFile ?: return if (startTimestamp == null && endTimestamp == null) {
             null
         } else {
             createDateRangeConfig(serviceAccountId)
@@ -155,7 +155,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
             )
         }
 
-        if (startDate == null && endDate == null) {
+        if (startTimestamp == null && endTimestamp == null) {
             return config
         }
 
@@ -163,8 +163,8 @@ class ModelSelectorCreateCommand : BaseCommand() {
         val configNode = jsonMapper.valueToTree<ObjectNode>(config)
         SelectorCommandUtils.patchTrainDatasetDateRange(
             configNode = configNode,
-            startDate = startDate?.let { parseBoundary("--start-date", it, isEndBoundary = false) },
-            endDate = endDate?.let { parseBoundary("--end-date", it, isEndBoundary = true) }
+            startDate = startTimestamp?.let { parseBoundary("--start-timestamp", it, isEndBoundary = false) },
+            endDate = endTimestamp?.let { parseBoundary("--end-timestamp", it, isEndBoundary = true) }
         )
         return jsonMapper.treeToValue(configNode, SelectorTrainingConfigurationInput::class.java)
     }
@@ -174,8 +174,8 @@ class ModelSelectorCreateCommand : BaseCommand() {
             jsonMapper = getJsonMapper(),
             serviceAccountId = serviceAccountId,
             extractorStrategy = requireNotNull(extractorStrategy),
-            startDate = parseBoundary("--start-date", requireNotNull(startDate), isEndBoundary = false),
-            endDate = parseBoundary("--end-date", requireNotNull(endDate), isEndBoundary = true),
+            startDate = parseBoundary("--start-timestamp", requireNotNull(startTimestamp), isEndBoundary = false),
+            endDate = parseBoundary("--end-timestamp", requireNotNull(endTimestamp), isEndBoundary = true),
         )
 
     private fun parseBoundary(

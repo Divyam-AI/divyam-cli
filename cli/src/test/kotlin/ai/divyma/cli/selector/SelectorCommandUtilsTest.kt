@@ -23,12 +23,12 @@ class SelectorCommandUtilsTest {
         SelectorCommandUtils.patchTrainDatasetDateRange(
             config,
             SelectorCommandUtils.TrainingWindowBoundary.parse(
-                "--start-date",
+                "--start-timestamp",
                 "2026-07-01",
                 isEndBoundary = false,
             ),
             SelectorCommandUtils.TrainingWindowBoundary.parse(
-                "--end-date",
+                "--end-timestamp",
                 "2026-07-31",
                 isEndBoundary = true,
             ),
@@ -49,12 +49,12 @@ class SelectorCommandUtilsTest {
         SelectorCommandUtils.patchTrainDatasetDateRange(
             config,
             SelectorCommandUtils.TrainingWindowBoundary.parse(
-                "--start-date",
+                "--start-timestamp",
                 "2026-07-01T09:00:00+5.30",
                 isEndBoundary = false,
             ),
             SelectorCommandUtils.TrainingWindowBoundary.parse(
-                "--end-date",
+                "--end-timestamp",
                 "2026-07-01T17:30:00+05:30",
                 isEndBoundary = true,
             ),
@@ -74,12 +74,12 @@ class SelectorCommandUtilsTest {
         SelectorCommandUtils.patchTrainDatasetDateRange(
             config,
             SelectorCommandUtils.TrainingWindowBoundary.parse(
-                "--start-date",
+                "--start-timestamp",
                 "2026-07-01T09:00:00+05:30",
                 isEndBoundary = false,
             ),
             SelectorCommandUtils.TrainingWindowBoundary.parse(
-                "--end-date",
+                "--end-timestamp",
                 "2026-07-01T04:00:00Z",
                 isEndBoundary = true,
             ),
@@ -100,12 +100,12 @@ class SelectorCommandUtilsTest {
             SelectorCommandUtils.patchTrainDatasetDateRange(
                 config,
                 SelectorCommandUtils.TrainingWindowBoundary.parse(
-                    "--start-date",
+                    "--start-timestamp",
                     "2026-07-01T09:00:00+05:30",
                     isEndBoundary = false,
                 ),
                 SelectorCommandUtils.TrainingWindowBoundary.parse(
-                    "--end-date",
+                    "--end-timestamp",
                     "2026-07-01T17:30:00",
                     isEndBoundary = true,
                 ),
@@ -113,7 +113,7 @@ class SelectorCommandUtilsTest {
         }
 
         assertEquals(
-            "--start-date and --end-date must both include UTC offsets when either value includes one",
+            "--start-timestamp and --end-timestamp must both include UTC offsets when either value includes one",
             error.message,
         )
     }
@@ -126,18 +126,18 @@ class SelectorCommandUtilsTest {
             SelectorCommandUtils.patchTrainDatasetDateRange(
                 config,
                 SelectorCommandUtils.TrainingWindowBoundary.parse(
-                    "--start-date",
+                    "--start-timestamp",
                     "2026-08-01",
                     isEndBoundary = false,
                 ),
                 SelectorCommandUtils.TrainingWindowBoundary.parse(
-                    "--end-date",
+                    "--end-timestamp",
                     "2026-07-31",
                     isEndBoundary = true,
                 ),
             )
         }
 
-        assertEquals("--start-date must be on or before --end-date", error.message)
+        assertEquals("--start-timestamp must be on or before --end-timestamp", error.message)
     }
 }
