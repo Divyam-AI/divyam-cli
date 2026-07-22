@@ -12,6 +12,7 @@ import ai.divyam.data.model.OptimizationGoal
 import ai.divyam.data.model.RetryFallbackPolicy
 import ai.divyam.data.model.ServiceAccount
 import ai.divyam.data.model.ServiceAccountUpdateRequest
+import com.fasterxml.jackson.core.type.TypeReference
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -212,12 +213,11 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
         name?.let { sa = sa.copy(name = it.trim()) }
         trafficAllocationConfig?.let {
             val mapper = getJsonMapper()
-            @Suppress("UNCHECKED_CAST")
             sa = sa.copy(
                 trafficAllocationConfig = mapper.readValue(
                     it,
-                    Map::class.java
-                ) as Map<String, Double>
+                    object : TypeReference<Map<String, Double>>() {}
+                )
             )
         }
 
