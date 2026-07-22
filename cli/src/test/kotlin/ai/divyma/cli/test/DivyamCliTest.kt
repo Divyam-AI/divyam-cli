@@ -1245,7 +1245,7 @@ class DivyamCliTest {
             "--name", "Test Selector For Get",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
-            "--extractor-strategy", "default"
+            "--config-file", "src/test/data/selector-config.json"
         )
 
         assertEquals(0, createExitCode)
@@ -1270,6 +1270,28 @@ class DivyamCliTest {
         assertNotNull(json)
         assertTrue(json!!.has("id"))
         assertEquals("Test Selector For Get", json.get("name").asText())
+        assertFalse(json.has("config"))
+        assertFalse(json.has("endpoint"))
+
+        outContent.reset()
+
+        val detailsExitCode = executeCommand(
+            ModelSelectorCommand(),
+            "get",
+            "--id", selectorId.toString(),
+            "--org-id", "1",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--details",
+            "--format", "json"
+        )
+
+        assertEquals(0, detailsExitCode)
+        val detailsJson = parseJson()
+        assertNotNull(detailsJson)
+        assertTrue(detailsJson!!.has("config"))
+        assertFalse(detailsJson.has("endpoint"))
     }
 
     @Test
