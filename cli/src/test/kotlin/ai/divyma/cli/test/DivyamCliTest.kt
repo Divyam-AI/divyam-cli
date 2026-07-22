@@ -480,6 +480,83 @@ class DivyamCliTest {
 
     @Test
     @Order(14)
+    fun `sa key list create and delete`() {
+        executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", "Key Test SA",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        val createJson = parseJson()
+        val saId = createJson!!.get("id").asText()
+
+        outContent.reset()
+
+        var exitCode = executeCommand(
+            SaCommand(),
+            "key",
+            "ls",
+            "--sa-id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(0, exitCode)
+        var json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.isArray)
+        assertEquals(1, json.size())
+        assertTrue(json[0].get("is_primary").asBoolean())
+
+        outContent.reset()
+
+        exitCode = executeCommand(
+            SaCommand(),
+            "key",
+            "create",
+            "--sa-id", saId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(0, exitCode)
+        json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("api_key"))
+        assertFalse(json.get("key").get("is_primary").asBoolean())
+        val secondaryKeyId = json.get("key").get("id").asText()
+
+        outContent.reset()
+
+        exitCode = executeCommand(
+            SaCommand(),
+            "key",
+            "delete",
+            "--sa-id", saId,
+            "--key-id", secondaryKeyId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json"
+        )
+
+        assertEquals(0, exitCode)
+        json = parseJson()
+        assertNotNull(json)
+        assertEquals("Service account API key deleted", json!!.get("detail").asText())
+    }
+
+    @Test
+    @Order(15)
     fun `sa create with retry fallback policy`() {
         val policyPath = "src/test/data/sample_retry_fallback_policy.json"
         val exitCode = executeCommand(
@@ -506,7 +583,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(15)
+    @Order(16)
     fun `sa update with retry fallback policy`() {
         executeCommand(
             SaCommand(),
