@@ -127,17 +127,18 @@ data class ModelProvider(val id: Int, val name: String)
  */
 object MockDataStore {
     val orgs = mutableMapOf<Int, OrgInput>()
-    val users = mutableMapOf<String, User>() // keyed by emailId
+    val users = mutableMapOf<String, User>()
     val serviceAccounts =
-        mutableMapOf<String, ServiceAccount>() // keyed by serviceAccount.id
+        mutableMapOf<String, ServiceAccount>()
     val modelInfos = mutableMapOf<Int, ModelProviderInfo>()
-    val modelSelectors = mutableMapOf<Int, ModelSelector>()
+    val modelSelectors =
+        mutableMapOf<Int, ModelSelector>()
     var lastModelSelectorCreateRequest: ModelSelectorCreateRequest? = null
     val evals =
-        mutableMapOf<String, MutableMap<Int, Eval>>() // keyed by serviceAccountId -> (evalId -> Eval)
+        mutableMapOf<String, MutableMap<Int, Eval>>()
 
     val providers =
-        mutableMapOf<String, ModelProvider>() // provider name -> provider struct
+        mutableMapOf<String, ModelProvider>()
 
     val orgIdCounter = AtomicInteger(1)
     val modelInfoIdCounter = AtomicInteger(1)
@@ -573,12 +574,19 @@ fun Application.configureRouting(password: String) {
                         call.parameters["serviceAccountId"]
                             ?: return@get call.respond(HttpStatusCode.BadRequest)
                     val states = call.request.queryParameters.getAll("states")
+                    val primaryOnly =
+                        call.request.queryParameters["primary_only"]
                     val evals =
                         MockDataStore.evals[serviceAccountId]?.values?.toList()
                             ?: emptyList()
-                    val filtered = if (!states.isNullOrEmpty()) {
+                    val stateFiltered = if (!states.isNullOrEmpty()) {
                         evals.filter { eval -> states.contains(eval.state.toString()) }
                     } else evals
+                    val filtered = when (primaryOnly) {
+                        "true" -> stateFiltered.filter { eval -> eval.isPrimary }
+                        "false" -> stateFiltered.filter { eval -> !eval.isPrimary }
+                        else -> stateFiltered
+                    }
                     call.respond(filtered)
                 }
 
@@ -691,8 +699,8 @@ fun Application.configureRouting(password: String) {
                         MockDataStore.modelSelectorIdCounter.getAndIncrement()
                     val createdAtInt =
                         (System.currentTimeMillis() / 1000).toInt()
-                    // The mock does not persist all create fields because input and output configs differ.
-                    // The API defaults a selector's state to REQUESTED.
+                    // The mock accepts configuration fields but does not persist every field.
+                    // The API defaults selector state to REQUESTED when creating a selector.
                     val selector = ModelSelector(
                         id = id,
                         name = createRequest.name,
