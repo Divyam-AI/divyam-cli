@@ -1211,8 +1211,8 @@ class DivyamCliTest {
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--config-file", "src/test/data/selector-config.json",
-            "--start-date", "2026-07-01",
-            "--end-date", "2026-07-31"
+            "--start-timestamp", "2026-07-01",
+            "--end-timestamp", "2026-07-31"
         )
 
         assertEquals(0, exitCode)
@@ -1237,8 +1237,8 @@ class DivyamCliTest {
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--extractor-strategy", "default",
-            "--start-date", "2026-07-01",
-            "--end-date", "2026-07-31"
+            "--start-timestamp", "2026-07-01",
+            "--end-timestamp", "2026-07-31"
         )
 
         assertEquals(0, exitCode)
@@ -1285,8 +1285,8 @@ class DivyamCliTest {
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--extractor-strategy", "default",
-            "--start-date", "2026-07-01T09:00:00+5.30",
-            "--end-date", "2026-07-01T17:30:00+05:30"
+            "--start-timestamp", "2026-07-01T09:00:00+5.30",
+            "--end-timestamp", "2026-07-01T17:30:00+05:30"
         )
 
         assertEquals(0, exitCode)

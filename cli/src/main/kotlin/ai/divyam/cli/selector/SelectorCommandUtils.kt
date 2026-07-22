@@ -28,7 +28,7 @@ object SelectorCommandUtils {
             instant != null && other.instant != null -> instant.isAfter(other.instant)
             localDateTime != null && other.localDateTime != null -> localDateTime.isAfter(other.localDateTime)
             else -> throw IllegalArgumentException(
-                "--start-date and --end-date must both include UTC offsets when either value includes one"
+                "--start-timestamp and --end-timestamp must both include UTC offsets when either value includes one"
             )
         }
 
@@ -92,7 +92,7 @@ object SelectorCommandUtils {
         }
 
         require(startDate == null || endDate == null || !startDate.isAfter(endDate)) {
-            "--start-date must be on or before --end-date"
+            "--start-timestamp must be on or before --end-timestamp"
         }
 
         val datasets = configNode.get("datasets") as? ObjectNode

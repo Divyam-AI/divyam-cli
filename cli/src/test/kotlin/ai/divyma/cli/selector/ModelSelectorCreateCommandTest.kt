@@ -24,12 +24,12 @@ class ModelSelectorCreateCommandTest {
             serviceAccountId = "service-account-id",
             extractorStrategy = "default",
             startDate = SelectorCommandUtils.TrainingWindowBoundary.parse(
-                "--start-date",
+                "--start-timestamp",
                 "2026-07-01",
                 isEndBoundary = false,
             ),
             endDate = SelectorCommandUtils.TrainingWindowBoundary.parse(
-                "--end-date",
+                "--end-timestamp",
                 "2026-07-31",
                 isEndBoundary = true,
             ),
