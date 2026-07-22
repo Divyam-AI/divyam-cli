@@ -102,6 +102,7 @@ jobs:
           find . -type f -name "*.deb" -exec mv {} temp-artifacts/linux-packages-${{ matrix.arch }} \;
           find . -type f -name "*.rpm" -exec mv {} temp-artifacts/linux-packages-${{ matrix.arch }} \;
           cp cli/build/native/nativeCompile/divyam temp-artifacts/linux-packages-${{ matrix.arch }}
+          cp cli/build/generated/completion/divyam_completion temp-artifacts/linux-packages-${{ matrix.arch }}/divyam_completion
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
