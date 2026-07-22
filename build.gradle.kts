@@ -8,17 +8,17 @@ allprojects {
     spotless {
         java {
             target("src/**/*.java")
-            licenseHeaderFile(rootProject.file("LICENSE_HEADER.txt"))
+            licenseHeaderFile(rootProject.file("config/spotless/copyright-header.txt"))
         }
         kotlin {
             target("src/**/*.kt")
-            licenseHeaderFile(rootProject.file("LICENSE_HEADER.txt"))
+            licenseHeaderFile(rootProject.file("config/spotless/copyright-header.txt"))
         }
         groovyGradle {
             target("*.gradle", "**/build.gradle")
             // The second argument is the delimiter (regex) where the header should stop
             licenseHeaderFile(
-                rootProject.file("LICENSE_HEADER.txt"),
+                rootProject.file("config/spotless/copyright-header.txt"),
                 "(plugins|import|rootProject)"
             )
         }

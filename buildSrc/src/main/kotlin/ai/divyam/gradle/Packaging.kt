@@ -88,6 +88,12 @@ fun Project.configurePackaging(
 
         sourcePackage = "divyam-cli-src"
 
+        from(rootDir) {
+            into("/usr/share/doc/$divyamPackageName")
+            include("LICENSE")
+            include("NOTICE")
+        }
+
         from(tasks.named("nativeCompile")) {
             // Place the executable in the standard /usr/bin directory.
             into("/usr/bin")
@@ -179,6 +185,14 @@ fun Project.configurePackaging(
                 into(binDir)
             }
 
+            copy {
+                from(rootDir) {
+                    include("LICENSE")
+                    include("NOTICE")
+                }
+                into("$tempDir/usr/local/share/doc/$divyamPackageName")
+            }
+
             // Bash completion
             val bashDir = File("$tempDir/usr/local/etc/bash_completion.d")
             bashDir.mkdirs()
@@ -237,7 +251,7 @@ fun Project.configurePackaging(
         dependsOn("nativeCompile")
 
         group = "distribution"
-        description = "Packages the Divyam CLI binary for the direct installer"
+        description = "Packages binary, LICENSE, and NOTICE for the direct installer"
 
         archiveBaseName.set(divyamPackageName)
         archiveVersion.set(sanitizedVersion)
@@ -252,6 +266,8 @@ fun Project.configurePackaging(
             into("$archiveRoot/bin")
         }
 
+        // Include license and required attribution notices from the project root.
+        println(rootDir)
         from(rootDir) {
             include("LICENSE")
             include("NOTICE")
@@ -265,5 +281,134 @@ fun Project.configurePackaging(
         }
 
         destinationDirectory.set(layout.buildDirectory.dir("distributions/installer"))
+    }
+
+    tasks.register("generateBrewFormula") {
+        dependsOn(brewPackageDist)
+
+        group = "distribution"
+        description = "Generate Homebrew formula for this project"
+
+        val formulaName = divyamPackageName // Capitalized class name
+        val binaryName = divyamAppName
+        val versionString = project.version.toString()
+        val archiveFile = brewPackageDist.flatMap { it.archiveFile }
+
+        val repoUrl = "https://github.com/divyam/$divyamPackageName"
+        val releaseUrl =
+            "$repoUrl/releases/download/v$versionString/${
+                archiveFile.get()
+                    .asFile.name
+            }"
+
+        outputs.file(
+            layout.buildDirectory.file
+                (
+                "distributions/homebrew/formula/${
+                    archiveFile.get().asFile
+                        .name.replace(".tar.gz", "")
+                }.rb"
+            )
+        )
+
+        doLast {
+            // Compute sha256 if file exists
+            val sha256 = if (archiveFile.get().asFile.exists()) {
+                val bytes = archiveFile.get().asFile.readBytes()
+                MessageDigest.getInstance("SHA-256")
+                    .digest(bytes)
+                    .joinToString("") { "%02x".format(it) }
+            } else {
+                "PUT_SHA256_HERE"
+            }
+
+            val formula = """
+            class $formulaName < Formula
+              desc "Divyam CLI"
+              homepage "$repoUrl"
+              url "$releaseUrl"
+              sha256 "$sha256"
+              version "$versionString"
+
+              def install
+                bin.install "$binaryName"
+              end
+
+              test do
+                system "#{bin}/$binaryName", "--help"
+              end
+            end
+        """.trimIndent()
+
+            val outputFile = outputs.files.singleFile
+            outputFile.parentFile.mkdirs()
+            outputFile.writeText(formula)
+
+            println("Generated Homebrew formula at: ${outputFile.absolutePath}")
+        }
+    }
+
+    tasks.register("generateBrewFormulaLocal") {
+        dependsOn(brewPackageDist)
+
+        group = "distribution"
+        description = "Generate Homebrew formula for this project"
+
+        // Capitalized class name
+        val formulaName = divyamPackageName.split("-").joinToString("") { str ->
+            str.replaceFirstChar { if (it.isLowerCase()) it.titlecase(getDefault()) else it.toString() }
+        }
+
+        val versionString = project.version.toString()
+        val archiveFile = brewPackageDist.flatMap { it.archiveFile }
+
+        val repoUrl = "https://github.com/divyam/$divyamPackageName"
+        val releaseUrl = "file://#{Pathname.pwd}/${
+            archiveFile.get()
+                .asFile.name
+        }"
+
+        outputs.file(
+            layout.buildDirectory.file
+                (
+                "distributions/homebrew/${divyamPackageName}.local.rb"
+            )
+        )
+
+        doLast {
+            // Compute sha256 if file exists
+            val sha256 = if (archiveFile.get().asFile.exists()) {
+                val bytes = archiveFile.get().asFile.readBytes()
+                MessageDigest.getInstance("SHA-256")
+                    .digest(bytes)
+                    .joinToString("") { "%02x".format(it) }
+            } else {
+                "PUT_SHA256_HERE"
+            }
+
+            val formula = """
+            class $formulaName < Formula
+              desc "Divyam CLI"
+              homepage "$repoUrl"
+              url "$releaseUrl"
+              sha256 "$sha256"
+              version "$versionString"
+
+              def install
+                bin.install "$divyamAppName"
+              end
+
+              test do
+                system "#{bin}/$divyamAppName", "--help"
+              end
+            end
+        """.trimIndent()
+
+            val outputFile = outputs.files.singleFile
+            outputFile.parentFile.mkdirs()
+            outputFile.writeText(formula)
+
+            println("Generated Homebrew formula at: ${outputFile.absolutePath}")
+        }
     }
 }

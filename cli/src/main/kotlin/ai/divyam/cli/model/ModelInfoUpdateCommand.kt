@@ -38,8 +38,7 @@ class ModelInfoUpdateCommand : BaseCommand() {
     )
     private var serviceAccountId: String? = null
 
-    // TODO: Does it make sense to allow model name update? Is it changing
-    //  the model fundamentally?
+    // TODO: Does it make sense to allow model name update? Is it changing the model fundamentally?
     @Option(
         names = ["--model-name"],
         description = ["Optional: New name of the model is change is desired"],
@@ -102,6 +101,30 @@ class ModelInfoUpdateCommand : BaseCommand() {
     )
     private var skipPricing: Boolean = false
 
+    @Option(
+        names = ["--input-price"],
+        description = ["Input price for --per-n-tokens. Requires --output-price."],
+    )
+    private var inputPrice: Double? = null
+
+    @Option(
+        names = ["--output-price"],
+        description = ["Output price for --per-n-tokens. Requires --input-price."],
+    )
+    private var outputPrice: Double? = null
+
+    @Option(
+        names = ["--currency"],
+        description = ["Currency for direct prices. Defaults to USD."],
+    )
+    private var currency: String? = null
+
+    @Option(
+        names = ["--per-n-tokens"],
+        description = ["Token unit for direct prices. Defaults to 1000000."],
+    )
+    private var perNTokens: Int? = null
+
     // TODO: Apply to all models in list? Also name sounds strange.
     @Option(
         names = ["--model-configs-json"],
@@ -126,7 +149,18 @@ class ModelInfoUpdateCommand : BaseCommand() {
 
     override fun execute(): Int {
         runBlocking {
-            val modelPricing = if (!skipPricing) {
+            val directPricing = resolveDirectPricing(
+                inputPrice = inputPrice,
+                outputPrice = outputPrice,
+                currency = currency,
+                perNTokens = perNTokens,
+            )
+            if (directPricing != null && skipPricing) {
+                throw IllegalArgumentException(
+                    "--skip-pricing-update cannot be combined with direct pricing flags"
+                )
+            }
+            val modelPricing = if (directPricing == null && !skipPricing) {
                 val pricingStore = pricingStore(modelPricingYaml)
                 val resolvedOrgId = getOrgId(orgId)
                 val existingModelInfo = divyamClient.getModelInfoById(
@@ -182,12 +216,12 @@ class ModelInfoUpdateCommand : BaseCommand() {
                     modelName = modelName,
                     baseModelName = baseModelName,
                     unsetBaseModelName = unsetBaseModelName,
-                    textPricing = if (modelPricing != null) TextPricing(
+                    textPricing = directPricing?.textPricing ?: if (modelPricing != null) TextPricing(
                         input = modelPricing.textInputPrice,
                         output = modelPricing.textOutputPrice
                     ) else null,
-                    currency = modelPricing?.currency,
-                    perNTokens = modelPricing?.perNTokens,
+                    currency = directPricing?.currency ?: modelPricing?.currency,
+                    perNTokens = directPricing?.perNTokens ?: modelPricing?.perNTokens,
                     configsModel = modelConfigsJson,
                     isSelectionEnabled = isSelectionEnabled,
                     isActive = isSActive
@@ -199,4 +233,3 @@ class ModelInfoUpdateCommand : BaseCommand() {
         return 0
     }
 }
-
