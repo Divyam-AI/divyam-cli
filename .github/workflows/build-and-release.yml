@@ -36,9 +36,11 @@ jobs:
         if: ${{ hashFiles('NOTICE') != '' }}
         run: |
           set -euo pipefail
+          export GEM_HOME="$RUNNER_TEMP/gems"
+          export GEM_PATH="$GEM_HOME"
+          export PATH="$GEM_HOME/bin:$PATH"
           gem install licensee -v 10.0.0 --no-document
-          LICENSEE_BIN="$(ruby -e 'puts Gem::Specification.find_by_name("licensee").full_gem_path')/bin/licensee"
-          "$LICENSEE_BIN" detect . | tee licensee-output.txt
+          licensee detect . | tee licensee-output.txt
           grep -F "License:        Apache-2.0" licensee-output.txt
           grep -F "Confidence:    100.00%" licensee-output.txt
 

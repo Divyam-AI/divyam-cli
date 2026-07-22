@@ -10,6 +10,7 @@ import org.gradle.api.tasks.bundling.Tar
 import org.redline_rpm.header.Os
 import org.redline_rpm.header.RpmType
 import java.io.File
+import java.security.MessageDigest
 import java.util.Locale.getDefault
 
 /**
@@ -247,7 +248,7 @@ fun Project.configurePackaging(
         )
     }
 
-    tasks.register("installerArchive", Tar::class.java) {
+    val installerArchive = tasks.register("installerArchive", Tar::class.java) {
         dependsOn("nativeCompile")
 
         group = "distribution"
@@ -284,7 +285,7 @@ fun Project.configurePackaging(
     }
 
     tasks.register("generateBrewFormula") {
-        dependsOn(brewPackageDist)
+        dependsOn(installerArchive)
 
         group = "distribution"
         description = "Generate Homebrew formula for this project"
@@ -292,7 +293,7 @@ fun Project.configurePackaging(
         val formulaName = divyamPackageName // Capitalized class name
         val binaryName = divyamAppName
         val versionString = project.version.toString()
-        val archiveFile = brewPackageDist.flatMap { it.archiveFile }
+        val archiveFile = installerArchive.flatMap { it.archiveFile }
 
         val repoUrl = "https://github.com/divyam/$divyamPackageName"
         val releaseUrl =
@@ -349,7 +350,7 @@ fun Project.configurePackaging(
     }
 
     tasks.register("generateBrewFormulaLocal") {
-        dependsOn(brewPackageDist)
+        dependsOn(installerArchive)
 
         group = "distribution"
         description = "Generate Homebrew formula for this project"
@@ -360,7 +361,7 @@ fun Project.configurePackaging(
         }
 
         val versionString = project.version.toString()
-        val archiveFile = brewPackageDist.flatMap { it.archiveFile }
+        val archiveFile = installerArchive.flatMap { it.archiveFile }
 
         val repoUrl = "https://github.com/divyam/$divyamPackageName"
         val releaseUrl = "file://#{Pathname.pwd}/${
