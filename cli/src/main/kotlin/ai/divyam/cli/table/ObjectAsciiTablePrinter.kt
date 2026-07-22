@@ -4,6 +4,7 @@
  */
 package ai.divyam.cli.table
 
+import ai.divyam.cli.format.OutputRedactor
 import de.vandermeer.asciitable.AsciiTable
 import de.vandermeer.asciitable.CWC_LongestWord
 import de.vandermeer.asciithemes.a8.A8_Grids
@@ -18,7 +19,11 @@ import java.util.stream.Collectors
 object ObjectAsciiTablePrinter {
     val timestampFields = setOf("createdAt", "updatedAt")
 
-    fun printTable(objects: List<Any>?, skipKeys: Set<String> = emptySet()) {
+    fun printTable(
+        objects: List<Any>?,
+        skipKeys: Set<String> = emptySet(),
+        redactKeys: Set<String> = emptySet()
+    ) {
         if (objects == null || objects.isEmpty()) {
             println("No objects to display.")
             return
@@ -34,7 +39,7 @@ object ObjectAsciiTablePrinter {
         val table = if (isPrimitiveOrWrapper(clazz)) {
             createPrimitiveObjectsTable(objects)
         } else {
-            createObjectsTable(fields, objects)
+            createObjectsTable(fields, objects, redactKeys)
         }
         println(table.render(100))
     }
@@ -95,7 +100,9 @@ object ObjectAsciiTablePrinter {
     }
 
     private fun createObjectsTable(
-        fields: Array<out Field>?, objects: List<Any>
+        fields: Array<out Field>?,
+        objects: List<Any>,
+        redactKeys: Set<String>
     ): AsciiTable {
         // Dynamically create headers
         val headers = Arrays.stream(fields)
@@ -120,9 +127,13 @@ object ObjectAsciiTablePrinter {
             val rowData = Arrays.stream(fields).map { field: Field? ->
                 try {
                     field!!.setAccessible(true) // Allow access to private fields
-                    return@map formatValue(
-                        field, field.get(obj)?.toString() ?: ""
-                    )
+                    val value = field.get(obj)?.toString() ?: ""
+                    val redactedValue = if (OutputRedactor.matchesKey(field.name, redactKeys)) {
+                        OutputRedactor.redactedValue
+                    } else {
+                        OutputRedactor.redactText(value, redactKeys)
+                    }
+                    return@map formatValue(field, redactedValue)
                 } catch (_: IllegalAccessException) {
                     return@map "N/A"
                 }

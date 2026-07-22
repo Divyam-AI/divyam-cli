@@ -269,8 +269,13 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
         return result to timeString
     }
 
-    protected fun printObjs(objs: Any, skipKeys: Set<String> = emptySet()) {
-        Printing.printObjs(objs, outputFormat, skipKeys)
+    protected fun printObjs(
+        objs: Any,
+        skipKeys: Set<String> = emptySet(),
+        includeKeys: Set<String> = emptySet(),
+        redactKeys: Set<String> = emptySet()
+    ) {
+        Printing.printObjs(objs, outputFormat, skipKeys, includeKeys, redactKeys)
     }
 
     protected fun getOrgId(orgIdCli: Int?): Int {

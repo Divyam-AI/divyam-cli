@@ -10,6 +10,18 @@ import picocli.CommandLine
 
 @CommandLine.Command(name = "get", description = ["Get selector by id"])
 class ModelSelectorGetCommand : BaseCommand() {
+    private val detailRedactKeys = setOf(
+        "api_key",
+        "apiKey",
+        "api_key_model",
+        "apiKeyModel",
+        "api_token",
+        "apiToken",
+        "password",
+        "authorization",
+        "secret"
+    )
+
     @CommandLine.Option(
         names = ["--id"],
         description = ["Required: model selector id to get"],
@@ -23,6 +35,12 @@ class ModelSelectorGetCommand : BaseCommand() {
     )
     private var orgId: Int? = null
 
+    @CommandLine.Option(
+        names = ["--details"],
+        description = ["Include selector config and training details."],
+    )
+    private var details = false
+
     override fun execute(): Int {
         runBlocking {
             val resolvedOrgId = getOrgId(orgId)
@@ -30,8 +48,15 @@ class ModelSelectorGetCommand : BaseCommand() {
                 divyamClient.getModelSelectorById(
                     orgId = resolvedOrgId,
                     modelSelectorId = id
-                )
-            printObjs(selector, skipKeys = setOf("config"))
+            )
+            val skipKeys = if (details) setOf("endpoint") else setOf("config", "endpoint")
+            val includeKeys = if (details) setOf("config") else emptySet()
+            printObjs(
+                selector,
+                skipKeys = skipKeys,
+                includeKeys = includeKeys,
+                redactKeys = if (details) detailRedactKeys else emptySet()
+            )
         }
         return 0
     }
