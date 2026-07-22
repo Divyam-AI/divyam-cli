@@ -19,6 +19,10 @@ plugins {
 
 group = "ai.divyam"
 
+providers.gradleProperty("releaseVersion").orNull?.let { releaseVersion ->
+    version = releaseVersion
+}
+
 repositories {
     mavenCentral()
 }
