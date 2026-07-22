@@ -31,7 +31,18 @@ class EvalListCommand : SaSpecificCommand() {
         names = ["--primary-only"],
         description = [$$"Optional: Lists only primary evals."]
     )
-    private var primaryOnly = false
+    private var primaryOnly: Boolean? = null
+
+    @CommandLine.Spec
+    private lateinit var commandSpec: CommandLine.Model.CommandSpec
+
+    private fun primaryOnlyWasRequested(): Boolean {
+        var parseResult = commandSpec.commandLine().parseResult
+        while (parseResult.hasSubcommand()) {
+            parseResult = parseResult.subcommand()
+        }
+        return parseResult.hasMatchedOption("--primary-only")
+    }
 
     override fun execute(): Int {
         runBlocking {
@@ -40,7 +51,7 @@ class EvalListCommand : SaSpecificCommand() {
                     orgId = getOrgId(orgId),
                     serviceAccountId = getSaId(serviceAccountId),
                     evalState = states,
-                    primaryOnly = primaryOnly
+                    primaryOnly = primaryOnlyWasRequested().takeIf { it }
                 )
             printObjs(evals)
         }

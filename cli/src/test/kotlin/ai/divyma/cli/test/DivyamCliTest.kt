@@ -887,6 +887,36 @@ class DivyamCliTest {
 
     @Test
     @Order(27)
+    fun `model-info create with direct pricing`() {
+        val exitCode = executeCommand(
+            ModelInfoCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--provider-name", "openai",
+            "--model-names", "unlisted-model",
+            "--provider-base-url", "https://api.openai.com/v1",
+            "--provider-api-key", "test-key",
+            "--service-account-id", testServiceAccountId,
+            "--input-price", "0.25",
+            "--output-price", "0.75",
+            "--currency", "INR",
+            "--per-n-tokens", "1000",
+        )
+
+        assertEquals(0, exitCode)
+        val modelInfo = parseJson()!!.first()
+        assertEquals(0.25, modelInfo.get("text_pricing").get("input").asDouble())
+        assertEquals(0.75, modelInfo.get("text_pricing").get("output").asDouble())
+        assertEquals("INR", modelInfo.get("currency").asText())
+        assertEquals(1000, modelInfo.get("per_n_tokens").asInt())
+    }
+
+    @Test
+    @Order(28)
     fun `model-info list`() {
         val exitCode = executeCommand(
             ModelInfoCommand(),
@@ -906,7 +936,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(28)
+    @Order(29)
     fun `model-info get`() {
         var exitCode = executeCommand(
             ModelInfoCommand(),
@@ -950,7 +980,7 @@ class DivyamCliTest {
     }
 
     @Test
-    @Order(29)
+    @Order(30)
     fun `model-info update`() {
         var exitCode = executeCommand(
             ModelInfoCommand(),
@@ -987,16 +1017,22 @@ class DivyamCliTest {
             "--service-account-id", testServiceAccountId,
             "--id", modelInfoId.toString(),
             "--model-name", "gpt-4.1-nano",
+            "--input-price", "0.03",
+            "--output-price", "0.12",
         )
 
         assertEquals(0, exitCode)
         json = parseJson()
         assertNotNull(json)
         assertEquals("gpt-4.1-nano", json!!.get("name_model").asText())
+        assertEquals(0.03, json.get("text_pricing").get("input").asDouble())
+        assertEquals(0.12, json.get("text_pricing").get("output").asDouble())
+        assertEquals("USD", json.get("currency").asText())
+        assertEquals(1_000_000, json.get("per_n_tokens").asInt())
     }
 
     @Test
-    @Order(30)
+    @Order(31)
     fun `model-info delete`() {
         var exitCode = executeCommand(
             ModelInfoCommand(),
@@ -1210,7 +1246,7 @@ class DivyamCliTest {
             "--name", "Test Selector For Get",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
-            "--extractor-strategy", "default"
+            "--config-file", "src/test/data/selector-config.json"
         )
 
         assertEquals(0, createExitCode)
@@ -1235,6 +1271,28 @@ class DivyamCliTest {
         assertNotNull(json)
         assertTrue(json!!.has("id"))
         assertEquals("Test Selector For Get", json.get("name").asText())
+        assertFalse(json.has("config"))
+        assertFalse(json.has("endpoint"))
+
+        outContent.reset()
+
+        val detailsExitCode = executeCommand(
+            ModelSelectorCommand(),
+            "get",
+            "--id", selectorId.toString(),
+            "--org-id", "1",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--details",
+            "--format", "json"
+        )
+
+        assertEquals(0, detailsExitCode)
+        val detailsJson = parseJson()
+        assertNotNull(detailsJson)
+        assertTrue(detailsJson!!.has("config"))
+        assertFalse(detailsJson.has("endpoint"))
     }
 
     @Test
@@ -1406,7 +1464,8 @@ class DivyamCliTest {
             "--name", "Test Eval",
             "--granularity", "LLM_REQUEST_RESPONSE",
             "--class-name", "TestEval",
-            "--state", "ACTIVE"
+            "--state", "ACTIVE",
+            "--is-primary", "false"
         )
 
         assertEquals(0, exitCode)
@@ -1428,10 +1487,11 @@ class DivyamCliTest {
             "--format", "json",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
-            "--name", "Test Eval",
+            "--name", "Test Primary Eval",
             "--granularity", "LLM_REQUEST_RESPONSE",
             "--class-name", "TestEval",
-            "--state", "ACTIVE"
+            "--state", "ACTIVE",
+            "--is-primary", "true"
         )
 
         outContent.reset()
@@ -1451,6 +1511,33 @@ class DivyamCliTest {
         val json = parseJson()
         assertNotNull(json)
         assertTrue(json!!.isArray)
+        assertEquals(2, json.size())
+        assertEquals(
+            setOf("Test Eval", "Test Primary Eval"),
+            json.map { eval -> eval.get("name").asText() }.toSet()
+        )
+
+        outContent.reset()
+
+        val primaryOnlyExitCode = executeCommand(
+            EvalCommand(),
+            "ls",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--primary-only"
+        )
+
+        assertEquals(0, primaryOnlyExitCode)
+        val primaryOnlyJson = parseJson()
+        assertNotNull(primaryOnlyJson)
+        assertTrue(primaryOnlyJson!!.isArray)
+        assertEquals(1, primaryOnlyJson.size())
+        assertEquals("Test Primary Eval", primaryOnlyJson[0].get("name").asText())
+        assertTrue(primaryOnlyJson[0].get("is_primary").asBoolean())
     }
 
     @Test
@@ -1746,7 +1833,7 @@ class DivyamCliTest {
     @Order(60)
     fun `connection params resolved from env vars`() {
         withTempHome { _ ->
-            // tempHome has no config — config source is ruled out
+            // tempHome has no config, so the configuration source is ruled out.
             setEnv("DIVYAM_ENDPOINT", baseUrl)
             setEnv("DIVYAM_USER", "admin@dashboard.divyam.ai")
             setEnv("DIVYAM_PASSWORD", testPassword)
@@ -1774,7 +1861,7 @@ class DivyamCliTest {
                 user = "admin@dashboard.divyam.ai",
                 password = testPassword
             )
-            // No CLI args, no env vars — config file is the only source
+            // No CLI arguments or environment variables are set, so the config file is the source.
             val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
             assertEquals(0, exitCode)
             val json = parseJson()
@@ -1787,7 +1874,7 @@ class DivyamCliTest {
     @Order(62)
     fun `cli args override env vars for connection params`() {
         withTempHome { _ ->
-            // Env vars point to a wrong host — CLI args must win
+            // Environment variables point to a wrong host, so CLI arguments must win.
             setEnv("DIVYAM_ENDPOINT", "http://wrong-host:9999")
             setEnv("DIVYAM_USER", "wrong-user@example.com")
             setEnv("DIVYAM_PASSWORD", "wrong-password")
@@ -1816,7 +1903,7 @@ class DivyamCliTest {
     @Order(63)
     fun `env vars override config file for connection params`() {
         withTempHome { tempHome ->
-            // Config file points to a wrong host — env vars must win
+            // The config file points to a wrong host, so environment variables must win.
             writeTestConfig(
                 tempHome,
                 endpoint = "http://wrong-config-host:9999",
@@ -1851,11 +1938,10 @@ class DivyamCliTest {
                 user = "admin@dashboard.divyam.ai",
                 password = testPassword
             )
-            // No DIVYAM_ENDPOINT env var, no --endpoint CLI arg
-            // initialize() defaults endpoint to "https://api.divyam.ai"
+            // No DIVYAM_ENDPOINT env var or --endpoint CLI arg. initialize() defaults the endpoint to "https://api.divyam.ai".
             val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
-            // Expect failure — not because endpoint is missing from config, but because
-            // https://api.divyam.ai is unreachable in tests. Exit 1 = network error, not config error.
+            // Expect failure because https://api.divyam.ai is unreachable in tests.
+            // Exit 1 represents a network error rather than a configuration error.
             assertEquals(1, exitCode)
             val errOutput = errContent.toString()
             assertFalse(
@@ -1878,7 +1964,7 @@ class DivyamCliTest {
                     "--user", "admin@dashboard.divyam.ai",
                     "--password", testPassword,
                     "--format", "json"
-                    // No --org-id CLI arg — DIVYAM_ORG_ID env var supplies it
+                    // No --org-id CLI arg, so DIVYAM_ORG_ID supplies it.
                 )
                 assertEquals(0, exitCode)
                 val json = parseJson()

@@ -11,6 +11,7 @@ import ai.divyam.data.model.ModelAPIAuthMode
 import ai.divyam.data.model.OptimizationGoal
 import ai.divyam.data.model.RetryFallbackPolicy
 import ai.divyam.data.model.ServiceAccountCreateRequest
+import com.fasterxml.jackson.core.type.TypeReference
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import picocli.CommandLine.Option
@@ -171,11 +172,10 @@ class SaCreateCommand : BaseCommand(), HasSecurityPolicy {
         var trafficAllocationConfigObj: Map<String, Double>? = null
         if (trafficAllocationConfig != null) {
             val mapper = getJsonMapper()
-            @Suppress("UNCHECKED_CAST")
             trafficAllocationConfigObj = mapper.readValue(
                 trafficAllocationConfig,
-                Map::class.java
-            ) as Map<String, Double>
+                object : TypeReference<Map<String, Double>>() {}
+            )
         }
         val retryFallbackPolicy = resolveRetryFallbackPolicy()
         val created = runBlocking {

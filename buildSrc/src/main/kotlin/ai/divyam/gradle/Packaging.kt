@@ -89,6 +89,12 @@ fun Project.configurePackaging(
 
         sourcePackage = "divyam-cli-src"
 
+        from(rootDir) {
+            into("/usr/share/doc/$divyamPackageName")
+            include("LICENSE")
+            include("NOTICE")
+        }
+
         from(tasks.named("nativeCompile")) {
             // Place the executable in the standard /usr/bin directory.
             into("/usr/bin")
@@ -180,6 +186,14 @@ fun Project.configurePackaging(
                 into(binDir)
             }
 
+            copy {
+                from(rootDir) {
+                    include("LICENSE")
+                    include("NOTICE")
+                }
+                into("$tempDir/usr/local/share/doc/$divyamPackageName")
+            }
+
             // Bash completion
             val bashDir = File("$tempDir/usr/local/etc/bash_completion.d")
             bashDir.mkdirs()
@@ -230,7 +244,7 @@ fun Project.configurePackaging(
         dependsOn("nativeCompile", "generateCompletion")
 
         group = "distribution"
-        description = "Packages binary, LICENSE, and README.md into a tar.gz"
+        description = "Packages binary, LICENSE, and NOTICE into a tar.gz"
 
         archiveBaseName.set(divyamPackageName)
         archiveVersion.set(sanitizedVersion)
@@ -243,10 +257,11 @@ fun Project.configurePackaging(
             include(divyamAppName) // your binary file name
         }
 
-        // Include LICENSE from project root
+        // Include license and required attribution notices from the project root.
         println(rootDir)
         from(rootDir) {
             include("LICENSE")
+            include("NOTICE")
         }
 
         // Make sure binary is executable inside tar.gz
