@@ -4,6 +4,7 @@
  */
 package ai.divyma.cli.test
 
+import ai.divyam.cli.MockDataStore
 import ai.divyam.cli.ServerCommand
 import ai.divyam.cli.chat.ChatCommand
 import ai.divyam.cli.eval.EvalCommand
@@ -12,6 +13,13 @@ import ai.divyam.cli.org.OrgCommand
 import ai.divyam.cli.sa.SaCommand
 import ai.divyam.cli.selector.ModelSelectorCommand
 import ai.divyam.cli.user.UserCommand
+import ai.divyam.data.model.EvaluationParamsOutput
+import ai.divyam.data.model.ExperimentDatasetInfo
+import ai.divyam.data.model.ExperimentDatasetsOutput
+import ai.divyam.data.model.LLMEvaluatorParams
+import ai.divyam.data.model.SelectorTrainingConfigurationOutput
+import ai.divyam.data.model.SourceSpec
+import ai.divyam.data.model.StageWiseParamsOutput
 import java.nio.file.Files
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -1314,6 +1322,32 @@ class DivyamCliTest {
         assertEquals(0, createExitCode)
         val createJson = parseJson()
         val sourceSelectorId = createJson!!.get("id").asInt()
+        val sourceEvalId = 987
+        val sourceSelector = requireNotNull(MockDataStore.modelSelectors[sourceSelectorId])
+        MockDataStore.modelSelectors[sourceSelectorId] = sourceSelector.copy(
+            config = SelectorTrainingConfigurationOutput(
+                datasets = ExperimentDatasetsOutput(
+                    trainDs = ExperimentDatasetInfo(
+                        name = "clone-source",
+                        sourceSpecs = SourceSpec(
+                            startDate = "2026-01-01T00:00:00",
+                            endDate = "2026-01-02T00:00:00"
+                        )
+                    )
+                ),
+                stages = StageWiseParamsOutput(
+                    selectorEvaluation = EvaluationParamsOutput(
+                        extractorStrategy = "default"
+                    )
+                ),
+                evaluator = LLMEvaluatorParams(
+                    evalId = sourceEvalId,
+                    name = "source-eval",
+                    evalClassPath = "Evaluator"
+                )
+            )
+        )
+        MockDataStore.lastModelSelectorCreateRequest = null
 
         outContent.reset()
 
@@ -1338,6 +1372,10 @@ class DivyamCliTest {
         assertEquals("Source Selector For Clone_clone", json.get("name").asText())
         // State defaults to REQUESTED per API spec (state in create request is ignored)
         assertEquals("REQUESTED", json.get("state").asText())
+        assertEquals(
+            sourceEvalId,
+            MockDataStore.lastModelSelectorCreateRequest?.evalId
+        )
     }
 
     @Test
