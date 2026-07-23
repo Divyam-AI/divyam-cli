@@ -1292,12 +1292,8 @@ class DivyamCliTest {
         val sourceSpecs = trainDataset.path("source_specs")
 
         assertTrue(trainDataset.path("name").asText().startsWith("train_${testServiceAccountId}_"))
-        assertEquals(1, trainDataset.path("min_rows").asInt())
-        assertEquals("router_logs", trainDataset.path("source").asText())
-        assertTrue(trainDataset.path("reuse_existing").asBoolean())
         assertEquals("2026-07-01T00:00:00", sourceSpecs.path("start_date").asText())
         assertEquals("2026-07-31T23:59:59", sourceSpecs.path("end_date").asText())
-        assertTrue(sourceSpecs.path("ignore_control_bucket").asBoolean())
         assertEquals(
             "default",
             config.path("stages").path("selector_evaluation")

@@ -203,10 +203,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
                 "name",
                 "train_${serviceAccountId}_${UUID.randomUUID().toString().take(8)}",
             )
-            trainDataset.put("min_rows", 1)
-            trainDataset.put("source", "router_logs")
-            trainDataset.put("reuse_existing", true)
-            trainDataset.putObject("source_specs").put("ignore_control_bucket", true)
+            trainDataset.putObject("source_specs")
             configNode.putObject("stages")
                 .putObject("selector_evaluation")
                 .put("extractor_strategy", extractorStrategy)
