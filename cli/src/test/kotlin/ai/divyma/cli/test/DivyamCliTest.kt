@@ -4,6 +4,7 @@
  */
 package ai.divyma.cli.test
 
+import ai.divyam.cli.MockDataStore
 import ai.divyam.cli.ServerCommand
 import ai.divyam.cli.chat.ChatCommand
 import ai.divyam.cli.eval.EvalCommand
@@ -1233,6 +1234,107 @@ class DivyamCliTest {
     }
 
     @Test
+    @Order(35)
+    fun `selector create with config file date range`() {
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Test Selector with Date Range",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--config-file", "src/test/data/selector-config.json",
+            "--start-timestamp", "2026-07-01",
+            "--end-timestamp", "2026-07-31"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertEquals("Test Selector with Date Range", json!!.get("name").asText())
+    }
+
+    @Test
+    @Order(35)
+    fun `selector create with date range without config file`() {
+        MockDataStore.latestModelSelectorCreateRequest = null
+
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Test Selector with Generated Date Range Config",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default",
+            "--start-timestamp", "2026-07-01",
+            "--end-timestamp", "2026-07-31"
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertTrue(json!!.has("id"))
+        assertEquals("Test Selector with Generated Date Range Config", json.get("name").asText())
+
+        val request = MockDataStore.latestModelSelectorCreateRequest
+        assertNotNull(request)
+        assertEquals("default", request!!.extractorStrategy)
+
+        val config = mapper.valueToTree<JsonNode>(request.config)
+        val trainDataset = config.path("datasets").path("train_ds")
+        val sourceSpecs = trainDataset.path("source_specs")
+
+        assertTrue(trainDataset.path("name").asText().startsWith("train_${testServiceAccountId}_"))
+        assertEquals("2026-07-01T00:00:00", sourceSpecs.path("start_date").asText())
+        assertEquals("2026-07-31T23:59:59", sourceSpecs.path("end_date").asText())
+        assertEquals(
+            "default",
+            config.path("stages").path("selector_evaluation")
+                .path("extractor_strategy").asText(),
+        )
+    }
+
+    @Test
+    @Order(36)
+    fun `selector create preserves timestamp offsets in generated configuration`() {
+        MockDataStore.latestModelSelectorCreateRequest = null
+
+        val exitCode = executeCommand(
+            ModelSelectorCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--name", "Test Selector with Offset Timestamp Config",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--extractor-strategy", "default",
+            "--start-timestamp", "2026-07-01T09:00:00+5.30",
+            "--end-timestamp", "2026-07-01T17:30:00+05:30"
+        )
+
+        assertEquals(0, exitCode)
+        assertNotNull(parseJson())
+
+        val request = MockDataStore.latestModelSelectorCreateRequest
+        assertNotNull(request)
+        val sourceSpecs = mapper.valueToTree<JsonNode>(request!!.config)
+            .path("datasets")
+            .path("train_ds")
+            .path("source_specs")
+        assertEquals("2026-07-01T09:00:00+05:30", sourceSpecs.path("start_date").asText())
+        assertEquals("2026-07-01T17:30:00+05:30", sourceSpecs.path("end_date").asText())
+    }
+
+    @Test
     @Order(36)
     fun `selector get`() {
         val createExitCode = executeCommand(
@@ -1784,7 +1886,7 @@ class DivyamCliTest {
     @Order(60)
     fun `connection params resolved from env vars`() {
         withTempHome { _ ->
-            // tempHome has no config, so the configuration source is ruled out.
+            // The temporary home has no config. Config resolution is ruled out.
             setEnv("DIVYAM_ENDPOINT", baseUrl)
             setEnv("DIVYAM_USER", "admin@dashboard.divyam.ai")
             setEnv("DIVYAM_PASSWORD", testPassword)

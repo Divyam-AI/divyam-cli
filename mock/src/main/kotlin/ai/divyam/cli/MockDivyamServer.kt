@@ -129,10 +129,11 @@ object MockDataStore {
     val orgs = mutableMapOf<Int, OrgInput>()
     val users = mutableMapOf<String, User>()
     val serviceAccounts =
-        mutableMapOf<String, ServiceAccount>()
-    val modelInfos = mutableMapOf<Int, ModelProviderInfo>()
+        mutableMapOf<String, ServiceAccount>() // keyed by serviceAccount.id
+    val modelInfos = mutableMapOf<Int, ModelProviderInfo>() // Model-info records keyed by ID.
     val modelSelectors =
-        mutableMapOf<Int, ModelSelector>()
+        mutableMapOf<Int, ModelSelector>() // keyed by id (int as models expect)
+    var latestModelSelectorCreateRequest: ModelSelectorCreateRequest? = null
     val evals =
         mutableMapOf<String, MutableMap<Int, Eval>>()
 
@@ -693,6 +694,7 @@ fun Application.configureRouting(password: String) {
                 post("") {
                     val createRequest =
                         call.receive<ModelSelectorCreateRequest>()
+                    MockDataStore.latestModelSelectorCreateRequest = createRequest
                     val id =
                         MockDataStore.modelSelectorIdCounter.getAndIncrement()
                     val createdAtInt =

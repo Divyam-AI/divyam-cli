@@ -6,11 +6,106 @@ package ai.divyam.cli.selector
 
 import ai.divyam.data.model.ModelSelectorCandidateModel
 import com.fasterxml.jackson.databind.node.ObjectNode
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * Utility functions shared across selector commands.
  */
 object SelectorCommandUtils {
+    private val localDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss")
+    private val dottedOffsetPattern = Regex("([+-])(\\d{1,2})\\.(\\d{2})$")
+
+    class TrainingWindowBoundary private constructor(
+        val serializedValue: String,
+        private val localDateTime: LocalDateTime?,
+        private val instant: Instant?,
+    ) {
+        fun isAfter(other: TrainingWindowBoundary): Boolean = when {
+            instant != null && other.instant != null -> instant.isAfter(other.instant)
+            localDateTime != null && other.localDateTime != null -> localDateTime.isAfter(other.localDateTime)
+            else -> throw IllegalArgumentException(
+                "--start-timestamp and --end-timestamp must both include UTC offsets when either value includes one"
+            )
+        }
+
+        companion object {
+            fun parse(optionName: String, value: String, isEndBoundary: Boolean): TrainingWindowBoundary {
+                val normalizedValue = normalizeDottedOffset(value)
+                runCatching { LocalDate.parse(normalizedValue) }.getOrNull()?.let { date ->
+                    val dateTime = if (isEndBoundary) {
+                        date.atStartOfDay().plusDays(1).minusSeconds(1)
+                    } else {
+                        date.atStartOfDay()
+                    }
+                    return TrainingWindowBoundary(
+                        serializedValue = dateTime.format(localDateTimeFormatter),
+                        localDateTime = dateTime,
+                        instant = null,
+                    )
+                }
+
+                runCatching { OffsetDateTime.parse(normalizedValue) }.getOrNull()?.let { dateTime ->
+                    return TrainingWindowBoundary(
+                        serializedValue = dateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        localDateTime = null,
+                        instant = dateTime.toInstant(),
+                    )
+                }
+
+                runCatching { LocalDateTime.parse(normalizedValue) }.getOrNull()?.let { dateTime ->
+                    return TrainingWindowBoundary(
+                        serializedValue = dateTime.format(localDateTimeFormatter),
+                        localDateTime = dateTime,
+                        instant = null,
+                    )
+                }
+
+                throw IllegalArgumentException(
+                    "$optionName must use YYYY-MM-DD or an ISO-8601 timestamp: $value"
+                )
+            }
+
+            private fun normalizeDottedOffset(value: String): String =
+                dottedOffsetPattern.replace(value) { match ->
+                    "${match.groupValues[1]}${match.groupValues[2].padStart(2, '0')}:${match.groupValues[3]}"
+                }
+        }
+    }
+
+    /**
+     * Applies explicit day boundaries to the training dataset source.
+     *
+     * A start date is inclusive from midnight and an end date is inclusive through
+     * 23:59:59, matching selector clone dataset recreation semantics.
+     */
+    fun patchTrainDatasetDateRange(
+        configNode: ObjectNode,
+        startDate: TrainingWindowBoundary?,
+        endDate: TrainingWindowBoundary?,
+    ) {
+        if (startDate == null && endDate == null) {
+            return
+        }
+
+        require(startDate == null || endDate == null || !startDate.isAfter(endDate)) {
+            "--start-timestamp must be on or before --end-timestamp"
+        }
+
+        val datasets = configNode.get("datasets") as? ObjectNode
+            ?: throw IllegalArgumentException("config has no datasets")
+        val trainDataset = datasets.get("train_ds") as? ObjectNode
+            ?: throw IllegalArgumentException("config has no datasets.train_ds")
+        val sourceSpecs = (trainDataset.get("source_specs") as? ObjectNode)
+            ?: configNode.objectNode().also { trainDataset.set<ObjectNode>("source_specs", it) }
+
+        startDate?.let { sourceSpecs.put("start_date", it.serializedValue) }
+        endDate?.let { sourceSpecs.put("end_date", it.serializedValue) }
+    }
+
     /**
      * Updates the name of a dataset entry in selector training configuration JSON.
      *
