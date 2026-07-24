@@ -32,6 +32,7 @@ import io.ktor.serialization.jackson.*
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.core.util.DefaultIndenter
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
@@ -100,6 +101,7 @@ import {{packageName}}.auth.*
               indentObjectsWith(DefaultIndenter("  ", "\n"))
             })
             registerModule(JavaTimeModule())
+            setDefaultPropertyInclusion(JsonInclude.Include.NON_ABSENT)
           }
         {{/jackson}}
           protected val UNSAFE_HEADERS: List<String> = listOf(HttpHeaders.ContentType)

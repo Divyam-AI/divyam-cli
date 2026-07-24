@@ -2349,8 +2349,7 @@
             },
             "min_rows": {
               "type": "integer",
-              "title": "Min Rows",
-              "default": 0
+              "title": "Min Rows"
             },
             "source": {
               "$ref": "#/components/schemas/DatasetSource",
