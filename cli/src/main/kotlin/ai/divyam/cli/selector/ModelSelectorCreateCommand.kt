@@ -77,7 +77,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
                 "Accepted forms: YYYY-MM-DD (00:00:00), YYYY-MM-DDTHH:mm:ss, " +
                 "YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss[+/-]HH:MM " +
                 "(IST example: 2026-07-01T09:00:00+05:30 = 2026-07-01T03:30:00Z). " +
-                "If either boundary uses a UTC offset, both must. Use both flags with --extractor-strategy to create the training configuration, or to override the window in --config-file.",
+                TS_HELP_TAIL,
         ],
     )
     private var startTimestamp: String? = null
@@ -89,7 +89,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
                 "Accepted forms: YYYY-MM-DD (23:59:59), YYYY-MM-DDTHH:mm:ss, " +
                 "YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss[+/-]HH:MM " +
                 "(IST example: 2026-07-01T17:30:00+05:30 = 2026-07-01T12:00:00Z). " +
-                "If either boundary uses a UTC offset, both must. Use both flags with --extractor-strategy to create the training configuration, or to override the window in --config-file.",
+                TS_HELP_TAIL,
         ],
     )
     private var endTimestamp: String? = null
@@ -190,6 +190,10 @@ class ModelSelectorCreateCommand : BaseCommand() {
         SelectorCommandUtils.TrainingWindowBoundary.parse(optionName, value, isEndBoundary)
 
     companion object {
+        private const val TS_HELP_TAIL =
+            "If either boundary uses a UTC offset, both must. " +
+                "Use both flags with --extractor-strategy to create the training configuration, or to override the window in --config-file."
+
         internal fun buildDateRangeConfig(
             jsonMapper: ObjectMapper,
             serviceAccountId: String,
