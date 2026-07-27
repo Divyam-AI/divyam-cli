@@ -1448,7 +1448,7 @@ class DivyamCliTest {
                 )
             )
         )
-        MockDataStore.lastModelSelectorCreateRequest = null
+        MockDataStore.latestModelSelectorCreateRequest = null
 
         outContent.reset()
 
@@ -1475,7 +1475,7 @@ class DivyamCliTest {
         assertEquals("REQUESTED", json.get("state").asText())
         assertEquals(
             sourceEvalId,
-            MockDataStore.lastModelSelectorCreateRequest?.evalId
+            MockDataStore.latestModelSelectorCreateRequest?.evalId
         )
     }
 
