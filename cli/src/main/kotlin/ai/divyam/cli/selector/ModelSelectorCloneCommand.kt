@@ -271,6 +271,7 @@ class ModelSelectorCloneCommand : BaseCommand() {
                 name = clonedName,
                 config = configInput,
                 endpoint = sourceSelector.endpoint,
+                evalId = sourceSelector.config?.evaluator?.evalId,
                 candidateModels = SelectorCommandUtils.parseCandidateModels(candidateModels)
             )
             divyamClient.createModelSelector(
