@@ -8,7 +8,6 @@ import ai.divyam.cli.MockDataStore
 import ai.divyam.cli.ServerCommand
 import ai.divyam.cli.chat.ChatCommand
 import ai.divyam.cli.eval.EvalCommand
-import ai.divyam.cli.MockDataStore
 import ai.divyam.cli.model.ModelInfoCommand
 import ai.divyam.cli.org.OrgCommand
 import ai.divyam.cli.sa.SaCommand
