@@ -188,8 +188,7 @@ class DivyamCliTest {
             "ls",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
-            "--password", testPassword,
-            "--format", "json"
+            "--password", testPassword
         )
 
         assertEquals(0, exitCode)
