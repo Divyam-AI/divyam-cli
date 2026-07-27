@@ -649,7 +649,6 @@ fun Application.configureRouting(password: String) {
                     call.respond(
                         EvalTestResponse(
                             evalId = eval.id,
-                            granularity = eval.granularity,
                             scores = listOf(
                                 EvalTestScore(
                                     evalId = eval.id,

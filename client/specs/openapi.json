@@ -2091,7 +2091,8 @@
             "record": {
               "additionalProperties": true,
               "type": "object",
-              "title": "Record"
+              "title": "Record",
+              "description": "A single router-native record. Every granularity requires the envelope keys id, timestamp and traffic_bucket. LLM_REQUEST_RESPONSE additionally requires request and response, TURN_BASED requires turn, and SESSION_BASED requires session. The record is validated against the granularity of the eval identified by eval_id, and a mismatch returns the missing fields."
             }
           },
           "type": "object",
@@ -2106,9 +2107,6 @@
               "type": "integer",
               "title": "Eval Id"
             },
-            "granularity": {
-              "$ref": "#/components/schemas/EvalGranularity"
-            },
             "scores": {
               "items": {
                 "$ref": "#/components/schemas/EvalTestScore"
@@ -2120,10 +2118,10 @@
           "type": "object",
           "required": [
             "eval_id",
-            "granularity",
             "scores"
           ],
-          "title": "EvalTestResponse"
+          "title": "EvalTestResponse",
+          "description": "Scores produced by testing one record against one eval.\n\nA multi-metric eval returns one row per child metric alongside its own, so scores is a list."
         },
         "EvalTestScore": {
           "properties": {
