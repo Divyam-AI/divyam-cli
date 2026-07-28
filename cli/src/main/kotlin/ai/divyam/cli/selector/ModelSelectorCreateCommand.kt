@@ -78,7 +78,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
         description = [
             "Optional: Inclusive start of the training-data window. " +
                 "A date (YYYY-MM-DD) starts at 00:00:00, or pass a full ISO-8601 timestamp. " +
-                "e.g. 2026-07-01  or  2026-07-01T09:00:00+05:30. " +
+                "e.g. 2026-07-01  or  2026-07-01T09:00:00. " +
                 "Pair with --end-timestamp when no config file is given.",
         ],
     )
@@ -89,7 +89,7 @@ class ModelSelectorCreateCommand : BaseCommand() {
         description = [
             "Optional: Inclusive end of the training-data window. " +
                 "A date (YYYY-MM-DD) ends at 23:59:59, or pass a full ISO-8601 timestamp. " +
-                "e.g. 2026-07-14  or  2026-07-14T17:30:00+05:30. " +
+                "e.g. 2026-07-14  or  2026-07-14T17:30:00. " +
                 "Pair with --start-timestamp when no config file is given.",
         ],
     )
