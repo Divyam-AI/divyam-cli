@@ -301,7 +301,7 @@ fun Application.configureRouting(password: String) {
                         divyamAuthKeyHashed = sha256Hex(randomString(32)),
                         optimizationGoal = request.optimizationGoal,
                         authmodeModelApi = request.authmodeModelApi,
-                        trafficAllocationConfig = request.trafficAllocationConfig,
+                        trafficAllocationConfig = request.trafficAllocationConfig ?: emptyMap(),
                         isOrgAdmin = request.isOrgAdmin,
                         isAdmin = request.isAdmin ?: false,
                         securityPolicy = request.securityPolicy,
