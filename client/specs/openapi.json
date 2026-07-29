@@ -1341,8 +1341,9 @@
       },
       "/v1/service_accounts/{service_account_id}/evals/{eval_id}/test/": {
         "post": {
-          "summary": "Test Eval",
-          "operationId": "test_eval",
+          "summary": "Post-registration eval smoke test",
+          "description": "Score one supplied record against an already registered eval. This validates the stored eval configuration and evaluator execution. It does not create selector training data or start selector training.",
+          "operationId": "smokeTestEval",
           "parameters": [
             {
               "name": "service_account_id",
@@ -1377,7 +1378,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/EvalTestRequest"
+                  "$ref": "#/components/schemas/EvalSmokeTestRequest"
                 }
               }
             }
@@ -1388,7 +1389,7 @@
               "content": {
                 "application/json": {
                   "schema": {
-                    "$ref": "#/components/schemas/EvalTestResponse"
+                    "$ref": "#/components/schemas/EvalSmokeTestResponse"
                   }
                 }
               }
@@ -2086,22 +2087,55 @@
           ],
           "title": "EvalState"
         },
-        "EvalTestRequest": {
+        "EvalSmokeTestRequest": {
+          "description": "One router-native record for a post-registration eval smoke test.\n\nThe record stays a free-form object because the keys it must carry are decided by the granularity of the eval being tested, not by this request.\nThis is the manual record path. The chat command can submit its actual Router request and response instead.\nValidation therefore runs against that granularity inside the endpoint, which is what lets a malformed record come back with its exact missing fields instead of a generic schema rejection.",
           "properties": {
             "record": {
               "additionalProperties": true,
               "type": "object",
               "title": "Record",
-              "description": "A single router-native record. Every granularity requires the envelope keys id, timestamp and traffic_bucket. LLM_REQUEST_RESPONSE additionally requires request and response, TURN_BASED requires turn, and SESSION_BASED requires session. The record is validated against the granularity of the eval identified by eval_id, and a mismatch returns the missing fields."
+              "description": "A manually supplied router-native record for post-registration smoke testing. Every granularity requires the envelope keys id, timestamp and traffic_bucket. LLM_REQUEST_RESPONSE additionally requires request and response, TURN_BASED requires turn, and SESSION_BASED requires session. The record is validated against the granularity of the eval identified by eval_id, and a mismatch returns the missing fields.",
+              "examples": [
+                {
+                  "id": "record-1",
+                  "timestamp": "2026-07-24T00:00:00Z",
+                  "traffic_bucket": "control",
+                  "request": {
+                    "model": "my-model",
+                    "messages": [
+                      {
+                        "role": "user",
+                        "content": "What is two plus two?"
+                      }
+                    ]
+                  },
+                  "response": {
+                    "id": "chatcmpl-1",
+                    "object": "chat.completion",
+                    "created": 1784678400,
+                    "model": "my-model",
+                    "choices": [
+                      {
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "message": {
+                          "role": "assistant",
+                          "content": "4"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
             }
           },
           "type": "object",
           "required": [
             "record"
           ],
-          "title": "EvalTestRequest"
+          "title": "EvalSmokeTestRequest"
         },
-        "EvalTestResponse": {
+        "EvalSmokeTestResponse": {
           "properties": {
             "eval_id": {
               "type": "integer",
@@ -2109,7 +2143,7 @@
             },
             "scores": {
               "items": {
-                "$ref": "#/components/schemas/EvalTestScore"
+                "$ref": "#/components/schemas/EvalSmokeTestScore"
               },
               "type": "array",
               "title": "Scores"
@@ -2120,10 +2154,11 @@
             "eval_id",
             "scores"
           ],
-          "title": "EvalTestResponse",
-          "description": "Scores produced by testing one record against one eval.\n\nA multi-metric eval returns one row per child metric alongside its own, so scores is a list."
+          "title": "EvalSmokeTestResponse",
+          "description": "Scores produced by smoke testing one record against one stored eval.\n\nA multi-metric eval returns one row per child metric alongside its own, so scores is a list."
         },
-        "EvalTestScore": {
+        "EvalSmokeTestScore": {
+          "description": "One score row produced by a post-registration eval smoke test.",
           "properties": {
             "eval_id": {
               "type": "integer",
@@ -2150,7 +2185,7 @@
             "eval_id",
             "eval_name"
           ],
-          "title": "EvalTestScore"
+          "title": "EvalSmokeTestScore"
         },
         "EvalUpdateRequest": {
           "properties": {

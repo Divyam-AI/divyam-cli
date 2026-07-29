@@ -8,12 +8,14 @@ import ai.divyam.cli.MockDataStore
 import ai.divyam.cli.ServerCommand
 import ai.divyam.cli.chat.ChatCommand
 import ai.divyam.cli.eval.EvalCommand
+import ai.divyam.cli.format.Printing
 import ai.divyam.cli.model.ModelInfoCommand
 import ai.divyam.cli.org.OrgCommand
 import ai.divyam.cli.sa.SaCommand
 import ai.divyam.cli.selector.ModelSelectorCommand
 import ai.divyam.cli.user.UserCommand
 import ai.divyam.data.model.EvaluationParamsOutput
+import ai.divyam.data.model.EvalGranularity
 import ai.divyam.data.model.ExperimentDatasetInfo
 import ai.divyam.data.model.ExperimentDatasetsOutput
 import ai.divyam.data.model.LLMEvaluatorParams
@@ -128,6 +130,13 @@ class DivyamCliTest {
         System.setOut(PrintStream(outContent))
         errContent.reset()
         System.setErr(PrintStream(errContent))
+        MockDataStore.lastEvalSmokeTestRequest = null
+        MockDataStore.lastChatCompletionRequest = null
+        MockDataStore.lastChatCompletionResponse = null
+        MockDataStore.chatCompletionRequestCount = 0
+        MockDataStore.omitChatTrafficHeaders = false
+        MockDataStore.chatTrafficHeaderName = "X-Router-Traffic-Bucket"
+        MockDataStore.evalSmokeFailuresRemaining = 0
     }
 
     @AfterEach
@@ -1752,7 +1761,28 @@ class DivyamCliTest {
         val recordFile = Files.createTempFile("eval-test-record", ".json")
         Files.writeString(
             recordFile,
-            """{"id":"request-1","timestamp":"2026-07-19T00:00:00Z","traffic_bucket":"selector_disabled"}""",
+            """
+            {
+              "id": "request-1",
+              "timestamp": "2026-07-19T00:00:00Z",
+              "traffic_bucket": "selector_disabled",
+              "request": {
+                "model": "gpt-4.1-mini",
+                "messages": [{"role": "user", "content": "What is two plus two?"}]
+              },
+              "response": {
+                "id": "chatcmpl-1",
+                "object": "chat.completion",
+                "created": 1784505600,
+                "model": "gpt-4.1-mini",
+                "choices": [{
+                  "index": 0,
+                  "finish_reason": "stop",
+                  "message": {"role": "assistant", "content": "4"}
+                }]
+              }
+            }
+            """.trimIndent(),
         )
 
         outContent.reset()
@@ -1774,7 +1804,7 @@ class DivyamCliTest {
         assertNotNull(json)
         assertEquals(evalId, json!!.get("eval_id").asInt())
         assertEquals(1.0, json.get("scores")[0].get("score").asDouble())
-        val requestRecord = MockDataStore.lastEvalTestRequest?.record as Map<*, *>
+        val requestRecord = MockDataStore.lastEvalSmokeTestRequest?.record as Map<*, *>
         assertEquals("request-1", requestRecord["id"])
         Files.deleteIfExists(recordFile)
     }
@@ -1802,6 +1832,224 @@ class DivyamCliTest {
         } finally {
             System.setIn(originalIn)
         }
+    }
+
+    @Test
+    @Order(51)
+    fun `chat test-eval scores the exact Router completion once`() {
+        val evalId = createRequestResponseEval("Chat Eval Smoke")
+        val originalIn = System.`in`
+        try {
+            System.setIn("Explain rate limiting.\n".byteInputStream())
+            val exitCode = executeCommand(
+                ChatCommand(),
+                "--endpoint", baseUrl,
+                "--user", "admin@dashboard.divyam.ai",
+                "--password", testPassword,
+                "--format", "json",
+                "--model-name", "gpt-4.1-mini",
+                "--test-eval", evalId.toString(),
+                "--service-account-id", testServiceAccountId,
+                "--org-id", "1",
+                "--debug",
+            )
+
+            assertEquals(0, exitCode)
+            assertEquals(1, MockDataStore.chatCompletionRequestCount)
+            val record = MockDataStore.lastEvalSmokeTestRequest?.record as Map<*, *>
+            val chatRequest = MockDataStore.lastChatCompletionRequest
+            assertEquals(chatRequest?.model, record["requested_model"])
+            assertEquals("selector_disabled", record["traffic_bucket"])
+            assertEquals("mock-provider", record["requested_model_provider"])
+            assertEquals(record["id"], record["response_id"])
+            assertEquals(
+                Printing.getJsonMapper().writeValueAsString(chatRequest),
+                Printing.getJsonMapper().writeValueAsString(record["request"]),
+            )
+            assertEquals(
+                Printing.getJsonMapper().writeValueAsString(MockDataStore.lastChatCompletionResponse),
+                Printing.getJsonMapper().writeValueAsString(record["response"]),
+            )
+
+            val output = outContent.toString()
+            assertTrue(output.contains("Divyam:"))
+            assertTrue(output.contains("Debug:"))
+            assertTrue(output.contains("Eval smoke test:"))
+            assertTrue(output.indexOf("Divyam:") < output.indexOf("Debug:"))
+            assertTrue(output.indexOf("Debug:") < output.indexOf("Eval smoke test:"))
+        } finally {
+            System.setIn(originalIn)
+        }
+    }
+
+    @Test
+    @Order(52)
+    fun `chat test-eval rejects unsupported transport before a model call`() {
+        val exitCode = executeCommand(
+            ChatCommand(),
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--model-name", "gpt-4.1-mini",
+            "--test-eval", "1",
+            "--stream",
+        )
+
+        assertEquals(1, exitCode)
+        assertEquals(0, MockDataStore.chatCompletionRequestCount)
+        assertTrue(errContent.toString().contains("non-streaming chat completions"))
+    }
+
+    @Test
+    @Order(53)
+    fun `chat test-eval rejects responses API before a model call`() {
+        val exitCode = executeCommand(
+            ChatCommand(),
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--model-name", "gpt-4.1-mini",
+            "--test-eval", "1",
+            "--api-type", "RESPONSES",
+        )
+
+        assertEquals(1, exitCode)
+        assertEquals(0, MockDataStore.chatCompletionRequestCount)
+        assertTrue(errContent.toString().contains("--api-type COMPLETIONS"))
+    }
+
+    @Test
+    @Order(54)
+    fun `chat test-eval keeps the reply when scoring fails`() {
+        val evalId = createRequestResponseEval("Chat Eval Failure")
+        MockDataStore.evalSmokeFailuresRemaining = 1
+        val originalIn = System.`in`
+        try {
+            System.setIn("What is a cache?\nHow does it help?\n".byteInputStream())
+            val exitCode = executeCommand(
+                ChatCommand(),
+                "--endpoint", baseUrl,
+                "--user", "admin@dashboard.divyam.ai",
+                "--password", testPassword,
+                "--model-name", "gpt-4.1-mini",
+                "--test-eval", evalId.toString(),
+                "--service-account-id", testServiceAccountId,
+                "--org-id", "1",
+            )
+
+            assertEquals(0, exitCode)
+            assertEquals(2, MockDataStore.chatCompletionRequestCount)
+            assertEquals(3, MockDataStore.lastChatCompletionRequest?.messages?.size)
+            assertTrue(outContent.toString().contains("Divyam:"))
+            assertTrue(outContent.toString().contains("Eval smoke test failed:"))
+        } finally {
+            System.setIn(originalIn)
+        }
+    }
+
+    @Test
+    @Order(55)
+    fun `chat test-eval reports a missing Router traffic bucket`() {
+        val evalId = createRequestResponseEval("Chat Eval Missing Bucket")
+        MockDataStore.omitChatTrafficHeaders = true
+        val originalIn = System.`in`
+        try {
+            System.setIn("What is a queue?\n".byteInputStream())
+            val exitCode = executeCommand(
+                ChatCommand(),
+                "--endpoint", baseUrl,
+                "--user", "admin@dashboard.divyam.ai",
+                "--password", testPassword,
+                "--model-name", "gpt-4.1-mini",
+                "--test-eval", evalId.toString(),
+                "--service-account-id", testServiceAccountId,
+                "--org-id", "1",
+            )
+
+            assertEquals(0, exitCode)
+            assertEquals(1, MockDataStore.chatCompletionRequestCount)
+            assertEquals(null, MockDataStore.lastEvalSmokeTestRequest)
+            assertTrue(
+                outContent.toString().contains(
+                    "Router response did not include X-Router-Traffic-Bucket"
+                )
+            )
+        } finally {
+            System.setIn(originalIn)
+        }
+    }
+
+    @Test
+    @Order(56)
+    fun `chat test-eval accepts a case-insensitive Router traffic header`() {
+        val evalId = createRequestResponseEval("Chat Eval Header Case")
+        MockDataStore.chatTrafficHeaderName = "x-router-traffic-bucket"
+        val originalIn = System.`in`
+        try {
+            System.setIn("What is a token?\n".byteInputStream())
+            val exitCode = executeCommand(
+                ChatCommand(),
+                "--endpoint", baseUrl,
+                "--user", "admin@dashboard.divyam.ai",
+                "--password", testPassword,
+                "--model-name", "gpt-4.1-mini",
+                "--test-eval", evalId.toString(),
+                "--service-account-id", testServiceAccountId,
+                "--org-id", "1",
+            )
+
+            assertEquals(0, exitCode)
+            assertNotNull(MockDataStore.lastEvalSmokeTestRequest)
+            assertTrue(outContent.toString().contains("Eval smoke test:"))
+        } finally {
+            System.setIn(originalIn)
+        }
+    }
+
+    @Test
+    @Order(57)
+    fun `chat test-eval rejects a non request-response eval before a model call`() {
+        val evalId = createRequestResponseEval(
+            name = "Chat Eval Wrong Granularity",
+            granularity = EvalGranularity.SESSION_BASED,
+        )
+
+        val exitCode = executeCommand(
+            ChatCommand(),
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--model-name", "gpt-4.1-mini",
+            "--test-eval", evalId.toString(),
+            "--service-account-id", testServiceAccountId,
+            "--org-id", "1",
+        )
+
+        assertEquals(1, exitCode)
+        assertEquals(0, MockDataStore.chatCompletionRequestCount)
+        assertTrue(errContent.toString().contains("requires an LLM_REQUEST_RESPONSE eval"))
+    }
+
+    private fun createRequestResponseEval(
+        name: String,
+        granularity: EvalGranularity = EvalGranularity.LLM_REQUEST_RESPONSE,
+    ): Int {
+        val exitCode = executeCommand(
+            EvalCommand(),
+            "create",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--format", "json",
+            "--org-id", "1",
+            "--service-account-id", testServiceAccountId,
+            "--name", name,
+            "--granularity", granularity.toString(),
+            "--class-name", "TestEval",
+            "--state", "ACTIVE",
+        )
+        assertEquals(0, exitCode)
+        return parseJson()!!.get("id").asInt()
     }
 
     // ============================================

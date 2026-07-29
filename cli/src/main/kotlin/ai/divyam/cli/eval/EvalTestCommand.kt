@@ -5,13 +5,16 @@
 package ai.divyam.cli.eval
 
 import ai.divyam.cli.base.SaSpecificCommand
-import ai.divyam.data.model.EvalTestRequest
+import ai.divyam.data.model.EvalSmokeTestRequest
 import com.fasterxml.jackson.module.kotlin.readValue
 import kotlinx.coroutines.runBlocking
 import picocli.CommandLine
 import java.io.File
 
-@CommandLine.Command(name = "test", description = ["Test an eval against one record."])
+@CommandLine.Command(
+    name = "test",
+    description = ["Run a post-registration eval smoke test against one caller-provided record."],
+)
 class EvalTestCommand : SaSpecificCommand() {
     @CommandLine.Option(
         names = ["--id"],
@@ -43,11 +46,11 @@ class EvalTestCommand : SaSpecificCommand() {
 
         val record = getJsonMapper().readValue<Map<String, Any>>(recordFile)
         val result = runBlocking {
-            divyamClient.testEval(
+            divyamClient.smokeTestEval(
                 serviceAccountId = getSaId(serviceAccountId),
                 evalId = evalId,
                 orgId = getOrgId(orgId),
-                evalTestRequest = EvalTestRequest(record = record),
+                evalSmokeTestRequest = EvalSmokeTestRequest(record = record),
             )
         }
         printObjs(result)
