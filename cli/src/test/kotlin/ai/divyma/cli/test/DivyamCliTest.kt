@@ -131,6 +131,7 @@ class DivyamCliTest {
         errContent.reset()
         System.setErr(PrintStream(errContent))
         MockDataStore.lastEvalSmokeTestRequest = null
+        MockDataStore.evalSmokeTestRequestCount = 0
         MockDataStore.lastChatCompletionRequest = null
         MockDataStore.lastChatCompletionResponse = null
         MockDataStore.chatCompletionRequestCount = 0
@@ -1856,6 +1857,7 @@ class DivyamCliTest {
 
             assertEquals(0, exitCode)
             assertEquals(1, MockDataStore.chatCompletionRequestCount)
+            assertEquals(1, MockDataStore.evalSmokeTestRequestCount)
             val record = MockDataStore.lastEvalSmokeTestRequest?.record as Map<*, *>
             val chatRequest = MockDataStore.lastChatCompletionRequest
             assertEquals(chatRequest?.model, record["requested_model"])
@@ -1939,6 +1941,7 @@ class DivyamCliTest {
 
             assertEquals(0, exitCode)
             assertEquals(2, MockDataStore.chatCompletionRequestCount)
+            assertEquals(2, MockDataStore.evalSmokeTestRequestCount)
             assertEquals(3, MockDataStore.lastChatCompletionRequest?.messages?.size)
             assertTrue(outContent.toString().contains("Divyam:"))
             assertTrue(outContent.toString().contains("Eval smoke test failed:"))
@@ -2028,6 +2031,25 @@ class DivyamCliTest {
         assertEquals(1, exitCode)
         assertEquals(0, MockDataStore.chatCompletionRequestCount)
         assertTrue(errContent.toString().contains("requires an LLM_REQUEST_RESPONSE eval"))
+    }
+
+    @Test
+    @Order(58)
+    fun `chat test-eval rejects an inaccessible eval before a model call`() {
+        val exitCode = executeCommand(
+            ChatCommand(),
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword,
+            "--model-name", "gpt-4.1-mini",
+            "--test-eval", "999999",
+            "--service-account-id", testServiceAccountId,
+            "--org-id", "1",
+        )
+
+        assertEquals(1, exitCode)
+        assertEquals(0, MockDataStore.chatCompletionRequestCount)
+        assertEquals(0, MockDataStore.evalSmokeTestRequestCount)
     }
 
     private fun createRequestResponseEval(

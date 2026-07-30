@@ -141,6 +141,7 @@ object MockDataStore {
     val evals =
         mutableMapOf<String, MutableMap<Int, Eval>>()
     var lastEvalSmokeTestRequest: EvalSmokeTestRequest? = null
+    var evalSmokeTestRequestCount: Int = 0
     var lastChatCompletionRequest: ChatRequest? = null
     var lastChatCompletionResponse: ChatCompletionResponse? = null
     var chatCompletionRequestCount: Int = 0
@@ -654,6 +655,7 @@ fun Application.configureRouting(password: String) {
                             "Eval not found"
                         )
                     MockDataStore.lastEvalSmokeTestRequest = call.receive()
+                    MockDataStore.evalSmokeTestRequestCount++
                     if (MockDataStore.evalSmokeFailuresRemaining > 0) {
                         MockDataStore.evalSmokeFailuresRemaining--
                         return@post call.respond(

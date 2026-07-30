@@ -254,7 +254,7 @@ class ChatCommand : BaseCommand(preferApiToken = true), Callable<Int> {
                     if (testEvalId != null) {
                         try {
                             smokeTestEval(turnResult)
-                        } catch (e: Throwable) {
+                        } catch (e: Exception) {
                             printEvalSmokeFailure(e)
                         }
                     }
