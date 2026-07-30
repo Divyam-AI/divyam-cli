@@ -27,7 +27,7 @@ class ConfigGetCommand : Callable<Int> {
         names = ["--format"],
         description = [$$"output format. Valid values: ${COMPLETION-CANDIDATES}"]
     )
-    var outputFormat: OutputFormat = OutputFormat.TEXT
+    var outputFormat: OutputFormat = OutputFormat.JSON
 
     override fun call(): Int {
         val config = ConfigCollection.get().configs[configName]

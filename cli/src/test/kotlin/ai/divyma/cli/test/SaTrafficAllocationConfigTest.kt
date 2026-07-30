@@ -137,7 +137,6 @@ class SaTrafficAllocationConfigTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
     }
 
@@ -151,8 +150,7 @@ class SaTrafficAllocationConfigTest {
                 "--endpoint", baseUrl,
                 "--user", "admin@dashboard.divyam.ai",
                 "--password", testPassword,
-                "--format", "json"
-            )
+                )
             parseJson()
         } finally {
             System.setOut(originalOut)

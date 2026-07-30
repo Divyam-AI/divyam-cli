@@ -1,0 +1,4 @@
+# Load packaged command completions for the image's default interactive shell.
+if ! shopt -oq posix && [ -r /usr/share/bash-completion/bash_completion ]; then
+  source /usr/share/bash-completion/bash_completion
+fi

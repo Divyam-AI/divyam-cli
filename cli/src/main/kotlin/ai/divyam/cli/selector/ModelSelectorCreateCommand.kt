@@ -67,20 +67,58 @@ class ModelSelectorCreateCommand : BaseCommand() {
     )
     private var candidateModels: String? = null
 
+    @Option(
+        names = ["--min-dataset-rows"],
+        description = ["Optional: Minimum number of rows the training source dataset must have before training starts"],
+    )
+    private var minDatasetRows: Int? = null
+
+    @Option(
+        names = ["--start-timestamp"],
+        description = [
+            "Optional: Inclusive start of the training-data window. " +
+                "A date (YYYY-MM-DD) starts at 00:00:00, or pass a full ISO-8601 timestamp. " +
+                "e.g. 2026-07-01, 2026-07-01T09:00:00, or 2026-07-01 09:00:00. " +
+                "Pair with --end-timestamp when no config file is given.",
+        ],
+    )
+    private var startTimestamp: String? = null
+
+    @Option(
+        names = ["--end-timestamp"],
+        description = [
+            "Optional: Inclusive end of the training-data window. " +
+                "A date (YYYY-MM-DD) ends at 23:59:59, or pass a full ISO-8601 timestamp. " +
+                "e.g. 2026-07-14, 2026-07-14T17:30:00, or 2026-07-14 17:30:00. " +
+                "Pair with --start-timestamp when no config file is given.",
+        ],
+    )
+    private var endTimestamp: String? = null
+
     override fun execute(): Int {
         validateOptions()
         val newModelSelector = runBlocking {
             val resolvedOrgId = getOrgId(orgId)
             val resolvedServiceAccountId = getSaId(serviceAccountId)
+            val config = SelectorConfigBuilder(getJsonMapper()).build(
+                fileConfig = readConfigFile(configFile),
+                serviceAccountId = resolvedServiceAccountId,
+                extractorStrategy = extractorStrategy,
+                overrides = listOf(
+                    ConfigOverride(extractorStrategy, "stages", "selector_evaluation", "extractor_strategy"),
+                    ConfigOverride(minDatasetRows, "datasets", "train_ds", "min_rows"),
+                    ConfigOverride(startTimestamp, "datasets", "train_ds", "source_specs", "start_date"),
+                    ConfigOverride(endTimestamp, "datasets", "train_ds", "source_specs", "end_date"),
+                ),
+            )
             val modelSelectorCreateRequest = ModelSelectorCreateRequest(
                 orgId = resolvedOrgId,
                 serviceAccountId = resolvedServiceAccountId,
                 name = name,
                 endpoint = selectorEndpoint,
-                config = readConfigFile(configFile),
-                extractorStrategy = extractorStrategy,
+                config = config,
                 evalId = evalId,
-                candidateModels = SelectorCommandUtils.parseCandidateModels(candidateModels)
+                candidateModels = SelectorCommandUtils.parseCandidateModels(candidateModels),
             )
             divyamClient.createModelSelector(
                 modelSelectorCreateRequest = modelSelectorCreateRequest
@@ -94,6 +132,11 @@ class ModelSelectorCreateCommand : BaseCommand() {
         if (configFile == null && extractorStrategy == null) {
             throw IllegalArgumentException(
                 "Either a config file (-c/--config-file) or an extractor strategy (-x/--extractor-strategy) must be provided"
+            )
+        }
+        if (configFile == null && (startTimestamp == null) != (endTimestamp == null)) {
+            throw IllegalArgumentException(
+                "--start-timestamp and --end-timestamp must be provided together when no config file is supplied"
             )
         }
     }
