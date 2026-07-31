@@ -378,11 +378,8 @@ class ChatCommand : BaseCommand(preferApiToken = true), Callable<Int> {
     private fun validateEvalSmokeOptions() {
         if (testEvalId == null) return
 
-        require(!stream) {
-            "--test-eval only supports non-streaming chat completions; remove --stream."
-        }
         require(apiType == ModelApiType.COMPLETIONS) {
-            "--test-eval only supports --api-type COMPLETIONS; RESPONSES is not scoreable as an LLM_REQUEST_RESPONSE record."
+            "--test-eval only supports --api-type COMPLETIONS. RESPONSES is not scoreable as an LLM_REQUEST_RESPONSE record."
         }
 
         val eval = runBlocking {
@@ -393,7 +390,7 @@ class ChatCommand : BaseCommand(preferApiToken = true), Callable<Int> {
             )
         }
         require(eval.granularity == EvalGranularity.LLM_REQUEST_RESPONSE) {
-            "--test-eval requires an LLM_REQUEST_RESPONSE eval; eval ${eval.id} has granularity ${eval.granularity}."
+            "--test-eval requires an LLM_REQUEST_RESPONSE eval. Eval ${eval.id} has granularity ${eval.granularity}."
         }
     }
 
@@ -417,7 +414,7 @@ class ChatCommand : BaseCommand(preferApiToken = true), Callable<Int> {
             turnResult.responseHeaders,
             "X-Router-Traffic-Bucket",
         ) ?: throw IllegalStateException(
-            "Router response did not include X-Router-Traffic-Bucket; the eval smoke test cannot identify the routed traffic bucket."
+            "Router response did not include X-Router-Traffic-Bucket. The eval smoke test cannot identify the routed traffic bucket."
         )
 
         val record = linkedMapOf<String, Any>(
@@ -433,6 +430,10 @@ class ChatCommand : BaseCommand(preferApiToken = true), Callable<Int> {
             turnResult.responseHeaders,
             "X-Requested-Model-Provider",
         )?.let { record["requested_model_provider"] = it }
+
+        if (stream) {
+            printEvalSmokeStreamWarning()
+        }
 
         val response = divyamClient.smokeTestEval(
             serviceAccountId = getSaId(testEvalServiceAccountId),
@@ -465,6 +466,15 @@ class ChatCommand : BaseCommand(preferApiToken = true), Callable<Int> {
             else -> value.toString()
         }
     }?.takeIf(String::isNotBlank)
+
+    // A streamed turn is reassembled from SSE chunks, so the scored record is lossy.
+    private fun printEvalSmokeStreamWarning() {
+        print(ansi().fgYellow().a("Eval smoke test warning: ").reset())
+        println(
+            "The scored record was reassembled from a streamed response. " +
+                "It omits usage and any additional choices."
+        )
+    }
 
     private fun printEvalSmokeFailure(error: Throwable) {
         print(ansi().fgRed().a("Eval smoke test failed: ").reset())

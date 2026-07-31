@@ -1811,20 +1811,30 @@ class DivyamCliTest {
 
     @Test
     @Order(52)
-    fun `chat test-eval rejects unsupported transport before a model call`() {
-        val exitCode = executeCommand(
-            ChatCommand(),
-            "--endpoint", baseUrl,
-            "--user", "admin@dashboard.divyam.ai",
-            "--password", testPassword,
-            "--model-name", "gpt-4.1-mini",
-            "--test-eval", "1",
-            "--stream",
-        )
+    fun `chat test-eval accepts streaming and reaches the model`() {
+        val evalId = createRequestResponseEval("Chat Eval Streaming")
+        val originalIn = System.`in`
+        try {
+            System.setIn("Explain rate limiting.\n".byteInputStream())
+            executeCommand(
+                ChatCommand(),
+                "--endpoint", baseUrl,
+                "--user", "admin@dashboard.divyam.ai",
+                "--password", testPassword,
+                "--model-name", "gpt-4.1-mini",
+                "--test-eval", evalId.toString(),
+                "--service-account-id", testServiceAccountId,
+                "--org-id", "1",
+                "--stream",
+            )
 
-        assertEquals(1, exitCode)
-        assertEquals(0, MockDataStore.chatCompletionRequestCount)
-        assertTrue(errContent.toString().contains("non-streaming chat completions"))
+            // The turn is no longer blocked before the model call, so the Router is reached.
+            assertTrue(MockDataStore.chatCompletionRequestCount > 0)
+            assertEquals(true, MockDataStore.lastChatCompletionRequest?.stream)
+            assertFalse(errContent.toString().contains("does not support streaming"))
+        } finally {
+            System.setIn(originalIn)
+        }
     }
 
     @Test
