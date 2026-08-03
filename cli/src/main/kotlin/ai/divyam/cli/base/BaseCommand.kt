@@ -78,7 +78,7 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
         names = ["--format"],
         description = [$$"output format. Valid values: ${COMPLETION-CANDIDATES}"]
     )
-    protected var outputFormat: OutputFormat = OutputFormat.TEXT
+    protected var outputFormat: OutputFormat = OutputFormat.JSON
 
     @Suppress("unused")
     @CommandLine.Option(

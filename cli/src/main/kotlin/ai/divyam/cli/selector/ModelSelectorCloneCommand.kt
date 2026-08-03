@@ -106,11 +106,19 @@ class ModelSelectorCloneCommand : BaseCommand() {
     )
     private var calibrationDatasetName: String? = null
 
+    @Option(
+        names = ["--min-dataset-rows"],
+        description = ["Optional: Minimum number of rows the training source dataset must have before training starts"],
+        required = false
+    )
+    private var minDatasetRows: Int? = null
+
     private fun requiresSourceConfigOverrides(): Boolean =
         datasetName != null ||
             trainDatasetName != null ||
             evalDatasetName != null ||
-            calibrationDatasetName != null
+            calibrationDatasetName != null ||
+            minDatasetRows != null
 
     /**
      * Updates the config JSON with a new train_ds section for dataset recreation.
@@ -201,6 +209,13 @@ class ModelSelectorCloneCommand : BaseCommand() {
         calibrationDatasetName?.let {
             SelectorCommandUtils.patchDatasetName(configNode, "calibration_ds", it)
         }
+        minDatasetRows?.let {
+            val trainDs = configNode.get("datasets")?.get("train_ds") as? ObjectNode
+                ?: throw IllegalArgumentException(
+                    "Source config has no datasets.train_ds to apply --min-dataset-rows"
+                )
+            trainDs.put("min_rows", it)
+        }
 
         // Serialize the modified JSON tree back into a string for type conversion (Output -> Input).
         return jsonMapper.writeValueAsString(configNode)
@@ -234,7 +249,7 @@ class ModelSelectorCloneCommand : BaseCommand() {
             if (requiresSourceConfigOverrides() && sourceSelector.config == null) {
                 throw IllegalArgumentException(
                     "Source selector (ID: $fromSelectorId) has no configuration. " +
-                            "Config overrides (dataset name flags) " +
+                            "Config overrides " +
                             "require the source selector to have an existing config."
                 )
             }
@@ -271,6 +286,7 @@ class ModelSelectorCloneCommand : BaseCommand() {
                 name = clonedName,
                 config = configInput,
                 endpoint = sourceSelector.endpoint,
+                evalId = sourceSelector.config?.evaluator?.evalId,
                 candidateModels = SelectorCommandUtils.parseCandidateModels(candidateModels)
             )
             divyamClient.createModelSelector(

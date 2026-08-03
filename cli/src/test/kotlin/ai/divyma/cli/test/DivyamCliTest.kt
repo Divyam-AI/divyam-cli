@@ -4,6 +4,7 @@
  */
 package ai.divyma.cli.test
 
+import ai.divyam.cli.MockDataStore
 import ai.divyam.cli.ServerCommand
 import ai.divyam.cli.chat.ChatCommand
 import ai.divyam.cli.eval.EvalCommand
@@ -12,6 +13,13 @@ import ai.divyam.cli.org.OrgCommand
 import ai.divyam.cli.sa.SaCommand
 import ai.divyam.cli.selector.ModelSelectorCommand
 import ai.divyam.cli.user.UserCommand
+import ai.divyam.data.model.EvaluationParamsOutput
+import ai.divyam.data.model.ExperimentDatasetInfo
+import ai.divyam.data.model.ExperimentDatasetsOutput
+import ai.divyam.data.model.LLMEvaluatorParams
+import ai.divyam.data.model.SelectorTrainingConfigurationOutput
+import ai.divyam.data.model.SourceSpec
+import ai.divyam.data.model.StageWiseParamsOutput
 import java.nio.file.Files
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -84,7 +92,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -102,7 +109,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
         )
         parseJson()
         System.setOut(originalOut)
@@ -161,7 +167,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--name", "Test Org",
         )
 
@@ -180,8 +185,7 @@ class DivyamCliTest {
             "ls",
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
-            "--password", testPassword,
-            "--format", "json"
+            "--password", testPassword
         )
 
         assertEquals(0, exitCode)
@@ -210,7 +214,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--id", "1",
         )
 
@@ -231,7 +234,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--id", "2",
             "--name", "Updated Org",
         )
@@ -256,7 +258,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--email", email,
             "--name", "Test User",
@@ -279,7 +280,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1"
         )
 
@@ -300,7 +300,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--email", email,
             "--name", username,
@@ -315,7 +314,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--email", email
         )
 
@@ -337,7 +335,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--email", email,
             "--name", "Original",
@@ -352,7 +349,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--email", email,
             "--name", "Updated"
         )
@@ -378,7 +374,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -398,7 +393,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -418,7 +412,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         val createJson = parseJson()
@@ -433,7 +426,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -453,7 +445,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         val createJson = parseJson()
@@ -469,7 +460,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -490,7 +480,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--retry-fallback-policy-file", policyPath
         )
 
@@ -516,7 +505,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         val createJson = parseJson()
@@ -532,7 +520,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--retry-fallback-policy-file", policyPath
         )
 
@@ -556,7 +543,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--retry-fallback-policy", "{\"retry_delay_s\":2,\"max_retries\":3,\"max_fallback_hops\":4}"
         )
 
@@ -583,7 +569,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         val createJson = parseJson()
@@ -597,7 +582,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--retry-fallback-policy", "{\"retry_delay_s\":6,\"max_retries\":1,\"max_fallback_hops\":2}"
         )
 
@@ -622,7 +606,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
         val createJson = parseJson()
         val saId = createJson!!.get("id").asText()
@@ -635,7 +618,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--retry-delay-s", "9"
         )
 
@@ -657,7 +639,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
         val createJson = parseJson()
         val saId = createJson!!.get("id").asText()
@@ -670,7 +651,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--max-retries", "1"
         )
 
@@ -692,7 +672,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
         val createJson = parseJson()
         val saId = createJson!!.get("id").asText()
@@ -705,7 +684,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--max-fallback-hops", "7"
         )
 
@@ -727,7 +705,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--retry-delay-s", "5",
             "--max-retries", "2",
             "--max-fallback-hops", "3",
@@ -758,7 +735,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         val createJson = parseJson()
@@ -773,7 +749,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--retry-delay-s", "1",
             "--max-retries", "4",
             "--max-fallback-hops", "5",
@@ -803,7 +778,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--retry-fallback-policy-file", policyPath,
             "--retry-delay-s", "5"
         )
@@ -827,7 +801,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
         val createJson = parseJson()
         val saId = createJson!!.get("id").asText()
@@ -840,7 +813,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--retry-fallback-policy", "{\"retry_delay_s\":2,\"max_fallback_hops\":1}",
             "--max-retries", "3"
         )
@@ -866,7 +838,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--provider-name", "openai",
             "--model-names", "gpt-4.1-mini",
@@ -893,7 +864,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--provider-name", "openai",
             "--model-names", "unlisted-model",
@@ -923,7 +893,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId
         )
@@ -943,7 +912,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--provider-name", "openai",
             "--model-names", "gpt-4.1-mini",
@@ -967,7 +935,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--id", modelInfoId.toString(),
         )
@@ -987,7 +954,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--provider-name", "openai",
             "--model-names", "gpt-4.1-mini",
@@ -1011,7 +977,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--id", modelInfoId.toString(),
@@ -1039,7 +1004,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--provider-name", "openai",
             "--model-names", "gpt-4.1-mini",
@@ -1063,7 +1027,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--id", modelInfoId.toString(),
         )
@@ -1076,7 +1039,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--id", modelInfoId.toString(),
         )
@@ -1097,7 +1059,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--name", "Test Selector",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
@@ -1122,7 +1083,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId
         )
@@ -1142,7 +1102,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--name", "Test Selector",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
@@ -1164,7 +1123,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -1187,7 +1145,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         val createJson = parseJson()
@@ -1202,7 +1159,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -1218,7 +1174,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--name", "Test Selector with Config File",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
@@ -1241,7 +1196,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--name", "Test Selector For Get",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
@@ -1262,7 +1216,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -1284,7 +1237,6 @@ class DivyamCliTest {
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
             "--details",
-            "--format", "json"
         )
 
         assertEquals(0, detailsExitCode)
@@ -1304,7 +1256,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--name", "Source Selector For Clone",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
@@ -1314,6 +1265,32 @@ class DivyamCliTest {
         assertEquals(0, createExitCode)
         val createJson = parseJson()
         val sourceSelectorId = createJson!!.get("id").asInt()
+        val sourceEvalId = 987
+        val sourceSelector = requireNotNull(MockDataStore.modelSelectors[sourceSelectorId])
+        MockDataStore.modelSelectors[sourceSelectorId] = sourceSelector.copy(
+            config = SelectorTrainingConfigurationOutput(
+                datasets = ExperimentDatasetsOutput(
+                    trainDs = ExperimentDatasetInfo(
+                        name = "clone-source",
+                        sourceSpecs = SourceSpec(
+                            startDate = "2026-01-01T00:00:00",
+                            endDate = "2026-01-02T00:00:00"
+                        )
+                    )
+                ),
+                stages = StageWiseParamsOutput(
+                    selectorEvaluation = EvaluationParamsOutput(
+                        extractorStrategy = "default"
+                    )
+                ),
+                evaluator = LLMEvaluatorParams(
+                    evalId = sourceEvalId,
+                    name = "source-eval",
+                    evalClassPath = "Evaluator"
+                )
+            )
+        )
+        MockDataStore.lastModelSelectorCreateRequest = null
 
         outContent.reset()
 
@@ -1327,7 +1304,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -1338,6 +1314,10 @@ class DivyamCliTest {
         assertEquals("Source Selector For Clone_clone", json.get("name").asText())
         // State defaults to REQUESTED per API spec (state in create request is ignored)
         assertEquals("REQUESTED", json.get("state").asText())
+        assertEquals(
+            sourceEvalId,
+            MockDataStore.lastModelSelectorCreateRequest?.evalId
+        )
     }
 
     @Test
@@ -1350,7 +1330,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--name", "Another Source Selector",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
@@ -1374,7 +1353,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -1399,7 +1377,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         // Should fail because the source selector doesn't exist
@@ -1415,7 +1392,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--name", "Source Selector Without Config",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
@@ -1438,7 +1414,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(1, cloneExitCode)
@@ -1457,7 +1432,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval",
@@ -1483,7 +1457,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Primary Eval",
@@ -1503,7 +1476,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -1526,7 +1498,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--primary-only"
         )
 
@@ -1548,7 +1519,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval 2",
@@ -1571,7 +1541,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -1589,7 +1558,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval 3",
@@ -1614,7 +1582,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -1634,7 +1601,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Primary Eval",
@@ -1661,7 +1627,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json",
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Eval For Primary Update",
@@ -1685,7 +1650,6 @@ class DivyamCliTest {
             "--endpoint", baseUrl,
             "--user", "admin@dashboard.divyam.ai",
             "--password", testPassword,
-            "--format", "json"
         )
 
         assertEquals(0, exitCode)
@@ -1736,7 +1700,6 @@ class DivyamCliTest {
                 "--endpoint", baseUrl,
                 "--user", "admin@dashboard.divyam.ai",
                 "--password", testPassword,
-                "--format", "json",
                 "--model-name", "gpt-4.1-mini"
             )
 
@@ -1817,7 +1780,7 @@ class DivyamCliTest {
             setEnv("DIVYAM_USER", "admin@dashboard.divyam.ai")
             setEnv("DIVYAM_PASSWORD", testPassword)
             try {
-                val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
+                val exitCode = executeCommand(OrgCommand(), "ls")
                 assertEquals(0, exitCode)
                 val json = parseJson()
                 assertNotNull(json)
@@ -1841,7 +1804,7 @@ class DivyamCliTest {
                 password = testPassword
             )
             // No CLI arguments or environment variables are set, so the config file is the source.
-            val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
+            val exitCode = executeCommand(OrgCommand(), "ls")
             assertEquals(0, exitCode)
             val json = parseJson()
             assertNotNull(json)
@@ -1863,8 +1826,7 @@ class DivyamCliTest {
                     "ls",
                     "--endpoint", baseUrl,
                     "--user", "admin@dashboard.divyam.ai",
-                    "--password", testPassword,
-                    "--format", "json"
+                    "--password", testPassword
                 )
                 assertEquals(0, exitCode)
                 val json = parseJson()
@@ -1893,7 +1855,7 @@ class DivyamCliTest {
             setEnv("DIVYAM_USER", "admin@dashboard.divyam.ai")
             setEnv("DIVYAM_PASSWORD", testPassword)
             try {
-                val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
+                val exitCode = executeCommand(OrgCommand(), "ls")
                 assertEquals(0, exitCode)
                 val json = parseJson()
                 assertNotNull(json)
@@ -1918,7 +1880,7 @@ class DivyamCliTest {
                 password = testPassword
             )
             // No DIVYAM_ENDPOINT env var or --endpoint CLI arg. initialize() defaults the endpoint to "https://api.divyam.ai".
-            val exitCode = executeCommand(OrgCommand(), "ls", "--format", "json")
+            val exitCode = executeCommand(OrgCommand(), "ls")
             // Expect failure because https://api.divyam.ai is unreachable in tests.
             // Exit 1 represents a network error rather than a configuration error.
             assertEquals(1, exitCode)
@@ -1941,10 +1903,9 @@ class DivyamCliTest {
                     "ls",
                     "--endpoint", baseUrl,
                     "--user", "admin@dashboard.divyam.ai",
-                    "--password", testPassword,
-                    "--format", "json"
-                    // No --org-id CLI arg, so DIVYAM_ORG_ID supplies it.
+                    "--password", testPassword
                 )
+                // No --org-id CLI arg, so DIVYAM_ORG_ID supplies it.
                 assertEquals(0, exitCode)
                 val json = parseJson()
                 assertNotNull(json)
@@ -1966,8 +1927,7 @@ class DivyamCliTest {
                 "ls",
                 "--endpoint", baseUrl,
                 "--user", "admin@dashboard.divyam.ai",
-                "--password", testPassword,
-                "--format", "json"
+                "--password", testPassword
             )
             assertEquals(0, exitCode)
             val json = parseJson()
@@ -1988,10 +1948,9 @@ class DivyamCliTest {
                     "ls",
                     "--endpoint", baseUrl,
                     "--user", "admin@dashboard.divyam.ai",
-                    "--password", testPassword,
-                    "--format", "json"
-                    // No --service-account-id or --org-id CLI args
+                    "--password", testPassword
                 )
+                // No --service-account-id or --org-id CLI args.
                 assertEquals(0, exitCode)
                 val json = parseJson()
                 assertNotNull(json)
@@ -2014,8 +1973,7 @@ class DivyamCliTest {
                 "ls",
                 "--endpoint", baseUrl,
                 "--user", "admin@dashboard.divyam.ai",
-                "--password", testPassword,
-                "--format", "json"
+                "--password", testPassword
             )
             assertEquals(0, exitCode)
             val json = parseJson()

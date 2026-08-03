@@ -133,6 +133,7 @@ object MockDataStore {
     val modelInfos = mutableMapOf<Int, ModelProviderInfo>()
     val modelSelectors =
         mutableMapOf<Int, ModelSelector>()
+    var lastModelSelectorCreateRequest: ModelSelectorCreateRequest? = null
     val evals =
         mutableMapOf<String, MutableMap<Int, Eval>>()
 
@@ -300,7 +301,7 @@ fun Application.configureRouting(password: String) {
                         divyamAuthKeyHashed = sha256Hex(randomString(32)),
                         optimizationGoal = request.optimizationGoal,
                         authmodeModelApi = request.authmodeModelApi,
-                        trafficAllocationConfig = request.trafficAllocationConfig,
+                        trafficAllocationConfig = request.trafficAllocationConfig ?: emptyMap(),
                         isOrgAdmin = request.isOrgAdmin,
                         isAdmin = request.isAdmin ?: false,
                         securityPolicy = request.securityPolicy,
@@ -693,6 +694,7 @@ fun Application.configureRouting(password: String) {
                 post("") {
                     val createRequest =
                         call.receive<ModelSelectorCreateRequest>()
+                    MockDataStore.lastModelSelectorCreateRequest = createRequest
                     val id =
                         MockDataStore.modelSelectorIdCounter.getAndIncrement()
                     val createdAtInt =

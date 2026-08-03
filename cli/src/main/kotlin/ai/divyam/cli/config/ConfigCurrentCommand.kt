@@ -19,7 +19,7 @@ class ConfigCurrentCommand : Callable<Int> {
         names = ["--format"],
         description = [$$"output format. Valid values: ${COMPLETION-CANDIDATES}"]
     )
-    var outputFormat: OutputFormat = OutputFormat.TEXT
+    var outputFormat: OutputFormat = OutputFormat.JSON
 
     override fun call(): Int {
         val configCollection = ConfigCollection.get()
@@ -28,8 +28,18 @@ class ConfigCurrentCommand : Callable<Int> {
             System.err.println("No configuration is currently in use")
             return 1
         }
-        println("Current config: ${configCollection.currentConfigName}")
-        Printing.printObjs(config, outputFormat)
+        if (outputFormat == OutputFormat.TEXT) {
+            println("Current config: ${configCollection.currentConfigName}")
+            Printing.printObjs(config, outputFormat)
+        } else {
+            Printing.printObjs(
+                mapOf(
+                    "currentConfigName" to configCollection.currentConfigName,
+                    "config" to config
+                ),
+                outputFormat
+            )
+        }
         return 0
     }
 }
