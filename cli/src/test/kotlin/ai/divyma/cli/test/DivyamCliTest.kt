@@ -1425,7 +1425,7 @@ class DivyamCliTest {
 
     @Test
     @Order(40)
-    fun `eval create defaults granularity`() {
+    fun `eval create omits granularity`() {
         val exitCode = executeCommand(
             EvalCommand(),
             "create",
@@ -1445,6 +1445,8 @@ class DivyamCliTest {
         assertNotNull(json)
         assertTrue(json!!.has("id"))
         assertEquals("Test Eval", json.get("name").asText())
+        // The CLI sends no granularity, so this value comes from the server side.
+        // The mock cannot resolve TestEval, so it falls back to the server default.
         assertEquals("LLM_REQUEST_RESPONSE", json.get("granularity").asText())
     }
 

@@ -9,6 +9,7 @@ import ai.divyam.data.model.ChatRequest
 import ai.divyam.data.model.Choice
 import ai.divyam.data.model.Eval
 import ai.divyam.data.model.EvalCreateRequest
+import ai.divyam.data.model.EvalGranularity
 import ai.divyam.data.model.EvalUpdateRequest
 import ai.divyam.data.model.Message
 import ai.divyam.data.model.ModelProviderInfo
@@ -603,7 +604,10 @@ fun Application.configureRouting(password: String) {
                         orgId = createRequest.orgId,
                         serviceAccountId = createRequest.serviceAccountId,
                         name = createRequest.name,
-                        granularity = createRequest.granularity,
+                        // The real server derives this from the eval class.
+                        // The mock cannot load that class, so it applies the server-side default.
+                        granularity = createRequest.granularity
+                            ?: EvalGranularity.LLM_REQUEST_RESPONSE,
                         className = createRequest.className,
                         classInitConfig = createRequest.classInitConfig,
                         samplingConfig = createRequest.samplingConfig,

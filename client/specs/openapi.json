@@ -2488,7 +2488,6 @@
                     "org_id",
                     "service_account_id",
                     "name",
-                    "granularity",
                     "class_name",
                     "state"
                 ],

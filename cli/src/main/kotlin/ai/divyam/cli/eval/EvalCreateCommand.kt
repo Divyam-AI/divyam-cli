@@ -29,10 +29,9 @@ class EvalCreateCommand : SaSpecificCommand() {
 
     @Option(
         names = ["--granularity"],
-        description = [$$"Granularity of the eval. Defaults to LLM_REQUEST_RESPONSE. ${COMPLETION-CANDIDATES}"],
-        defaultValue = "LLM_REQUEST_RESPONSE"
+        description = [$$"Optional: granularity of the eval. Derived from the evaluator class named by --class-name when omitted. ${COMPLETION-CANDIDATES}"],
     )
-    private var granularity: EvalGranularity = EvalGranularity.LLM_REQUEST_RESPONSE
+    private var granularity: EvalGranularity? = null
 
     @Option(
         names = ["--class-name"],
@@ -82,6 +81,7 @@ class EvalCreateCommand : SaSpecificCommand() {
                     orgId = getOrgId(orgId),
                     serviceAccountId = sa.id,
                     name = name,
+                    // Null drops the key from the payload, so the server derives it from the class.
                     granularity = granularity,
                     className = className,
                     state = state,
