@@ -10,6 +10,7 @@ import ai.divyam.data.model.ChatCompletionResponse
 import ai.divyam.data.model.ChatMessage
 import ai.divyam.data.model.ChatRequest
 import ai.divyam.data.model.ChatRole
+import ai.divyam.cli.eval.EvalSmokeRecord
 import ai.divyam.data.model.EvalGranularity
 import ai.divyam.data.model.EvalSmokeTestRequest
 import ai.divyam.data.model.InputMessages
@@ -417,19 +418,16 @@ class ChatCommand : BaseCommand(preferApiToken = true), Callable<Int> {
             "Router response did not include X-Router-Traffic-Bucket. The eval smoke test cannot identify the routed traffic bucket."
         )
 
-        val record = linkedMapOf<String, Any>(
-            "id" to chatResponse.id,
-            "response_id" to chatResponse.id,
-            "timestamp" to Instant.ofEpochSecond(chatResponse.created).toString(),
-            "traffic_bucket" to trafficBucket,
-            "requested_model" to chatRequest.model,
-            "request" to serializeRecordValue(chatRequest),
-            "response" to serializeRecordValue(chatResponse),
+        val record = EvalSmokeRecord(
+            id = chatResponse.id,
+            responseId = chatResponse.id,
+            timestamp = Instant.ofEpochSecond(chatResponse.created).toString(),
+            trafficBucket = trafficBucket,
+            requestedModel = chatRequest.model,
+            request = serializeRecordValue(chatRequest),
+            response = serializeRecordValue(chatResponse),
+            requestedModelProvider = getResponseHeader(turnResult.responseHeaders, "X-Requested-Model-Provider"),
         )
-        getResponseHeader(
-            turnResult.responseHeaders,
-            "X-Requested-Model-Provider",
-        )?.let { record["requested_model_provider"] = it }
 
         if (stream) {
             printEvalSmokeStreamWarning()
