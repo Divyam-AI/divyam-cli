@@ -1446,7 +1446,7 @@ class DivyamCliTest {
         assertTrue(json!!.has("id"))
         assertEquals("Test Eval", json.get("name").asText())
         // The CLI sends no granularity, so this value comes from the server side.
-        // The mock cannot resolve TestEval, so it falls back to the server default.
+        // The mock answers with its own default rather than resolving the class, so this asserts the CLI omitted the key and did not send a client side default.
         assertEquals("LLM_REQUEST_RESPONSE", json.get("granularity").asText())
     }
 
