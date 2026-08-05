@@ -9,6 +9,9 @@ import ai.divyam.data.model.ChatRequest
 import ai.divyam.data.model.Choice
 import ai.divyam.data.model.Eval
 import ai.divyam.data.model.EvalCreateRequest
+import ai.divyam.data.model.EvalSmokeTestRequest
+import ai.divyam.data.model.EvalSmokeTestResponse
+import ai.divyam.data.model.EvalSmokeTestScore
 import ai.divyam.data.model.EvalUpdateRequest
 import ai.divyam.data.model.Message
 import ai.divyam.data.model.ModelProviderInfo
@@ -41,6 +44,7 @@ import io.ktor.server.request.receive
 import io.ktor.server.request.uri
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondRedirect
+import io.ktor.server.response.header
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
@@ -136,6 +140,14 @@ object MockDataStore {
     var lastModelSelectorCreateRequest: ModelSelectorCreateRequest? = null
     val evals =
         mutableMapOf<String, MutableMap<Int, Eval>>()
+    var lastEvalSmokeTestRequest: EvalSmokeTestRequest? = null
+    var evalSmokeTestRequestCount: Int = 0
+    var lastChatCompletionRequest: ChatRequest? = null
+    var lastChatCompletionResponse: ChatCompletionResponse? = null
+    var chatCompletionRequestCount: Int = 0
+    var omitChatTrafficHeaders: Boolean = false
+    var chatTrafficHeaderName: String = "X-Router-Traffic-Bucket"
+    var evalSmokeFailuresRemaining: Int = 0
 
     val providers =
         mutableMapOf<String, ModelProvider>()
@@ -631,6 +643,40 @@ fun Application.configureRouting(password: String) {
                     )
                 }
 
+                post("/{serviceAccountId}/evals/{evalId}/test") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
+                            ?: return@post call.respond(HttpStatusCode.BadRequest)
+                    val evalId = call.parameters["evalId"]?.toIntOrNull()
+                        ?: return@post call.respond(HttpStatusCode.BadRequest)
+                    val eval = MockDataStore.evals[serviceAccountId]?.get(evalId)
+                        ?: return@post call.respond(
+                            HttpStatusCode.NotFound,
+                            "Eval not found"
+                        )
+                    MockDataStore.lastEvalSmokeTestRequest = call.receive()
+                    MockDataStore.evalSmokeTestRequestCount++
+                    if (MockDataStore.evalSmokeFailuresRemaining > 0) {
+                        MockDataStore.evalSmokeFailuresRemaining--
+                        return@post call.respond(
+                            HttpStatusCode.BadRequest,
+                            "Eval smoke test failed"
+                        )
+                    }
+                    call.respond(
+                        EvalSmokeTestResponse(
+                            evalId = eval.id,
+                            scores = listOf(
+                                EvalSmokeTestScore(
+                                    evalId = eval.id,
+                                    evalName = eval.name,
+                                    score = 1.0,
+                                )
+                            ),
+                        ),
+                    )
+                }
+
                 post("/{serviceAccountId}/evals/{evalId}") {
                     val serviceAccountId =
                         call.parameters["serviceAccountId"]
@@ -764,6 +810,8 @@ fun Application.configureRouting(password: String) {
             // -----------------------
             post("/chat/completions") {
                 val chatRequest = call.receive<ChatRequest>()
+                MockDataStore.lastChatCompletionRequest = chatRequest
+                MockDataStore.chatCompletionRequestCount++
                 call.request.queryParameters["mock_selector"]?.toBoolean()
                     ?: false
                 call.request.queryParameters["mock_model"]?.toBoolean()
@@ -809,7 +857,18 @@ fun Application.configureRouting(password: String) {
                     systemFingerprint = null,
                     usage = null
                 )
+                MockDataStore.lastChatCompletionResponse = response
 
+                if (!MockDataStore.omitChatTrafficHeaders) {
+                    call.response.header(
+                        MockDataStore.chatTrafficHeaderName,
+                        "selector_disabled"
+                    )
+                    call.response.header(
+                        "X-Requested-Model-Provider",
+                        "mock-provider"
+                    )
+                }
                 call.respond(response)
             }
         }
