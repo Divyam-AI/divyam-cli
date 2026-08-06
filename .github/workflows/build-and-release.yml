@@ -43,17 +43,20 @@ jobs:
             VERSION="${GITHUB_REF#refs/tags/}"
             IS_RELEASE=true
           else
-            # Branch and pull request builds keep the -SNAPSHOT already in the file.
             VERSION=$(grep '^version=' cli/gradle.properties | cut -d'=' -f2)
             IS_RELEASE=false
           fi
-          # Tags and the dispatch input are written v1.2.3; a Gradle version is not.
-          VERSION="${VERSION#v}"
-          VERSION="${VERSION%-SNAPSHOT}"
-          if [[ "$IS_RELEASE" == "true" && ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Release version must be MAJOR.MINOR.PATCH, got '$VERSION'" >&2
-            exit 1
+          if [[ "$IS_RELEASE" == "true" ]]; then
+            # Tags and the dispatch input are written v1.2.3; a Gradle version is not.
+            VERSION="${VERSION#v}"
+            VERSION="${VERSION%-SNAPSHOT}"
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Release version must be MAJOR.MINOR.PATCH, got '$VERSION'" >&2
+              exit 1
+            fi
           fi
+          # Branch and pull request builds keep the -SNAPSHOT the file already has,
+          # so their docker tags stay distinct from a release of the same number.
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
           echo "Resolved version $VERSION (release=$IS_RELEASE)"
