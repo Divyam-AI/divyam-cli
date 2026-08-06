@@ -28,7 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.resolve.outputs.version }}
-      is_release: ${{ steps.resolve.outputs.is_release }}
     steps:
       - uses: actions/checkout@v4
 
@@ -54,11 +53,13 @@ jobs:
               echo "Release version must be MAJOR.MINOR.PATCH, got '$VERSION'" >&2
               exit 1
             fi
+          elif [[ "$VERSION" != *-SNAPSHOT ]]; then
+            # A branch build has to stay distinguishable from a release of the same
+            # number, and its docker tag is the only place that distinction survives.
+            echo "Non-release builds must resolve a -SNAPSHOT version, got '$VERSION'" >&2
+            exit 1
           fi
-          # Branch and pull request builds keep the -SNAPSHOT the file already has,
-          # so their docker tags stay distinct from a release of the same number.
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
           echo "Resolved version $VERSION (release=$IS_RELEASE)"
 
   header-check:
@@ -90,8 +91,7 @@ jobs:
           submodules: recursive
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
-      - name: Apply release version
-        if: needs.resolve-version.outputs.is_release == 'true'
+      - name: Apply resolved version
         run: |
           sed -i "s/^version=.*/version=${{ needs.resolve-version.outputs.version }}/" cli/gradle.properties
 
@@ -173,8 +173,7 @@ jobs:
           submodules: recursive
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
 
-      - name: Apply release version
-        if: needs.resolve-version.outputs.is_release == 'true'
+      - name: Apply resolved version
         run: |
           # BSD sed on macOS runners needs an explicit empty backup suffix.
           sed -i '' "s/^version=.*/version=${{ needs.resolve-version.outputs.version }}/" cli/gradle.properties
