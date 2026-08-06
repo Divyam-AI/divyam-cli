@@ -8,6 +8,10 @@ installations.
 Please refer to the [wiki](https://github.com/Divyam-AI/divyam-cli/wiki) for
 installation, user and developer docs.
 
+### Registering evals
+
+- [docs/evalm8-eval.md](docs/evalm8-eval.md): `eval create` examples for evalm8 evals, config files, and the built-in evaluator classes
+
 ### Gemini model provider setup
 
 - [docs/gemini-model-info.md](docs/gemini-model-info.md) — `model-info create` examples for AI Studio, Vertex SA key, Vertex ADC, and impersonation (WIF)

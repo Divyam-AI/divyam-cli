@@ -32,6 +32,7 @@ import ai.divyam.data.model.UserUpdateRequest
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.jackson.jackson
 import io.ktor.server.application.Application
@@ -128,6 +129,12 @@ data class ModelProvider(val id: Int, val name: String)
 /**
  *  Mock data stores (WIP) does not yet simulate a server.
  */
+/** The only evalm8 key the stub accepts, so a test can drive the rejected-key branch. */
+const val EVALM8_GOOD_API_KEY: String = "evm8_sk_mock-key"
+
+/** An evalm8 eval name the stub never finds, so a test can drive the not-found branch. */
+const val EVALM8_MISSING_EVAL: String = "no-such-eval"
+
 object MockDataStore {
     val orgs = mutableMapOf<Int, OrgInput>()
     val users = mutableMapOf<String, User>()
@@ -141,6 +148,7 @@ object MockDataStore {
     var lastModelSelectorCreateRequest: ModelSelectorCreateRequest? = null
     val evals =
         mutableMapOf<String, MutableMap<Int, Eval>>()
+    var lastEvalCreateRequest: EvalCreateRequest? = null
 
     val providers =
         mutableMapOf<String, ModelProvider>()
@@ -177,6 +185,27 @@ fun Application.configureRouting(password: String) {
         // Health and status endpoints (from spec)
         get("/health") {
             call.respond(mapOf("status" to "ok"))
+        }
+
+        // Stands in for evalm8, a separate product the CLI checks before registering against it.
+        // Only the one route the verifier calls is modelled.
+        // The eval named EVALM8_MISSING_EVAL is never found, so a test can drive the 404 branch.
+        get("/api/v1/workspace/{org}/{project}/evals/evals/{evalName}") {
+            val supplied = call.request.headers[HttpHeaders.Authorization]
+            if (supplied != "Bearer $EVALM8_GOOD_API_KEY") {
+                return@get call.respond(
+                    HttpStatusCode.Unauthorized,
+                    mapOf("detail" to "Missing Authorization credentials."),
+                )
+            }
+            val evalName = call.parameters["evalName"].orEmpty()
+            if (evalName == EVALM8_MISSING_EVAL) {
+                return@get call.respond(
+                    HttpStatusCode.NotFound,
+                    mapOf("detail" to "Artifact '/evals/$evalName.json' not found"),
+                )
+            }
+            call.respond(mapOf("name" to evalName, "rubric_uri" to "mock-rubric"))
         }
 
         get("/status") {
@@ -723,6 +752,9 @@ fun Application.configureRouting(password: String) {
                         call.parameters["serviceAccountId"]
                             ?: return@post call.respond(HttpStatusCode.BadRequest)
                     val createRequest = call.receive<EvalCreateRequest>()
+                    // Kept so a test can assert what the CLI folded into class_init_config.
+                    // The response below echoes the request, so asserting on it proves nothing.
+                    MockDataStore.lastEvalCreateRequest = createRequest
 
                     val evalId = MockDataStore.evalIdCounter.getAndIncrement()
                     // create Eval as per the data model

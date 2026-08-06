@@ -36,8 +36,7 @@ class EvalUpdateCommand : SaSpecificCommand() {
 
     @Option(
         names = ["--granularity"],
-        description = [$$"Optional: New granularity of the eval. ${COMPLETION" +
-                " - CANDIDATES}"],
+        description = [$$"Optional: New granularity of the eval. ${COMPLETION-CANDIDATES}"],
     )
     private var granularity: EvalGranularity? = null
 
