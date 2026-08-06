@@ -192,10 +192,17 @@ fun Application.configureRouting(password: String) {
         // The eval named EVALM8_MISSING_EVAL is never found, so a test can drive the 404 branch.
         get("/api/v1/workspace/{org}/{project}/evals/evals/{evalName}") {
             val supplied = call.request.headers[HttpHeaders.Authorization]
-            if (supplied != "Bearer $EVALM8_GOOD_API_KEY") {
+            if (supplied == null) {
                 return@get call.respond(
                     HttpStatusCode.Unauthorized,
                     mapOf("detail" to "Missing Authorization credentials."),
+                )
+            }
+            if (supplied != "Bearer $EVALM8_GOOD_API_KEY") {
+                // evalm8 answers a bad key with 400, not 401. Verified against the sandbox instance.
+                return@get call.respond(
+                    HttpStatusCode.BadRequest,
+                    mapOf("detail" to "Invalid API key credentials."),
                 )
             }
             val evalName = call.parameters["evalName"].orEmpty()
