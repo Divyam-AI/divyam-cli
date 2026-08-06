@@ -46,7 +46,9 @@ jobs:
             IS_RELEASE=false
           fi
           if [[ "$IS_RELEASE" == "true" ]]; then
-            # Tags and the dispatch input are written v1.2.3; a Gradle version is not.
+            # A tag and the dispatch input are written v1.2.3, but the Gradle version
+            # has to be 1.2.3: it reaches the deb and rpm version fields, which must
+            # start with a digit. The tag gets its v back where the release is created.
             VERSION="${VERSION#v}"
             VERSION="${VERSION%-SNAPSHOT}"
             if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
