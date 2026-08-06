@@ -68,13 +68,6 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
     var isOrgAdmin: Boolean? = null
 
     @Option(
-        names = ["--regenerate-api-key"],
-        description = ["Optional: indicates if API key for this service account should be regenerated"],
-        defaultValue = "false"
-    )
-    var regenerateApiKey: Boolean = false
-
-    @Option(
         names = ["--allowed-ip-networks"],
         description = ["Optional: Comma separated list of ip networks that should be allowed to use this service account"],
         split = ","
@@ -189,7 +182,6 @@ class SaUpdateCommand : BaseCommand(), HasSecurityPolicy {
                     authmodeModelApi = sa.authmodeModelApi,
                     isOrgAdmin = sa.isOrgAdmin,
                     isAdmin = sa.isAdmin,
-                    regenerateApiKey = regenerateApiKey,
                     securityPolicy = sa.securityPolicy,
                     retryFallbackPolicy = sa.retryFallbackPolicy
                 )

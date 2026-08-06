@@ -1682,6 +1682,179 @@ class DivyamCliTest {
     }
 
     // ============================================
+    // Service Account API Key Tests
+    // ============================================
+
+    /**
+     * Creates a service account and returns its id. Each API key test needs its own,
+     * because the assertions depend on how many keys the account has.
+     */
+    private fun newServiceAccountId(name: String): String {
+        outContent.reset()
+        val exitCode = executeCommand(
+            SaCommand(),
+            "create",
+            "--org-id", "1",
+            "--name", name,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword
+        )
+        assertEquals(0, exitCode)
+        val id = parseJson()!!.get("id").asText()
+        outContent.reset()
+        return id
+    }
+
+    private fun listApiKeys(serviceAccountId: String): JsonNode {
+        outContent.reset()
+        val exitCode = executeCommand(
+            SaCommand(),
+            "key", "ls",
+            "--sa-id", serviceAccountId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword
+        )
+        assertEquals(0, exitCode)
+        val keys = parseJson()!!
+        outContent.reset()
+        return keys
+    }
+
+    @Test
+    @Order(70)
+    fun `sa key create and ls`() {
+        val saId = newServiceAccountId("SA For Key Create")
+
+        val exitCode = executeCommand(
+            SaCommand(),
+            "key", "create",
+            "--sa-id", saId,
+            "--name", "rotation-key",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword
+        )
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertEquals("rotation-key", json!!.get("key").get("name").asText())
+        assertEquals(saId, json.get("key").get("service_account_id").asText())
+        assertTrue(json.get("api_key").asText().isNotEmpty())
+        // Null fields are dropped from CLI output, so an active key either omits
+        // revoked_at or carries it as null.
+        val revokedAt = json.get("key").get("revoked_at")
+        assertTrue(revokedAt == null || revokedAt.isNull, "A new key must not be revoked")
+
+        val keys = listApiKeys(saId)
+        assertTrue(keys.isArray)
+        assertEquals(2, keys.size())
+        assertTrue(keys.any { it.get("name").asText() == "rotation-key" })
+    }
+
+    @Test
+    @Order(71)
+    fun `sa key revoke`() {
+        val saId = newServiceAccountId("SA For Key Revoke")
+        executeCommand(
+            SaCommand(),
+            "key", "create",
+            "--sa-id", saId,
+            "--name", "replacement-key",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword
+        )
+        outContent.reset()
+
+        val original = listApiKeys(saId).first { it.get("name").asText() == "default_key" }
+        val keyId = original.get("id").asText()
+
+        val exitCode = executeCommand(
+            SaCommand(),
+            "key", "revoke",
+            "--sa-id", saId,
+            "--key-id", keyId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword
+        )
+
+        assertEquals(0, exitCode)
+        assertTrue(outContent.toString().contains("Revoked API key $keyId"))
+
+        val revoked = listApiKeys(saId).first { it.get("id").asText() == keyId }
+        assertFalse(revoked.get("revoked_at").isNull)
+    }
+
+    @Test
+    @Order(72)
+    fun `sa key revoke refuses the only active key`() {
+        val saId = newServiceAccountId("SA With One Key")
+        val keyId = listApiKeys(saId).first().get("id").asText()
+
+        val exitCode = executeCommand(
+            SaCommand(),
+            "key", "revoke",
+            "--sa-id", saId,
+            "--key-id", keyId,
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword
+        )
+
+        assertEquals(1, exitCode)
+        val output = errContent.toString()
+        assertTrue(
+            output.contains("Can not revoke the only active API key"),
+            "Expected the server's reason for the refusal, got: $output"
+        )
+    }
+
+    @Test
+    @Order(73)
+    fun `sa key ls resolves the service account from the env var`() {
+        val saId = newServiceAccountId("SA For Key Env Lookup")
+        withTempHome { _ ->
+            setEnv("DIVYAM_SA_ID", saId)
+            try {
+                val exitCode = executeCommand(
+                    SaCommand(),
+                    "key", "ls",
+                    "--endpoint", baseUrl,
+                    "--user", "admin@dashboard.divyam.ai",
+                    "--password", testPassword
+                )
+                assertEquals(0, exitCode)
+                assertTrue(parseJson()!!.isArray)
+            } finally {
+                clearEnv("DIVYAM_SA_ID")
+            }
+        }
+    }
+
+    @Test
+    @Order(74)
+    fun `sa update no longer accepts regenerate-api-key`() {
+        val saId = newServiceAccountId("SA For Regenerate Flag")
+
+        val exitCode = executeCommand(
+            SaCommand(),
+            "update",
+            "--id", saId,
+            "--regenerate-api-key",
+            "--endpoint", baseUrl,
+            "--user", "admin@dashboard.divyam.ai",
+            "--password", testPassword
+        )
+
+        assertFalse(exitCode == 0) { "Expected the removed option to be rejected" }
+        assertTrue(errContent.toString().contains("--regenerate-api-key"))
+    }
+
+    // ============================================
     // Fallback Behavior Tests
     // Priority: CLI args > env vars > config file > defaults
     // ============================================

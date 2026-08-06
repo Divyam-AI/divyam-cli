@@ -29,7 +29,8 @@ object Printing {
         outputFormat: OutputFormat,
         skipKeys: Set<String> = emptySet(),
         includeKeys: Set<String> = emptySet(),
-        redactKeys: Set<String> = emptySet()
+        redactKeys: Set<String> = emptySet(),
+        flattenKeys: Set<String> = emptySet()
     ) {
         when (outputFormat) {
             OutputFormat.TEXT -> {
@@ -38,7 +39,9 @@ object Printing {
                 } else {
                     listOfNotNull(objs)
                 }
-                ObjectAsciiTablePrinter.printTable(list, skipKeys, redactKeys)
+                // flattenKeys is a table concern only: json and yaml callers want the
+                // shape the API returned, nesting included.
+                ObjectAsciiTablePrinter.printTable(list, skipKeys, redactKeys, flattenKeys)
             }
             OutputFormat.JSON -> {
                 val sanitizedObjs = sanitizeRootKeys(objs, skipKeys, includeKeys, redactKeys)

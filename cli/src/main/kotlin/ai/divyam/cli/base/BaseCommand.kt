@@ -273,9 +273,10 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
         objs: Any,
         skipKeys: Set<String> = emptySet(),
         includeKeys: Set<String> = emptySet(),
-        redactKeys: Set<String> = emptySet()
+        redactKeys: Set<String> = emptySet(),
+        flattenKeys: Set<String> = emptySet()
     ) {
-        Printing.printObjs(objs, outputFormat, skipKeys, includeKeys, redactKeys)
+        Printing.printObjs(objs, outputFormat, skipKeys, includeKeys, redactKeys, flattenKeys)
     }
 
     protected fun getOrgId(orgIdCli: Int?): Int {
