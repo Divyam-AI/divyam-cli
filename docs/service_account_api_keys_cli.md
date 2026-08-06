@@ -28,15 +28,15 @@ Any other account's keys are refused with `403`.
 ## Rotating a key
 
 ```
-$ divyam sa key create --sa-id rSQnFWIa6gTEnzXS --name rotation-key
+$ divyam sa key create --sa-id <service account id> --name rotation-key
 {
   "key" : {
-    "id" : "wXmg1aoZ_PMsRso6",
-    "service_account_id" : "rSQnFWIa6gTEnzXS",
+    "id" : "<new key id>",
+    "service_account_id" : "<service account id>",
     "name" : "rotation-key",
     "created_at" : 1785923617
   },
-  "api_key" : "divyam-v1-300c541adf102c21304d27684a6a6ecef25b33ca991bc8a238a0ccde6172d911"
+  "api_key" : "divyam-v1-<64 hex characters>"
 }
 ```
 
@@ -44,8 +44,8 @@ $ divyam sa key create --sa-id rSQnFWIa6gTEnzXS --name rotation-key
 can retrieve it later. Point your traffic at it, confirm it works, then retire the old key:
 
 ```
-$ divyam sa key revoke --sa-id rSQnFWIa6gTEnzXS --key-id 5G0MtNTSzLH1DCZx
-Revoked API key 5G0MtNTSzLH1DCZx
+$ divyam sa key revoke --sa-id <service account id> --key-id <old key id>
+Revoked API key <old key id>
 ```
 
 A revoked key stops authenticating within `api_keys_cache_ttr` (300s by default) on each router
@@ -61,9 +61,9 @@ replica, so allow for that before assuming the old key is dead.
 │Id              │Service  Account│Name        │Created At│Revoked At│
 │                │Id              │            │          │          │
 ├────────────────┼────────────────┼────────────┼──────────┼──────────┤
-│wXmg1aoZ_PMsRso6│rSQnFWIa6gTEnzXS│rotation-key│2026-08-05│          │
+│aaaaaaaaaaaaaaaa│ssssssssssssssss│rotation-key│2026-08-05│          │
 │                │                │            │15:23:37  │          │
-│5G0MtNTSzLH1DCZx│rSQnFWIa6gTEnzXS│default_key │2026-08-05│2026-08-05│
+│bbbbbbbbbbbbbbbb│ssssssssssssssss│default_key │2026-08-05│2026-08-05│
 │                │                │            │15:23:26  │15:24:40  │
 └────────────────┴────────────────┴────────────┴──────────┴──────────┘
 ```
