@@ -13,6 +13,7 @@ import java.util.concurrent.Callable
     description = ["Manage service accounts"],
     subcommands = [SaListCommand::class, SaGetCommand::class,
         SaCreateCommand::class,
-        SaUpdateCommand::class]
+        SaUpdateCommand::class,
+        SaKeyCommand::class]
 )
 class SaCommand : BaseSubCommand(), Callable<Int>

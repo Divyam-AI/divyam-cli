@@ -2,7 +2,7 @@
     "openapi": "3.1.0",
     "info": {
         "title": "Divyam",
-        "version": "0.1.209"
+        "version": "0.1.213"
     },
     "paths": {
         "/v1/orgs/": {
@@ -509,6 +509,142 @@
                                 "schema": {
                                     "$ref": "#/components/schemas/ServiceAccount"
                                 }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/service_accounts/{service_account_id}/api_keys/": {
+            "get": {
+                "summary": "List Service Account Api Keys",
+                "operationId": "list_service_account_api_keys",
+                "parameters": [
+                    {
+                        "name": "service_account_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Service Account Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ServiceAccountApiKeyRecord"
+                                    },
+                                    "title": "Response List Service Account Api Keys"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Create Service Account Api Key",
+                "operationId": "create_service_account_api_key",
+                "parameters": [
+                    {
+                        "name": "service_account_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Service Account Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ServiceAccountApiKeyCreateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/IssuedServiceAccountApiKey"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/service_accounts/{service_account_id}/api_keys/{key_id}/revoke/": {
+            "post": {
+                "summary": "Revoke Service Account Api Key",
+                "operationId": "revoke_service_account_api_key",
+                "parameters": [
+                    {
+                        "name": "service_account_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Service Account Id"
+                        }
+                    },
+                    {
+                        "name": "key_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Key Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
                             }
                         }
                     },
@@ -1498,6 +1634,25 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/models": {
+            "get": {
+                "summary": "Models",
+                "description": "List the models the calling service account can reach.\n\nThe org and service account come from the bearer token rather than from arguments, so an off the shelf client needs no Divyam specific parameters.",
+                "operationId": "models",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ModelListResponse"
                                 }
                             }
                         }
@@ -3053,6 +3208,23 @@
                 ],
                 "title": "IpVerificationStrategy"
             },
+            "IssuedServiceAccountApiKey": {
+                "properties": {
+                    "key": {
+                        "$ref": "#/components/schemas/ServiceAccountApiKeyRecord"
+                    },
+                    "api_key": {
+                        "type": "string",
+                        "title": "Api Key"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "key",
+                    "api_key"
+                ],
+                "title": "IssuedServiceAccountApiKey"
+            },
             "LLMEvaluatorParams": {
                 "properties": {
                     "eval_id": {
@@ -3129,6 +3301,56 @@
                     "GEMINI"
                 ],
                 "title": "ModelApiType"
+            },
+            "ModelListEntry": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "object": {
+                        "type": "string",
+                        "const": "model",
+                        "title": "Object",
+                        "default": "model"
+                    },
+                    "created": {
+                        "type": "integer",
+                        "title": "Created"
+                    },
+                    "owned_by": {
+                        "type": "string",
+                        "title": "Owned By"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "id",
+                    "owned_by"
+                ],
+                "title": "ModelListEntry"
+            },
+            "ModelListResponse": {
+                "properties": {
+                    "object": {
+                        "type": "string",
+                        "const": "list",
+                        "title": "Object",
+                        "default": "list"
+                    },
+                    "data": {
+                        "items": {
+                            "$ref": "#/components/schemas/ModelListEntry"
+                        },
+                        "type": "array",
+                        "title": "Data"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "data"
+                ],
+                "title": "ModelListResponse"
             },
             "ModelProviderInfo": {
                 "properties": {
@@ -4250,10 +4472,6 @@
                         ],
                         "title": "Api Key"
                     },
-                    "divyam_auth_key_hashed": {
-                        "type": "string",
-                        "title": "Divyam Auth Key Hashed"
-                    },
                     "optimization_goal": {
                         "$ref": "#/components/schemas/OptimizationGoal"
                     },
@@ -4316,12 +4534,63 @@
                     "name",
                     "org_id",
                     "org_name",
-                    "divyam_auth_key_hashed",
                     "optimization_goal",
                     "authmode_model_api",
                     "traffic_allocation_config"
                 ],
                 "title": "ServiceAccount"
+            },
+            "ServiceAccountApiKeyCreateRequest": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "name"
+                ],
+                "title": "ServiceAccountApiKeyCreateRequest"
+            },
+            "ServiceAccountApiKeyRecord": {
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "title": "Id"
+                    },
+                    "service_account_id": {
+                        "type": "string",
+                        "title": "Service Account Id"
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    },
+                    "created_at": {
+                        "type": "integer",
+                        "title": "Created At"
+                    },
+                    "revoked_at": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Revoked At"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "id",
+                    "service_account_id",
+                    "name",
+                    "created_at"
+                ],
+                "title": "ServiceAccountApiKeyRecord"
             },
             "ServiceAccountCreateRequest": {
                 "properties": {

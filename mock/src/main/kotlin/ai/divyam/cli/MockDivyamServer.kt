@@ -11,6 +11,7 @@ import ai.divyam.data.model.Eval
 import ai.divyam.data.model.EvalCreateRequest
 import ai.divyam.data.model.EvalGranularity
 import ai.divyam.data.model.EvalUpdateRequest
+import ai.divyam.data.model.IssuedServiceAccountApiKey
 import ai.divyam.data.model.Message
 import ai.divyam.data.model.ModelProviderInfo
 import ai.divyam.data.model.ModelProviderInfoCreation
@@ -22,6 +23,7 @@ import ai.divyam.data.model.ModelSelectorUpdateRequest
 import ai.divyam.data.model.OrgInput
 import ai.divyam.data.model.OrgUpdateRequest
 import ai.divyam.data.model.ServiceAccount
+import ai.divyam.data.model.ServiceAccountApiKeyRecord
 import ai.divyam.data.model.ServiceAccountCreateRequest
 import ai.divyam.data.model.ServiceAccountUpdateRequest
 import ai.divyam.data.model.User
@@ -131,6 +133,8 @@ object MockDataStore {
     val users = mutableMapOf<String, User>()
     val serviceAccounts =
         mutableMapOf<String, ServiceAccount>()
+    val serviceAccountApiKeys =
+        mutableMapOf<String, MutableList<ServiceAccountApiKeyRecord>>()
     val modelInfos = mutableMapOf<Int, ModelProviderInfo>()
     val modelSelectors =
         mutableMapOf<Int, ModelSelector>()
@@ -146,6 +150,7 @@ object MockDataStore {
     val evalIdCounter = AtomicInteger(1)
     val modelProviderCounter = AtomicInteger(1)
     val modelSelectorIdCounter = AtomicInteger(1)
+    val serviceAccountApiKeyIdCounter = AtomicInteger(1)
 
     init {
         // seed sample org
@@ -299,7 +304,6 @@ fun Application.configureRouting(password: String) {
                         orgId = request.orgId,
                         orgName = org.name,
                         apiKey = randomString(32),
-                        divyamAuthKeyHashed = sha256Hex(randomString(32)),
                         optimizationGoal = request.optimizationGoal,
                         authmodeModelApi = request.authmodeModelApi,
                         trafficAllocationConfig = request.trafficAllocationConfig ?: emptyMap(),
@@ -310,6 +314,11 @@ fun Application.configureRouting(password: String) {
                     )
 
                     MockDataStore.serviceAccounts[sa.id] = sa
+                    // Every service account starts with one key, as it does on the
+                    // server: the key the create response hands back.
+                    MockDataStore.serviceAccountApiKeys[sa.id] = mutableListOf(
+                        newApiKeyRecord(serviceAccountId = sa.id, name = "default_key")
+                    )
                     call.respond(HttpStatusCode.OK, sa)
                 }
 
@@ -538,6 +547,16 @@ fun Application.configureRouting(password: String) {
                             ?: return@post call.respond(HttpStatusCode.BadRequest)
                     val updateRequest =
                         call.receive<ServiceAccountUpdateRequest>()
+                    if (updateRequest.regenerateApiKey == true) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf(
+                                "detail" to "regenerate_api_key is no longer supported. " +
+                                        "Use the api_keys routes instead."
+                            )
+                        )
+                        return@post
+                    }
                     val existingAccount =
                         MockDataStore.serviceAccounts[serviceAccountId]
                     if (existingAccount != null) {
@@ -564,6 +583,114 @@ fun Application.configureRouting(password: String) {
                     } else call.respond(
                         HttpStatusCode.NotFound,
                         "Service account not found"
+                    )
+                }
+
+                // -----------------------
+                // API keys under a service account
+                // -----------------------
+                get("/{serviceAccountId}/api_keys") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
+                            ?: return@get call.respond(HttpStatusCode.BadRequest)
+                    if (!MockDataStore.serviceAccounts.containsKey(serviceAccountId)) {
+                        call.respond(
+                            HttpStatusCode.NotFound,
+                            mapOf("detail" to "Unknown Service Account")
+                        )
+                        return@get
+                    }
+                    call.respond(
+                        MockDataStore.serviceAccountApiKeys[serviceAccountId]
+                            ?: mutableListOf()
+                    )
+                }
+
+                post("/{serviceAccountId}/api_keys") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
+                            ?: return@post call.respond(HttpStatusCode.BadRequest)
+                    if (!MockDataStore.serviceAccounts.containsKey(serviceAccountId)) {
+                        call.respond(
+                            HttpStatusCode.NotFound,
+                            mapOf("detail" to "Unknown Service Account")
+                        )
+                        return@post
+                    }
+                    val name = call.receive<Map<String, String>>()["name"]?.trim()
+                    if (name.isNullOrEmpty()) {
+                        call.respond(
+                            HttpStatusCode.UnprocessableEntity,
+                            mapOf("detail" to "Missing required key name")
+                        )
+                        return@post
+                    }
+                    val keys = MockDataStore.serviceAccountApiKeys
+                        .getOrPut(serviceAccountId) { mutableListOf() }
+                    // Matches the server's default service_account_max_active_api_keys.
+                    val maxActiveApiKeys = 10
+                    if (keys.count { it.revokedAt == null } >= maxActiveApiKeys) {
+                        call.respond(
+                            HttpStatusCode.Conflict,
+                            mapOf(
+                                "detail" to "Service account already has " +
+                                        "$maxActiveApiKeys active API keys"
+                            )
+                        )
+                        return@post
+                    }
+                    val keyRecord =
+                        newApiKeyRecord(serviceAccountId = serviceAccountId, name = name)
+                    keys.add(keyRecord)
+                    call.respond(
+                        IssuedServiceAccountApiKey(
+                            key = keyRecord,
+                            apiKey = randomString(32)
+                        )
+                    )
+                }
+
+                post("/{serviceAccountId}/api_keys/{keyId}/revoke") {
+                    val serviceAccountId =
+                        call.parameters["serviceAccountId"]
+                            ?: return@post call.respond(HttpStatusCode.BadRequest)
+                    val keyId = call.parameters["keyId"]
+                        ?: return@post call.respond(HttpStatusCode.BadRequest)
+                    val keys = MockDataStore.serviceAccountApiKeys[serviceAccountId]
+                    val index = keys?.indexOfFirst { it.id == keyId } ?: -1
+                    if (index < 0) {
+                        call.respond(
+                            HttpStatusCode.NotFound,
+                            mapOf("detail" to "Service account API key not found")
+                        )
+                        return@post
+                    }
+                    val key = keys!![index]
+                    // Revoking twice is not an error, and this check precedes the
+                    // last-key one so re-revoking the only key stays a success.
+                    if (key.revokedAt != null) {
+                        call.respond(
+                            HttpStatusCode.OK,
+                            mapOf("detail" to "Service account API key revoked")
+                        )
+                        return@post
+                    }
+                    if (keys.count { it.revokedAt == null } <= 1) {
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            mapOf(
+                                "detail" to "Can not revoke the only active API key " +
+                                        "for this service account"
+                            )
+                        )
+                        return@post
+                    }
+                    keys[index] = key.copy(
+                        revokedAt = (System.currentTimeMillis() / 1000).toInt()
+                    )
+                    call.respond(
+                        HttpStatusCode.OK,
+                        mapOf("detail" to "Service account API key revoked")
                     )
                 }
 
@@ -819,6 +946,16 @@ fun Application.configureRouting(password: String) {
         }
     }
 }
+
+fun newApiKeyRecord(
+    serviceAccountId: String,
+    name: String
+): ServiceAccountApiKeyRecord = ServiceAccountApiKeyRecord(
+    id = "sak-${MockDataStore.serviceAccountApiKeyIdCounter.getAndIncrement()}",
+    serviceAccountId = serviceAccountId,
+    name = name,
+    createdAt = (System.currentTimeMillis() / 1000).toInt()
+)
 
 fun randomString(length: Int): String {
     val chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
