@@ -49,42 +49,71 @@ class Evalm8Verifier {
                 response.status.value to response.bodyAsText()
             } catch (error: Exception) {
                 throw IllegalArgumentException(
-                    "Could not reach evalm8 at $baseUrl (${error.message}). " +
-                        "Retry, or pass --skip-verify to register without checking.",
+                    listOf(
+                        "Could not reach evalm8.",
+                        "  Retry, or pass --skip-verify to register without checking.",
+                        "  Reason: ${error.message}",
+                        "  Asked:  $baseUrl",
+                    ).joinToString("\n"),
                 )
             }
         }
         val reason = detailOf(body)
 
+        // Each message reads as a headline, then what to do, then the evidence.
+        // The harness truncates a long stderr, so the actionable lines come before the detail.
         when (status) {
             HTTP_OK -> return
-            // The message already names the eval, org and project.
-            // evalm8's own detail would only repeat them and push the actionable part out of view.
             HTTP_NOT_FOUND -> throw IllegalArgumentException(
-                "evalm8 has no eval '$evalName' in $org/$project. " +
-                    "Check --evalm8-eval-name, --evalm8-org and --evalm8-project, or pass " +
-                    "--skip-verify to register without checking. Asked $baseUrl.",
+                report(
+                    "evalm8 has no eval '$evalName' in org '$org', project '$project'.",
+                    "  Check --evalm8-eval-name, --evalm8-org and --evalm8-project.",
+                    "  Or pass --skip-verify to register without checking.",
+                    reason,
+                    baseUrl,
+                ),
             )
 
             // evalm8 answers a malformed, unknown or revoked key with 400, and a missing header with 401.
             // Retrying never helps for any of them, so they must not fall into the retry branch below.
             HTTP_BAD_REQUEST, HTTP_UNAUTHORIZED, HTTP_FORBIDDEN -> throw IllegalArgumentException(
-                "evalm8 rejected the api key at $baseUrl (HTTP $status)$reason " +
-                    "Check --evalm8-api-key.",
+                report(
+                    "evalm8 rejected the api key (HTTP $status).",
+                    "  Check --evalm8-api-key.",
+                    null,
+                    reason,
+                    baseUrl,
+                ),
             )
 
             else -> throw IllegalArgumentException(
-                "evalm8 answered HTTP $status at $baseUrl$reason " +
-                    "Retry, or pass --skip-verify to register without checking.",
+                report(
+                    "evalm8 answered HTTP $status.",
+                    "  Retry, or pass --skip-verify to register without checking.",
+                    null,
+                    reason,
+                    baseUrl,
+                ),
             )
         }
     }
 
+    private fun report(
+        headline: String,
+        advice: String,
+        alternative: String?,
+        reason: String?,
+        baseUrl: String,
+    ): String = listOfNotNull(
+        headline,
+        advice,
+        alternative,
+        reason?.let { "  Reason: $it" },
+        "  Asked:  $baseUrl",
+    ).joinToString("\n")
+
     /** evalm8 explains itself in a detail field, which is more use than the bare status. */
-    private fun detailOf(body: String): String {
-        val match = DETAIL.find(body) ?: return "."
-        return ": ${match.groupValues[1]}"
-    }
+    private fun detailOf(body: String): String? = DETAIL.find(body)?.groupValues?.get(1)
 
     private companion object {
         const val TIMEOUT_MILLIS = 15_000L

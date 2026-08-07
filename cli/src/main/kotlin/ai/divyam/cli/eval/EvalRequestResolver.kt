@@ -82,8 +82,11 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
         }
         if (className != null && evalm8.anyProvided()) {
             throw IllegalArgumentException(
-                "--class-name cannot be combined with the --evalm8-* flags, since both name the " +
-                    "evaluator class. Use one or the other.",
+                listOf(
+                    "--class-name and the --evalm8-* flags both name the evaluator class.",
+                    "  Use the --evalm8-* flags for an eval defined in evalm8.",
+                    "  Use --class-name for one of the router's built-in evaluators.",
+                ).joinToString("\n"),
             )
         }
 
@@ -180,8 +183,11 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
         val className = tree.get("class_name")?.asText()
         if (className.isNullOrBlank()) {
             throw IllegalArgumentException(
-                "An evaluator is required. Name one in evalm8 with --evalm8-org, --evalm8-project " +
-                    "and --evalm8-eval-name, or supply a full eval with --eval-config-file.",
+                listOf(
+                    "An evaluator is required, and none was named.",
+                    "  Name one in evalm8 with --evalm8-org, --evalm8-project and --evalm8-eval-name.",
+                    "  Or supply a whole eval with --eval-config-file.",
+                ).joinToString("\n"),
             )
         }
 
@@ -208,17 +214,21 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
         val missing = EVALM8_REQUIRED_KEYS.filter { config.get(it)?.asText().isNullOrBlank() }
         if (missing.isNotEmpty()) {
             throw IllegalArgumentException(
-                missing.joinToString(", ") { FLAG_FOR_KEY[it] ?: it } +
-                    " ${if (missing.size == 1) "is" else "are"} required when registering an " +
-                    "evalm8 eval.",
+                listOf(
+                    "Registering an evalm8 eval needs every one of its identifiers.",
+                    "  Missing: ${missing.joinToString(", ") { FLAG_FOR_KEY[it] ?: it }}",
+                ).joinToString("\n"),
             )
         }
         val allowed = EVALM8_REQUIRED_KEYS + EVALM8_OPTIONAL_KEYS
         val unknown = config.fieldNames().asSequence().filterNot { it in allowed }.toList()
         if (unknown.isNotEmpty()) {
             throw IllegalArgumentException(
-                "class_init_config for the evalm8 evaluator does not accept: " +
-                    "${unknown.joinToString(", ")}. Allowed keys: ${allowed.joinToString(", ")}.",
+                listOf(
+                    "class_init_config for the evalm8 evaluator has keys it does not accept.",
+                    "  Unknown: ${unknown.joinToString(", ")}",
+                    "  Allowed: ${allowed.joinToString(", ")}",
+                ).joinToString("\n"),
             )
         }
     }
