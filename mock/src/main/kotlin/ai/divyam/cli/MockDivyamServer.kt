@@ -149,6 +149,7 @@ object MockDataStore {
     val evals =
         mutableMapOf<String, MutableMap<Int, Eval>>()
     var lastEvalCreateRequest: EvalCreateRequest? = null
+    var lastEvalUpdateRequest: EvalUpdateRequest? = null
 
     val providers =
         mutableMapOf<String, ModelProvider>()
@@ -811,6 +812,7 @@ fun Application.configureRouting(password: String) {
                         MockDataStore.evals[serviceAccountId]?.get(evalId)
                     if (existingEval != null) {
                         val updateRequest = call.receive<EvalUpdateRequest>()
+                        MockDataStore.lastEvalUpdateRequest = updateRequest
                         val updatedEval = existingEval.copy(
                             name = updateRequest.name ?: existingEval.name,
                             granularity = updateRequest.granularity

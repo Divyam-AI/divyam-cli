@@ -1926,6 +1926,146 @@ class DivyamCliTest {
     }
 
     // ============================================
+    // Eval update input modes, the same surface as create
+    // ============================================
+
+    private fun evalUpdate(evalId: Int, vararg args: String): Int = executeCommand(
+        EvalCommand(),
+        "update",
+        "--endpoint", baseUrl,
+        "--user", "admin@dashboard.divyam.ai",
+        "--password", testPassword,
+        "--org-id", "1",
+        "--service-account-id", testServiceAccountId,
+        "--id", evalId.toString(),
+        *args,
+    )
+
+    /** Registers an evalm8 eval and returns its id, so an update has something real to change. */
+    private fun createEvalm8Eval(name: String): Int {
+        assertEquals(0, evalCreate("--name", name, *evalm8Flags()))
+        val id = parseJson()!!.get("id").asInt()
+        outContent.reset()
+        return id
+    }
+
+    @Test
+    @Order(60)
+    fun `evalm8 update rotates one identifier and keeps the rest`() {
+        val evalId = createEvalm8Eval("Rotate Key Eval")
+
+        val exitCode = evalUpdate(evalId, "--evalm8-api-key", EVALM8_GOOD_API_KEY)
+
+        assertEquals(0, exitCode)
+        val sent = MockDataStore.lastEvalUpdateRequest
+        assertNotNull(sent)
+        @Suppress("UNCHECKED_CAST")
+        val config = sent!!.classInitConfig as Map<String, Any?>
+        // The rotated value, plus every identifier the caller did not name.
+        assertEquals(EVALM8_GOOD_API_KEY, config["api_key"])
+        assertEquals("acme", config["org"])
+        assertEquals("tutor", config["project"])
+        assertEquals("Tutor Eval", config["eval_name"])
+        assertEquals(baseUrl, config["base_url"])
+        assertEquals("latest", config["eval_ref"])
+    }
+
+    @Test
+    @Order(61)
+    fun `eval update without evalm8 flags leaves the stored config alone`() {
+        val evalId = createEvalm8Eval("Name Only Eval")
+
+        val exitCode = evalUpdate(evalId, "--name", "Renamed Only")
+
+        assertEquals(0, exitCode)
+        val sent = MockDataStore.lastEvalUpdateRequest
+        assertNotNull(sent)
+        assertEquals("Renamed Only", sent!!.name)
+        // Absent rather than an empty object, so the router keeps what it stored.
+        assertNull(sent.classInitConfig)
+    }
+
+    @Test
+    @Order(62)
+    fun `evalm8 update fails when evalm8 does not have the eval`() {
+        val evalId = createEvalm8Eval("Update To Missing")
+
+        val exitCode = evalUpdate(evalId, "--evalm8-eval-name", EVALM8_MISSING_EVAL)
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains(EVALM8_MISSING_EVAL))
+    }
+
+    @Test
+    @Order(63)
+    fun `evalm8 update fails when evalm8 rejects the api key`() {
+        val evalId = createEvalm8Eval("Update Bad Key")
+
+        val exitCode = evalUpdate(evalId, "--evalm8-api-key", "evm8_sk_not-the-right-key")
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("--evalm8-api-key"))
+    }
+
+    @Test
+    @Order(64)
+    fun `eval update rejects class name combined with evalm8 flags`() {
+        val evalId = createEvalm8Eval("Update Conflict")
+
+        val exitCode = evalUpdate(
+            evalId,
+            "--class-name", "TestEval",
+            "--evalm8-org", "acme",
+        )
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("--class-name"))
+    }
+
+    @Test
+    @Order(65)
+    fun `eval update rejects a factory owned class init config key`() {
+        val evalId = createEvalm8Eval("Update Reserved Key")
+
+        val exitCode = evalUpdate(evalId, "--class-init-config", """{"eval_id": 7}""")
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("eval_id"))
+    }
+
+    @Test
+    @Order(66)
+    fun `evalm8 update converting from another evaluator names the missing identifiers`() {
+        assertEquals(
+            0,
+            evalCreate("--name", "Built In Eval", "--class-name", "TestEval"),
+        )
+        val evalId = parseJson()!!.get("id").asInt()
+        outContent.reset()
+
+        // Nothing to merge onto, since the stored eval is not an evalm8 one.
+        val exitCode = evalUpdate(evalId, "--evalm8-org", "acme")
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("--evalm8-eval-name"))
+    }
+
+    @Test
+    @Order(67)
+    fun `eval update skip-verify does not contact evalm8`() {
+        val evalId = createEvalm8Eval("Update Unverified")
+
+        val exitCode = evalUpdate(
+            evalId,
+            "--evalm8-base-url", "http://127.0.0.1:1",
+            "--evalm8-eval-name", EVALM8_MISSING_EVAL,
+            "--skip-verify",
+        )
+
+        assertEquals(0, exitCode)
+    }
+
+    // ============================================
     // Chat Completion Test
     // ============================================
 

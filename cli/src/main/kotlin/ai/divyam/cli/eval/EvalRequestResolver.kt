@@ -57,6 +57,28 @@ data class ResolvedEval(
 )
 
 /**
+ * The eval an update should send.
+ *
+ * Every field is nullable because an update changes only what the caller named.
+ * The router keeps its stored value for anything left out.
+ */
+data class ResolvedEvalUpdate(
+    val name: String?,
+    val state: EvalState?,
+    val isPrimary: Boolean?,
+    val granularity: EvalGranularity?,
+    val className: String?,
+    val classInitConfig: Map<String, Any?>?,
+    val samplingConfig: Map<String, Any?>?,
+)
+
+/** The stored eval an update is being applied to, which is what partial evalm8 flags merge onto. */
+data class ExistingEval(
+    val className: String?,
+    val classInitConfig: Map<String, Any?>?,
+)
+
+/**
  * Turns the three input modes into one eval.
  *
  * A config document supplies the base, explicit flags override it, and defaults fill the rest.
@@ -98,6 +120,63 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
 
         validate(tree)
         return toResolvedEval(tree)
+    }
+
+    /**
+     * The same resolution as [resolve], for a partial update.
+     *
+     * Two things differ. Nothing is required, since an update names only what it changes.
+     * The evalm8 flags also merge onto the stored config rather than starting empty.
+     * Rotating one identifier such as the api key therefore keeps the rest of them.
+     */
+    @Suppress("LongParameterList")
+    fun resolveUpdate(
+        evalConfig: String?,
+        evalConfigFile: File?,
+        name: String?,
+        state: EvalState?,
+        isPrimary: Boolean?,
+        granularity: EvalGranularity?,
+        className: String?,
+        classInitConfig: String?,
+        evalm8: Evalm8Options,
+        existing: ExistingEval,
+    ): ResolvedEvalUpdate {
+        if (evalConfig != null && evalConfigFile != null) {
+            throw IllegalArgumentException("Use only one of: --eval-config, --eval-config-file.")
+        }
+        if (className != null && evalm8.anyProvided()) {
+            throw IllegalArgumentException(
+                listOf(
+                    "--class-name and the --evalm8-* flags both name the evaluator class.",
+                    "  Use the --evalm8-* flags for an eval defined in evalm8.",
+                    "  Use --class-name for one of the router's built-in evaluators.",
+                ).joinToString("\n"),
+            )
+        }
+
+        val tree = readDocument(evalConfig, evalConfigFile)
+        applyOverrides(tree, name, state, isPrimary, granularity, className, classInitConfig)
+        if (evalm8.anyProvided()) {
+            seedFromExisting(tree, existing)
+            applyEvalm8(tree, evalm8)
+        }
+
+        validateForUpdate(tree)
+        return toResolvedEvalUpdate(tree)
+    }
+
+    /**
+     * Puts the stored evalm8 config under the flags, so a partial change keeps the identifiers it did not name.
+     *
+     * Only an eval that is already an evalm8 eval is merged onto.
+     * Converting some other evaluator to evalm8 starts from nothing, so the caller has to name every identifier and is told which are missing.
+     */
+    private fun seedFromExisting(tree: ObjectNode, existing: ExistingEval) {
+        if (existing.className != EVALM8_CLASS_NAME) return
+        if (tree.has("class_init_config")) return
+        val stored = existing.classInitConfig ?: return
+        tree.replace("class_init_config", mapper.valueToTree(stored))
     }
 
     private fun readDocument(evalConfig: String?, evalConfigFile: File?): ObjectNode {
@@ -210,6 +289,37 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
         }
     }
 
+    /**
+     * The update flavour of [validate].
+     *
+     * Nothing is required, since an update changes only what it names.
+     * What is present is held to the same rules, so an update cannot write a config that a create would have refused.
+     */
+    private fun validateForUpdate(tree: ObjectNode) {
+        val nameNode = tree.get("name")
+        if (nameNode != null && nameNode.asText().isBlank()) {
+            throw IllegalArgumentException("--name cannot be blank.")
+        }
+
+        val configNode = tree.get("class_init_config")
+        if (configNode != null && !configNode.isNull && configNode !is ObjectNode) {
+            throw IllegalArgumentException("class_init_config must be a JSON object.")
+        }
+        val config = configNode as? ObjectNode ?: return
+
+        val owned = config.fieldNames().asSequence().filter { it in FACTORY_OWNED_KEYS }.toList()
+        if (owned.isNotEmpty()) {
+            throw IllegalArgumentException(
+                "class_init_config must not set ${owned.joinToString(", ")}, because the evaluator " +
+                    "factory supplies these and would overwrite them.",
+            )
+        }
+
+        if (tree.get("class_name")?.asText() == EVALM8_CLASS_NAME) {
+            validateEvalm8Config(config)
+        }
+    }
+
     private fun validateEvalm8Config(config: ObjectNode) {
         val missing = EVALM8_REQUIRED_KEYS.filter { config.get(it)?.asText().isNullOrBlank() }
         if (missing.isNotEmpty()) {
@@ -250,6 +360,25 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
         },
         className = tree.get("class_name").asText(),
         classInitConfig = asMap(tree.get("class_init_config")) ?: emptyMap(),
+        samplingConfig = asMap(tree.get("sampling_config")),
+    )
+
+    private fun toResolvedEvalUpdate(tree: ObjectNode): ResolvedEvalUpdate = ResolvedEvalUpdate(
+        name = tree.get("name")?.asText(),
+        state = tree.get("state")?.asText()?.let { raw ->
+            EvalState.decode(raw) ?: throw IllegalArgumentException(
+                "Unknown state '$raw'. Valid values: ${EvalState.values().joinToString(", ")}.",
+            )
+        },
+        isPrimary = tree.get("is_primary")?.asBoolean(),
+        granularity = tree.get("granularity")?.asText()?.let { raw ->
+            EvalGranularity.decode(raw) ?: throw IllegalArgumentException(
+                "Unknown granularity '$raw'. Valid values: " +
+                    "${EvalGranularity.values().joinToString(", ")}.",
+            )
+        },
+        className = tree.get("class_name")?.asText(),
+        classInitConfig = asMap(tree.get("class_init_config")),
         samplingConfig = asMap(tree.get("sampling_config")),
     )
 
