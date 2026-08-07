@@ -20,7 +20,7 @@ import java.io.File
         "The --evalm8-* flags work here exactly as they do on create, and merge onto what is " +
             "already stored, so one identifier can be changed on its own.",
         "",
-        "  divyam eval update --id 36 --evalm8-api-key <new key>",
+        "  divyam eval update --id <eval-id> --evalm8-api-key <evalm8-api-key>",
         "",
     ],
 )

@@ -20,8 +20,9 @@ import java.io.File
         "Most evals live in evalm8, so name it with the --evalm8-* flags and the CLI resolves the " +
             "evaluator class for you.",
         "",
-        "  divyam eval create --name \"Tutor Eval\" --evalm8-org acme \\",
-        "    --evalm8-project tutor --evalm8-eval-name \"Tutor Eval\" --evalm8-api-key <key>",
+        "  divyam eval create --name <name> --evalm8-org <org> \\",
+        "    --evalm8-project <project> --evalm8-eval-name <name-in-evalm8> \\",
+        "    --evalm8-api-key <evalm8-api-key>",
         "",
     ],
 )
