@@ -2534,4 +2534,66 @@ class DivyamCliTest {
             assertTrue(json!!.isArray)
         }
     }
+
+    // Two built-in evaluators, whose constructors take only what the factory injects and none of the evalm8 identifiers.
+    private val randomClassName =
+        "divyamlibs.evaluator.strategies.random_evaluation_criteria.RandomEvaluationCriteria"
+    private val turnClassName =
+        "divyamlibs.evaluator.strategies.random_evaluation_criteria.RandomTurnEvaluationCriteria"
+
+    @Test
+    @Order(69)
+    fun `moving an eval off evalm8 without saying what to do with the config is refused`() {
+        val evalId = createEvalm8Eval("Leaving Evalm8 Eval")
+        // Cleared, because the store keeps whatever an earlier test sent and the assertion below is that nothing new arrives.
+        MockDataStore.lastEvalUpdateRequest = null
+
+        val exitCode = evalUpdate(evalId, "--class-name", randomClassName)
+
+        assertEquals(1, exitCode)
+        val error = errContent.toString()
+        // The six identifiers are named, because the point is that they would otherwise ride along.
+        assertTrue(error.contains("api_key"), "the refusal must name what would be left behind, got: $error")
+        assertTrue(error.contains("--class-init-config '{}'"), "the refusal must offer the way to clear it, got: $error")
+        assertNull(MockDataStore.lastEvalUpdateRequest, "nothing should reach the router")
+    }
+
+    @Test
+    @Order(70)
+    fun `moving an eval off evalm8 with an empty config clears it`() {
+        val evalId = createEvalm8Eval("Cleared Config Eval")
+
+        val exitCode = evalUpdate(evalId, "--class-name", randomClassName, "--class-init-config", "{}")
+
+        assertEquals(0, exitCode)
+        val sent = MockDataStore.lastEvalUpdateRequest
+        assertNotNull(sent)
+        assertEquals(randomClassName, sent!!.className)
+        // An empty object rather than absent, so the router clears the stored config instead of keeping it.
+        @Suppress("UNCHECKED_CAST")
+        val config = sent.classInitConfig as? Map<String, Any?>
+        assertNotNull(config, "an explicit empty config must be sent, not dropped")
+        assertTrue(config!!.isEmpty(), "the config must be sent empty, got $config")
+    }
+
+    @Test
+    @Order(71)
+    fun `moving an eval off a non evalm8 class is not second guessed`() {
+        assertEquals(
+            0,
+            evalCreate(
+                "--name", "Plain Eval",
+                "--class-name", randomClassName,
+                "--class-init-config", "{}",
+            ),
+        )
+        val evalId = parseJson()!!.get("id").asInt()
+        outContent.reset()
+
+        // Nothing evalm8 shaped is stored, so there is nothing to strand and no reason to refuse.
+        val exitCode = evalUpdate(evalId, "--class-name", turnClassName)
+
+        assertEquals(0, exitCode)
+        assertEquals(turnClassName, MockDataStore.lastEvalUpdateRequest?.className)
+    }
 }

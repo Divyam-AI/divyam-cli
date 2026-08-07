@@ -148,8 +148,10 @@ class EvalUpdateCommand : SaSpecificCommand() {
         )
 
         val updated = runBlocking {
-            // Only the evalm8 path needs the stored eval, and only so partial flags merge onto it.
-            val existing = if (evalm8.anyProvided()) readExisting() else ExistingEval(null, null)
+            // The evalm8 path needs the stored eval so partial flags merge onto it.
+            // A class change needs it too, to tell whether the eval is leaving evalm8 and stranding its config.
+            val needsExisting = evalm8.anyProvided() || className != null || documentNamesClass()
+            val existing = if (needsExisting) readExisting() else ExistingEval(null, null)
 
             val resolved = EvalRequestResolver(getJsonMapper()).resolveUpdate(
                 evalConfig = evalConfig,
@@ -176,8 +178,8 @@ class EvalUpdateCommand : SaSpecificCommand() {
                     name = resolved.name,
                     granularity = resolved.granularity,
                     className = resolved.className,
-                    // Null and not an empty map, so the field is absent and the router keeps what it stored.
-                    // An empty map reaches the server as {}, which its own update path treats as no change only by accident of Python truthiness.
+                    // Null means the field is absent and the router keeps what it stored.
+                    // An empty map reaches the router as {} and clears the stored config, which is how an eval moves onto a class that takes no constructor arguments.
                     classInitConfig = resolved.classInitConfig,
                     state = resolved.state,
                     isPrimary = resolved.isPrimary,
@@ -190,6 +192,23 @@ class EvalUpdateCommand : SaSpecificCommand() {
     }
 
     /** Reads the eval being updated, so the evalm8 flags change one identifier without dropping the others. */
+    /**
+     * Whether a config document names the evaluator class, which is the third way an update can move an eval off evalm8.
+     *
+     * A document that will not parse returns false, so the resolver reports the parse error rather than this.
+     */
+    private fun documentNamesClass(): Boolean {
+        val mapper = getJsonMapper()
+        val tree = runCatching {
+            when {
+                evalConfig != null -> mapper.readTree(evalConfig)
+                evalConfigFile?.isFile == true -> mapper.readTree(evalConfigFile)
+                else -> null
+            }
+        }.getOrNull()
+        return tree?.hasNonNull("class_name") == true
+    }
+
     private suspend fun readExisting(): ExistingEval {
         val stored = divyamClient.getEval(
             serviceAccountId = getSaId(serviceAccountId),

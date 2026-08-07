@@ -162,8 +162,33 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
             applyEvalm8(tree, evalm8)
         }
 
+        requireConfigDecisionWhenLeavingEvalm8(tree, existing)
         validateForUpdate(tree)
         return toResolvedEvalUpdate(tree)
+    }
+
+    /**
+     * Refuses to move an eval off evalm8 while leaving the evalm8 config attached.
+     *
+     * An absent class_init_config means no change, so the six evalm8 identifiers would stay on an eval whose new class accepts none of them.
+     * The evaluator factory splats the stored config into the constructor, so that eval raises TypeError and is dropped from the active set without surfacing anything.
+     * The caller has to say what the new class should be built with, even when the answer is nothing.
+     */
+    private fun requireConfigDecisionWhenLeavingEvalm8(tree: ObjectNode, existing: ExistingEval) {
+        if (existing.className != EVALM8_CLASS_NAME) return
+        if (existing.classInitConfig.isNullOrEmpty()) return
+        if (tree.has("class_init_config")) return
+        val target = tree.get("class_name")?.asText() ?: return
+        if (target == EVALM8_CLASS_NAME) return
+
+        throw IllegalArgumentException(
+            listOf(
+                "This eval is moving off evalm8, so its evalm8 config cannot stay attached.",
+                "  Leaving it would keep ${existing.classInitConfig.keys.sorted().joinToString(", ")} on an eval whose class takes none of them, and it would stop scoring.",
+                "  Pass --class-init-config '{}' to clear it.",
+                "  Pass --class-init-config '{...}' to give ${target.substringAfterLast('.')} the arguments it needs.",
+            ).joinToString("\n"),
+        )
     }
 
     /**
