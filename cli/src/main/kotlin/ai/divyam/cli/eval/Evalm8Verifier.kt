@@ -58,10 +58,12 @@ class Evalm8Verifier {
 
         when (status) {
             HTTP_OK -> return
+            // The message already names the eval, org and project.
+            // evalm8's own detail would only repeat them and push the actionable part out of view.
             HTTP_NOT_FOUND -> throw IllegalArgumentException(
-                "evalm8 has no eval named '$evalName' in org '$org' project '$project' at " +
-                    "$baseUrl$reason Check --evalm8-eval-name, --evalm8-org and " +
-                    "--evalm8-project, or pass --skip-verify to register without checking.",
+                "evalm8 has no eval '$evalName' in $org/$project. " +
+                    "Check --evalm8-eval-name, --evalm8-org and --evalm8-project, or pass " +
+                    "--skip-verify to register without checking. Asked $baseUrl.",
             )
 
             // evalm8 answers a malformed, unknown or revoked key with 400, and a missing header with 401.
