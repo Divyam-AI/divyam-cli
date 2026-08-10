@@ -11,15 +11,15 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import java.io.File
 
-/** The evaluator class the router uses to score through evalm8. */
+/** The evaluator class the router uses to score through Evalm8. */
 const val EVALM8_CLASS_NAME: String =
     "divyamlibs.evaluator.strategies.evalm8.evalm8_evaluation_criteria" +
         ".Evalm8RequestResponseEvaluationCriteria"
 
-/** The default evalm8 deployment, used when the caller does not name one. */
+/** The default Evalm8 deployment, used when the caller does not name one. */
 const val EVALM8_DEFAULT_BASE_URL: String = "https://evalm8.divyam.ai"
 
-/** The evalm8 constructor takes exactly these, and has no kwargs to absorb anything else. */
+/** The Evalm8 constructor takes exactly these, and has no kwargs to absorb anything else. */
 private val EVALM8_REQUIRED_KEYS = listOf("base_url", "api_key", "org", "project", "eval_name")
 private val EVALM8_OPTIONAL_KEYS = listOf("eval_ref")
 
@@ -40,7 +40,7 @@ data class Evalm8Options(
     val baseUrl: String? = null,
     val apiKey: String? = null,
 ) {
-    /** True when any evalm8 flag was passed, which is what selects the evalm8 path. */
+    /** True when any Evalm8 flag was passed, which is what selects the Evalm8 path. */
     fun anyProvided(): Boolean =
         listOf(org, project, evalName, evalRef, baseUrl, apiKey).any { it != null }
 }
@@ -72,7 +72,7 @@ data class ResolvedEvalUpdate(
     val samplingConfig: Map<String, Any?>?,
 )
 
-/** The stored eval an update is being applied to, which is what partial evalm8 flags merge onto. */
+/** The stored eval an update is being applied to, which is what partial Evalm8 flags merge onto. */
 data class ExistingEval(
     val className: String?,
     val classInitConfig: Map<String, Any?>?,
@@ -106,7 +106,7 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
             throw IllegalArgumentException(
                 listOf(
                     "--class-name and the --evalm8-* flags both name the evaluator class.",
-                    "  Use the --evalm8-* flags for an eval defined in evalm8.",
+                    "  Use the --evalm8-* flags for an eval defined in Evalm8.",
                     "  Use --class-name for one of the router's built-in evaluators.",
                 ).joinToString("\n"),
             )
@@ -126,7 +126,7 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
      * The same resolution as [resolve], for a partial update.
      *
      * Two things differ. Nothing is required, since an update names only what it changes.
-     * The evalm8 flags also merge onto the stored config rather than starting empty.
+     * The Evalm8 flags also merge onto the stored config rather than starting empty.
      * Rotating one identifier such as the api key therefore keeps the rest of them.
      */
     @Suppress("LongParameterList")
@@ -149,7 +149,7 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
             throw IllegalArgumentException(
                 listOf(
                     "--class-name and the --evalm8-* flags both name the evaluator class.",
-                    "  Use the --evalm8-* flags for an eval defined in evalm8.",
+                    "  Use the --evalm8-* flags for an eval defined in Evalm8.",
                     "  Use --class-name for one of the router's built-in evaluators.",
                 ).joinToString("\n"),
             )
@@ -168,9 +168,9 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
     }
 
     /**
-     * Refuses to move an eval off evalm8 while leaving the evalm8 config attached.
+     * Refuses to move an eval off Evalm8 while leaving the Evalm8 config attached.
      *
-     * An absent class_init_config means no change, so the six evalm8 identifiers would stay on an eval whose new class accepts none of them.
+     * An absent class_init_config means no change, so the six Evalm8 identifiers would stay on an eval whose new class accepts none of them.
      * The evaluator factory splats the stored config into the constructor, so that eval raises TypeError and is dropped from the active set without surfacing anything.
      * The caller has to say what the new class should be built with, even when the answer is nothing.
      */
@@ -183,7 +183,7 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
 
         throw IllegalArgumentException(
             listOf(
-                "This eval is moving off evalm8, so its evalm8 config cannot stay attached.",
+                "This eval is moving off Evalm8, so its Evalm8 config cannot stay attached.",
                 "  Leaving it would keep ${existing.classInitConfig.keys.sorted().joinToString(", ")} on an eval whose class takes none of them, and it would stop scoring.",
                 "  Pass --class-init-config '{}' to clear it.",
                 "  Pass --class-init-config '{...}' to give ${target.substringAfterLast('.')} the arguments it needs.",
@@ -192,10 +192,10 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
     }
 
     /**
-     * Puts the stored evalm8 config under the flags, so a partial change keeps the identifiers it did not name.
+     * Puts the stored Evalm8 config under the flags, so a partial change keeps the identifiers it did not name.
      *
-     * Only an eval that is already an evalm8 eval is merged onto.
-     * Converting some other evaluator to evalm8 starts from nothing, so the caller has to name every identifier and is told which are missing.
+     * Only an eval that is already an Evalm8 eval is merged onto.
+     * Converting some other evaluator to Evalm8 starts from nothing, so the caller has to name every identifier and is told which are missing.
      */
     private fun seedFromExisting(tree: ObjectNode, existing: ExistingEval) {
         if (existing.className != EVALM8_CLASS_NAME) return
@@ -255,7 +255,7 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
             ?: throw IllegalArgumentException("--class-init-config must be a JSON object.")
     }
 
-    /** Folds the evalm8 flags into the config, naming the class the caller no longer has to know. */
+    /** Folds the Evalm8 flags into the config, naming the class the caller no longer has to know. */
     private fun applyEvalm8(tree: ObjectNode, evalm8: Evalm8Options) {
         val existing = tree.get("class_name")?.asText()
         if (existing != null && existing != EVALM8_CLASS_NAME) {
@@ -289,7 +289,7 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
             throw IllegalArgumentException(
                 listOf(
                     "An evaluator is required, and none was named.",
-                    "  Name one in evalm8 with --evalm8-org, --evalm8-project and --evalm8-eval-name.",
+                    "  Name one in Evalm8 with --evalm8-org, --evalm8-project and --evalm8-eval-name.",
                     "  Or supply a whole eval with --eval-config-file.",
                 ).joinToString("\n"),
             )
@@ -350,7 +350,7 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
         if (missing.isNotEmpty()) {
             throw IllegalArgumentException(
                 listOf(
-                    "Registering an evalm8 eval needs every one of its identifiers.",
+                    "Registering an Evalm8 eval needs every one of its identifiers.",
                     "  Missing: ${missing.joinToString(", ") { FLAG_FOR_KEY[it] ?: it }}",
                 ).joinToString("\n"),
             )
@@ -360,7 +360,7 @@ class EvalRequestResolver(private val mapper: ObjectMapper) {
         if (unknown.isNotEmpty()) {
             throw IllegalArgumentException(
                 listOf(
-                    "class_init_config for the evalm8 evaluator has keys it does not accept.",
+                    "class_init_config for the Evalm8 evaluator has keys it does not accept.",
                     "  Unknown: ${unknown.joinToString(", ")}",
                     "  Allowed: ${allowed.joinToString(", ")}",
                 ).joinToString("\n"),

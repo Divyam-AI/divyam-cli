@@ -15,7 +15,7 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.appendPathSegments
 
 /**
- * Confirms an eval exists in evalm8 before the router is told to use it.
+ * Confirms an eval exists in Evalm8 before the router is told to use it.
  *
  * Without this the registration always succeeds, since the router never inspects class_init_config.
  * A wrong org, project, name or key then surfaces only at scoring time.
@@ -50,7 +50,7 @@ class Evalm8Verifier {
             } catch (error: Exception) {
                 throw IllegalArgumentException(
                     listOf(
-                        "Could not reach evalm8.",
+                        "Could not reach Evalm8.",
                         "  Retry, or pass --skip-verify to register without checking.",
                         "  Reason: ${error.message}",
                         "  Asked:  $baseUrl",
@@ -66,7 +66,7 @@ class Evalm8Verifier {
             HTTP_OK -> return
             HTTP_NOT_FOUND -> throw IllegalArgumentException(
                 report(
-                    "evalm8 has no eval '$evalName' in org '$org', project '$project'.",
+                    "Evalm8 has no eval '$evalName' in org '$org', project '$project'.",
                     "  Check --evalm8-eval-name, --evalm8-org and --evalm8-project.",
                     "  Or pass --skip-verify to register without checking.",
                     reason,
@@ -74,11 +74,11 @@ class Evalm8Verifier {
                 ),
             )
 
-            // evalm8 answers a malformed, unknown or revoked key with 400, and a missing header with 401.
+            // Evalm8 answers a malformed, unknown or revoked key with 400, and a missing header with 401.
             // Retrying never helps for any of them, so they must not fall into the retry branch below.
             HTTP_BAD_REQUEST, HTTP_UNAUTHORIZED, HTTP_FORBIDDEN -> throw IllegalArgumentException(
                 report(
-                    "evalm8 rejected the api key (HTTP $status).",
+                    "Evalm8 rejected the api key (HTTP $status).",
                     "  Check --evalm8-api-key.",
                     null,
                     reason,
@@ -88,7 +88,7 @@ class Evalm8Verifier {
 
             else -> throw IllegalArgumentException(
                 report(
-                    "evalm8 answered HTTP $status.",
+                    "Evalm8 answered HTTP $status.",
                     "  Retry, or pass --skip-verify to register without checking.",
                     null,
                     reason,
@@ -112,7 +112,7 @@ class Evalm8Verifier {
         "  Asked:  $baseUrl",
     ).joinToString("\n")
 
-    /** evalm8 explains itself in a detail field, which is more use than the bare status. */
+    /** Evalm8 explains itself in a detail field, which is more use than the bare status. */
     private fun detailOf(body: String): String? = DETAIL.find(body)?.groupValues?.get(1)
 
     private companion object {

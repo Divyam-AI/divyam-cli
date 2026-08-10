@@ -16,12 +16,7 @@ import java.io.File
 @CommandLine.Command(
     name = "update",
     description = [
-        "Update an eval.",
-        "The --evalm8-* flags work here exactly as they do on create, and merge onto what is " +
-            "already stored, so one identifier can be changed on its own.",
-        "",
-        "  divyam eval update --id <eval-id> --evalm8-api-key <evalm8-api-key>",
-        "",
+        "Update an eval, merging any --evalm8-* flags onto what is already stored",
     ],
 )
 class EvalUpdateCommand : SaSpecificCommand() {
@@ -46,43 +41,43 @@ class EvalUpdateCommand : SaSpecificCommand() {
 
     @Option(
         names = ["--evalm8-org"],
-        description = ["The evalm8 organisation holding the eval."],
+        description = ["The Evalm8 organisation holding the eval."],
     )
     private var evalm8Org: String? = null
 
     @Option(
         names = ["--evalm8-project"],
-        description = ["The evalm8 project holding the eval."],
+        description = ["The Evalm8 project holding the eval."],
     )
     private var evalm8Project: String? = null
 
     @Option(
         names = ["--evalm8-eval-name"],
-        description = ["The eval as named in evalm8."],
+        description = ["The eval as named in Evalm8."],
     )
     private var evalm8EvalName: String? = null
 
     @Option(
         names = ["--evalm8-eval-ref"],
-        description = ["Which version of the evalm8 eval to pin."],
+        description = ["Which version of the Evalm8 eval to pin."],
     )
     private var evalm8EvalRef: String? = null
 
     @Option(
         names = ["--evalm8-base-url"],
-        description = ["evalm8 endpoint."],
+        description = ["Evalm8 endpoint."],
     )
     private var evalm8BaseUrl: String? = null
 
     @Option(
         names = ["--evalm8-api-key"],
-        description = ["evalm8 api key. This is distinct from the router api key."],
+        description = ["Evalm8 api key. This is distinct from the router api key."],
     )
     private var evalm8ApiKey: String? = null
 
     @Option(
         names = ["--skip-verify"],
-        description = ["Update without first checking the eval exists in evalm8."],
+        description = ["Update without first checking the eval exists in Evalm8."],
     )
     private var skipVerify: Boolean = false
 
@@ -148,8 +143,8 @@ class EvalUpdateCommand : SaSpecificCommand() {
         )
 
         val updated = runBlocking {
-            // The evalm8 path needs the stored eval so partial flags merge onto it.
-            // A class change needs it too, to tell whether the eval is leaving evalm8 and stranding its config.
+            // The Evalm8 path needs the stored eval so partial flags merge onto it.
+            // A class change needs it too, to tell whether the eval is leaving Evalm8 and stranding its config.
             val needsExisting = evalm8.anyProvided() || className != null || documentNamesClass()
             val existing = if (needsExisting) readExisting() else ExistingEval(null, null)
 
@@ -191,9 +186,8 @@ class EvalUpdateCommand : SaSpecificCommand() {
         return 0
     }
 
-    /** Reads the eval being updated, so the evalm8 flags change one identifier without dropping the others. */
     /**
-     * Whether a config document names the evaluator class, which is the third way an update can move an eval off evalm8.
+     * Whether a config document names the evaluator class, which is the third way an update can move an eval off Evalm8.
      *
      * A document that will not parse returns false, so the resolver reports the parse error rather than this.
      */
@@ -209,6 +203,7 @@ class EvalUpdateCommand : SaSpecificCommand() {
         return tree?.hasNonNull("class_name") == true
     }
 
+    /** Reads the eval being updated, so the Evalm8 flags change one identifier without dropping the others. */
     private suspend fun readExisting(): ExistingEval {
         val stored = divyamClient.getEval(
             serviceAccountId = getSaId(serviceAccountId),

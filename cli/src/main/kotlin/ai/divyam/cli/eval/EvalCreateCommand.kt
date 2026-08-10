@@ -16,14 +16,7 @@ import java.io.File
 @CommandLine.Command(
     name = "create",
     description = [
-        "Register an eval with the router.",
-        "Most evals live in evalm8, so name it with the --evalm8-* flags and the CLI resolves the " +
-            "evaluator class for you.",
-        "",
-        "  divyam eval create --name <name> --evalm8-org <org> \\",
-        "    --evalm8-project <project> --evalm8-eval-name <name-in-evalm8> \\",
-        "    --evalm8-api-key <evalm8-api-key>",
-        "",
+        "Register an eval with the router, from Evalm8 with the --evalm8-* flags or from an evaluator class",
     ],
 )
 class EvalCreateCommand : SaSpecificCommand() {
@@ -41,43 +34,43 @@ class EvalCreateCommand : SaSpecificCommand() {
 
     @Option(
         names = ["--evalm8-org"],
-        description = ["The evalm8 organisation holding the eval."],
+        description = ["The Evalm8 organisation holding the eval."],
     )
     private var evalm8Org: String? = null
 
     @Option(
         names = ["--evalm8-project"],
-        description = ["The evalm8 project holding the eval."],
+        description = ["The Evalm8 project holding the eval."],
     )
     private var evalm8Project: String? = null
 
     @Option(
         names = ["--evalm8-eval-name"],
-        description = ["The eval as named in evalm8."],
+        description = ["The eval as named in Evalm8."],
     )
     private var evalm8EvalName: String? = null
 
     @Option(
         names = ["--evalm8-eval-ref"],
-        description = ["Which version of the evalm8 eval to pin. Default: latest"],
+        description = ["Which version of the Evalm8 eval to pin. Default: latest"],
     )
     private var evalm8EvalRef: String? = null
 
     @Option(
         names = ["--evalm8-base-url"],
-        description = ["evalm8 endpoint. Default: $EVALM8_DEFAULT_BASE_URL"],
+        description = ["Evalm8 endpoint. Default: $EVALM8_DEFAULT_BASE_URL"],
     )
     private var evalm8BaseUrl: String? = null
 
     @Option(
         names = ["--evalm8-api-key"],
-        description = ["evalm8 api key. This is distinct from the router api key."],
+        description = ["Evalm8 api key. This is distinct from the router api key."],
     )
     private var evalm8ApiKey: String? = null
 
     @Option(
         names = ["--skip-verify"],
-        description = ["Register without first checking the eval exists in evalm8."],
+        description = ["Register without first checking the eval exists in Evalm8."],
     )
     private var skipVerify: Boolean = false
 
