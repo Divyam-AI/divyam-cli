@@ -34,13 +34,13 @@ class EvalCreateCommand : SaSpecificCommand() {
 
     @Option(
         names = ["--evalm8-org"],
-        description = ["The Evalm8 organisation holding the eval."],
+        description = ["The org name in Evalm8 holding the eval."],
     )
     private var evalm8Org: String? = null
 
     @Option(
         names = ["--evalm8-project"],
-        description = ["The Evalm8 project holding the eval."],
+        description = ["The project name in Evalm8 holding the eval."],
     )
     private var evalm8Project: String? = null
 
@@ -64,7 +64,7 @@ class EvalCreateCommand : SaSpecificCommand() {
 
     @Option(
         names = ["--evalm8-api-key"],
-        description = ["Evalm8 api key. This is distinct from the router api key."],
+        description = ["API key to connect to Evalm8. This is distinct from the Divyam Router API key."],
     )
     private var evalm8ApiKey: String? = null
 
