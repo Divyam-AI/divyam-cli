@@ -1,1325 +1,245 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Eval Review</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&family=Lora:wght@400;500&display=swap" rel="stylesheet">
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" integrity="sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT" crossorigin="anonymous"></script>
-  <style>
-    :root {
-      --bg: #faf9f5;
-      --surface: #ffffff;
-      --border: #e8e6dc;
-      --text: #141413;
-      --text-muted: #b0aea5;
-      --accent: #d97757;
-      --accent-hover: #c4613f;
-      --green: #788c5d;
-      --green-bg: #eef2e8;
-      --red: #c44;
-      --red-bg: #fceaea;
-      --header-bg: #141413;
-      --header-text: #faf9f5;
-      --radius: 6px;
-    }
+<title>divyam-cli — eval review</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{
+  --ground:#f6f7f9; --surface:#ffffff; --surface-2:#f0f2f6; --ink:#1a1d24; --muted:#5b6472;
+  --border:#e4e8ee; --accent:#3a5bd9; --accent-soft:#e7ecfd; --pass:#1a7f4b; --pass-soft:#e3f3ea;
+  --fail:#c0392b; --fail-soft:#fbe9e7; --code-bg:#f4f6fb; --code-ink:#243044;
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0f1217; --surface:#171b22; --surface-2:#1e232c; --ink:#e6e9ef; --muted:#9aa4b2;
+    --border:#272d38; --accent:#8098ff; --accent-soft:#20283f; --pass:#4ade80; --pass-soft:#14301f;
+    --fail:#f87171; --fail-soft:#331a1a; --code-bg:#12161d; --code-ink:#cdd6e5;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0f1217; --surface:#171b22; --surface-2:#1e232c; --ink:#e6e9ef; --muted:#9aa4b2;
+  --border:#272d38; --accent:#8098ff; --accent-soft:#20283f; --pass:#4ade80; --pass-soft:#14301f;
+  --fail:#f87171; --fail-soft:#331a1a; --code-bg:#12161d; --code-ink:#cdd6e5;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.55;
+  font-size:15px;-webkit-font-smoothing:antialiased}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+header{padding:22px clamp(16px,4vw,40px) 0;max-width:1280px;margin:0 auto}
+h1{font-size:22px;margin:0 0 2px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border)}
+.tab{appearance:none;background:none;border:0;color:var(--muted);font:inherit;font-weight:600;
+  padding:9px 14px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+main{max-width:1280px;margin:0 auto;padding:18px clamp(16px,4vw,40px) 60px}
+.wrap{display:grid;grid-template-columns:288px 1fr;gap:22px;align-items:start}
+@media (max-width:820px){.wrap{grid-template-columns:1fr}}
+.rail{display:flex;flex-direction:column;gap:6px;position:sticky;top:14px}
+.rail-item{text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:10px 12px;cursor:pointer;color:inherit;font:inherit;display:flex;flex-direction:column;gap:6px}
+.rail-item:hover{border-color:var(--accent)}
+.rail-item[aria-current="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.rail-item:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rail-top{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.rail-name{font-weight:600;font-size:13.5px}
+.rail-prompt{color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+.badge.pass{background:var(--pass-soft);color:var(--pass)}
+.badge.part{background:var(--fail-soft);color:var(--fail)}
+.panel{display:flex;flex-direction:column;gap:16px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.eyebrow{text-transform:uppercase;letter-spacing:.08em;font-size:11px;font-weight:700;color:var(--muted);margin:0 0 8px}
+.prompt-quote{font-size:16px;margin:0}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:1040px){.cols{grid-template-columns:1fr}}
+.col h3{margin:0;font-size:13px;display:flex;align-items:center;gap:8px}
+.dot{width:9px;height:9px;border-radius:50%}
+.dot.ws{background:var(--accent)} .dot.bl{background:var(--muted)}
+.col-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.meta{color:var(--muted);font-size:11.5px;font-variant-numeric:tabular-nums}
+.md{font-size:13.5px}
+.md h1,.md h2,.md h3{font-size:14px;margin:14px 0 6px;letter-spacing:-.01em}
+.md h1:first-child,.md h2:first-child{margin-top:0}
+.md p{margin:8px 0}
+.md ul{margin:8px 0;padding-left:20px} .md li{margin:3px 0}
+.md code{background:var(--code-bg);color:var(--code-ink);padding:1px 5px;border-radius:5px;font-size:12.5px}
+.md pre{background:var(--code-bg);color:var(--code-ink);padding:11px 13px;border-radius:9px;
+  overflow-x:auto;border:1px solid var(--border)}
+.md pre code{background:none;padding:0;font-size:12.5px;line-height:1.5}
+.md table{border-collapse:collapse;width:100%;font-size:12.5px;margin:8px 0;display:block;overflow-x:auto}
+.md th,.md td{border:1px solid var(--border);padding:5px 9px;text-align:left}
+.md th{background:var(--surface-2)}
+.grades{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.grade{display:flex;gap:9px;align-items:flex-start;font-size:12.5px}
+.chk{flex:none;width:17px;height:17px;border-radius:5px;display:grid;place-items:center;
+  font-size:11px;font-weight:800;margin-top:1px}
+.chk.y{background:var(--pass-soft);color:var(--pass)} .chk.n{background:var(--fail-soft);color:var(--fail)}
+.score-line{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:2px}
+.bench table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:13.5px}
+.bench th,.bench td{border-bottom:1px solid var(--border);padding:9px 12px;text-align:left}
+.bench th{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.bench td.num{text-align:right;font-family:ui-monospace,Menlo,monospace}
+.bar{height:8px;border-radius:6px;background:var(--surface-2);overflow:hidden;min-width:90px}
+.bar>span{display:block;height:100%;background:var(--accent)}
+.bar.bl>span{background:var(--muted)}
+.notes{margin:16px 0 0;padding-left:20px;color:var(--muted);font-size:13px}
+.notes li{margin:6px 0}
+.hidden{display:none}
+.kbd{font-size:11px;color:var(--muted)}
+.pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--accent-soft);color:var(--accent)}
+</style>
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Lora', Georgia, serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* ---- Header ---- */
-    .header {
-      background: var(--header-bg);
-      color: var(--header-text);
-      padding: 1rem 2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    .header h1 {
-      font-family: 'Poppins', sans-serif;
-      font-size: 1.25rem;
-      font-weight: 600;
-    }
-    .header .instructions {
-      font-size: 0.8rem;
-      opacity: 0.7;
-      margin-top: 0.25rem;
-    }
-    .header .progress {
-      font-size: 0.875rem;
-      opacity: 0.8;
-      text-align: right;
-    }
-
-    /* ---- Main content ---- */
-    .main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 1.5rem 2rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1.25rem;
-    }
-
-    /* ---- Sections ---- */
-    .section {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      flex-shrink: 0;
-    }
-    .section-header {
-      font-family: 'Poppins', sans-serif;
-      padding: 0.75rem 1rem;
-      font-size: 0.75rem;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
-    }
-    .section-body {
-      padding: 1rem;
-    }
-
-    /* ---- Config badge ---- */
-    .config-badge {
-      display: inline-block;
-      padding: 0.2rem 0.625rem;
-      border-radius: 9999px;
-      font-family: 'Poppins', sans-serif;
-      font-size: 0.6875rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.03em;
-      margin-left: 0.75rem;
-      vertical-align: middle;
-    }
-    .config-badge.config-primary {
-      background: rgba(33, 150, 243, 0.12);
-      color: #1976d2;
-    }
-    .config-badge.config-baseline {
-      background: rgba(255, 193, 7, 0.15);
-      color: #f57f17;
-    }
-
-    /* ---- Prompt ---- */
-    .prompt-text {
-      white-space: pre-wrap;
-      font-size: 0.9375rem;
-      line-height: 1.6;
-    }
-
-    /* ---- Outputs ---- */
-    .output-file {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .output-file + .output-file {
-      margin-top: 1rem;
-    }
-    .output-file-header {
-      padding: 0.5rem 0.75rem;
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .output-file-header .dl-btn {
-      font-size: 0.7rem;
-      color: var(--accent);
-      text-decoration: none;
-      cursor: pointer;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-weight: 500;
-      opacity: 0.8;
-    }
-    .output-file-header .dl-btn:hover {
-      opacity: 1;
-      text-decoration: underline;
-    }
-    .output-file-content {
-      padding: 0.75rem;
-      overflow-x: auto;
-    }
-    .output-file-content pre {
-      font-size: 0.8125rem;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
-    }
-    .output-file-content img {
-      max-width: 100%;
-      height: auto;
-      border-radius: 4px;
-    }
-    .output-file-content iframe {
-      width: 100%;
-      height: 600px;
-      border: none;
-    }
-    .output-file-content table {
-      border-collapse: collapse;
-      font-size: 0.8125rem;
-      width: 100%;
-    }
-    .output-file-content table td,
-    .output-file-content table th {
-      border: 1px solid var(--border);
-      padding: 0.375rem 0.5rem;
-      text-align: left;
-    }
-    .output-file-content table th {
-      background: var(--bg);
-      font-weight: 600;
-    }
-    .output-file-content .download-link {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--accent);
-      text-decoration: none;
-      font-size: 0.875rem;
-      cursor: pointer;
-    }
-    .output-file-content .download-link:hover {
-      background: var(--border);
-    }
-    .empty-state {
-      color: var(--text-muted);
-      font-style: italic;
-      padding: 2rem;
-      text-align: center;
-    }
-
-    /* ---- Feedback ---- */
-    .prev-feedback {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 0.625rem 0.75rem;
-      margin-top: 0.75rem;
-      font-size: 0.8125rem;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-    .prev-feedback-label {
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 0.25rem;
-      color: var(--text-muted);
-    }
-    .feedback-textarea {
-      width: 100%;
-      min-height: 100px;
-      padding: 0.75rem;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-family: inherit;
-      font-size: 0.9375rem;
-      line-height: 1.5;
-      resize: vertical;
-      color: var(--text);
-    }
-    .feedback-textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
-    .feedback-status {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-top: 0.5rem;
-      min-height: 1.1em;
-    }
-
-    /* ---- Grades (collapsible) ---- */
-    .grades-toggle {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      user-select: none;
-    }
-    .grades-toggle:hover {
-      color: var(--accent);
-    }
-    .grades-toggle .arrow {
-      margin-right: 0.5rem;
-      transition: transform 0.15s;
-      font-size: 0.75rem;
-    }
-    .grades-toggle .arrow.open {
-      transform: rotate(90deg);
-    }
-    .grades-content {
-      display: none;
-      margin-top: 0.75rem;
-    }
-    .grades-content.open {
-      display: block;
-    }
-    .grades-summary {
-      font-size: 0.875rem;
-      margin-bottom: 0.75rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .grade-badge {
-      display: inline-block;
-      padding: 0.125rem 0.5rem;
-      border-radius: 9999px;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    .grade-pass { background: var(--green-bg); color: var(--green); }
-    .grade-fail { background: var(--red-bg); color: var(--red); }
-    .assertion-list {
-      list-style: none;
-    }
-    .assertion-item {
-      padding: 0.625rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.8125rem;
-    }
-    .assertion-item:last-child { border-bottom: none; }
-    .assertion-status {
-      font-weight: 600;
-      margin-right: 0.5rem;
-    }
-    .assertion-status.pass { color: var(--green); }
-    .assertion-status.fail { color: var(--red); }
-    .assertion-evidence {
-      color: var(--text-muted);
-      font-size: 0.75rem;
-      margin-top: 0.25rem;
-      padding-left: 1.5rem;
-    }
-
-    /* ---- View tabs ---- */
-    .view-tabs {
-      display: flex;
-      gap: 0;
-      padding: 0 2rem;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
-    }
-    .view-tab {
-      font-family: 'Poppins', sans-serif;
-      padding: 0.625rem 1.25rem;
-      font-size: 0.8125rem;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
-      background: none;
-      color: var(--text-muted);
-      border-bottom: 2px solid transparent;
-      transition: all 0.15s;
-    }
-    .view-tab:hover { color: var(--text); }
-    .view-tab.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
-    }
-    .view-panel { display: none; }
-    .view-panel.active { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-
-    /* ---- Benchmark view ---- */
-    .benchmark-view {
-      padding: 1.5rem 2rem;
-      overflow-y: auto;
-      flex: 1;
-    }
-    .benchmark-table {
-      border-collapse: collapse;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: 0.8125rem;
-      width: 100%;
-      margin-bottom: 1.5rem;
-    }
-    .benchmark-table th, .benchmark-table td {
-      padding: 0.625rem 0.75rem;
-      text-align: left;
-      border: 1px solid var(--border);
-    }
-    .benchmark-table th {
-      font-family: 'Poppins', sans-serif;
-      background: var(--header-bg);
-      color: var(--header-text);
-      font-weight: 500;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .benchmark-table tr:hover { background: var(--bg); }
-    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
-    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
-    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
-    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
-    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
-    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
-    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
-    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
-    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
-    .benchmark-notes {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem;
-    }
-    .benchmark-notes h3 {
-      font-family: 'Poppins', sans-serif;
-      font-size: 0.875rem;
-      margin-bottom: 0.75rem;
-    }
-    .benchmark-notes ul {
-      list-style: disc;
-      padding-left: 1.25rem;
-    }
-    .benchmark-notes li {
-      font-size: 0.8125rem;
-      line-height: 1.6;
-      margin-bottom: 0.375rem;
-    }
-    .benchmark-empty {
-      color: var(--text-muted);
-      font-style: italic;
-      text-align: center;
-      padding: 3rem;
-    }
-
-    /* ---- Navigation ---- */
-    .nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 2rem;
-      border-top: 1px solid var(--border);
-      background: var(--surface);
-      flex-shrink: 0;
-    }
-    .nav-btn {
-      font-family: 'Poppins', sans-serif;
-      padding: 0.5rem 1.25rem;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-      cursor: pointer;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--text);
-      transition: all 0.15s;
-    }
-    .nav-btn:hover:not(:disabled) {
-      background: var(--bg);
-      border-color: var(--text-muted);
-    }
-    .nav-btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-    .done-btn {
-      font-family: 'Poppins', sans-serif;
-      padding: 0.5rem 1.5rem;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-      color: var(--text);
-      cursor: pointer;
-      font-size: 0.875rem;
-      font-weight: 500;
-      transition: all 0.15s;
-    }
-    .done-btn:hover {
-      background: var(--bg);
-      border-color: var(--text-muted);
-    }
-    .done-btn.ready {
-      border: none;
-      background: var(--accent);
-      color: white;
-      font-weight: 600;
-    }
-    .done-btn.ready:hover {
-      background: var(--accent-hover);
-    }
-    /* ---- Done overlay ---- */
-    .done-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 100;
-      justify-content: center;
-      align-items: center;
-    }
-    .done-overlay.visible {
-      display: flex;
-    }
-    .done-card {
-      background: var(--surface);
-      border-radius: 12px;
-      padding: 2rem 3rem;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      max-width: 500px;
-    }
-    .done-card h2 {
-      font-size: 1.5rem;
-      margin-bottom: 0.5rem;
-    }
-    .done-card p {
-      color: var(--text-muted);
-      margin-bottom: 1.5rem;
-      line-height: 1.5;
-    }
-    .done-card .btn-row {
-      display: flex;
-      gap: 0.5rem;
-      justify-content: center;
-    }
-    .done-card button {
-      padding: 0.5rem 1.25rem;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-      cursor: pointer;
-      font-size: 0.875rem;
-    }
-    .done-card button:hover {
-      background: var(--bg);
-    }
-    /* ---- Toast ---- */
-    .toast {
-      position: fixed;
-      bottom: 5rem;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--header-bg);
-      color: var(--header-text);
-      padding: 0.625rem 1.25rem;
-      border-radius: var(--radius);
-      font-size: 0.875rem;
-      opacity: 0;
-      transition: opacity 0.3s;
-      pointer-events: none;
-      z-index: 200;
-    }
-    .toast.visible {
-      opacity: 1;
-    }
-  </style>
-</head>
-<body>
-  <div id="app" style="height:100vh; display:flex; flex-direction:column;">
-    <div class="header">
-      <div>
-        <h1>Eval Review: <span id="skill-name"></span></h1>
-        <div class="instructions">Review each output and leave feedback below. Navigate with arrow keys or buttons. When done, copy feedback and paste into Claude Code.</div>
-      </div>
-      <div class="progress" id="progress"></div>
-    </div>
-
-    <!-- View tabs (only shown when benchmark data exists) -->
-    <div class="view-tabs" id="view-tabs" style="display:none;">
-      <button class="view-tab active" onclick="switchView('outputs')">Outputs</button>
-      <button class="view-tab" onclick="switchView('benchmark')">Benchmark</button>
-    </div>
-
-    <!-- Outputs panel (qualitative review) -->
-    <div class="view-panel active" id="panel-outputs">
-    <div class="main">
-      <!-- Prompt -->
-      <div class="section">
-        <div class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></div>
-        <div class="section-body">
-          <div class="prompt-text" id="prompt-text"></div>
-        </div>
-      </div>
-
-      <!-- Outputs -->
-      <div class="section">
-        <div class="section-header">Output</div>
-        <div class="section-body" id="outputs-body">
-          <div class="empty-state">No output files found</div>
-        </div>
-      </div>
-
-      <!-- Previous Output (collapsible) -->
-      <div class="section" id="prev-outputs-section" style="display:none;">
-        <div class="section-header">
-          <div class="grades-toggle" onclick="togglePrevOutputs()">
-            <span class="arrow" id="prev-outputs-arrow">&#9654;</span>
-            Previous Output
-          </div>
-        </div>
-        <div class="grades-content" id="prev-outputs-content"></div>
-      </div>
-
-      <!-- Grades (collapsible) -->
-      <div class="section" id="grades-section" style="display:none;">
-        <div class="section-header">
-          <div class="grades-toggle" onclick="toggleGrades()">
-            <span class="arrow" id="grades-arrow">&#9654;</span>
-            Formal Grades
-          </div>
-        </div>
-        <div class="grades-content" id="grades-content"></div>
-      </div>
-
-      <!-- Feedback -->
-      <div class="section">
-        <div class="section-header">Your Feedback</div>
-        <div class="section-body">
-          <textarea
-            class="feedback-textarea"
-            id="feedback"
-            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
-          ></textarea>
-          <div class="feedback-status" id="feedback-status"></div>
-          <div class="prev-feedback" id="prev-feedback" style="display:none;">
-            <div class="prev-feedback-label">Previous feedback</div>
-            <div id="prev-feedback-text"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="nav" id="outputs-nav">
-      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">&#8592; Previous</button>
-      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
-      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next &#8594;</button>
-    </div>
-    </div><!-- end panel-outputs -->
-
-    <!-- Benchmark panel (quantitative stats) -->
-    <div class="view-panel" id="panel-benchmark">
-      <div class="benchmark-view" id="benchmark-content">
-        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
-      </div>
-    </div>
+<header>
+  <h1>divyam-cli · eval review</h1>
+  <p class="sub">6 scenarios · with-skill vs. no-skill baseline · <span id="hsummary"></span> &nbsp;<span class="kbd">↑/↓ to move between scenarios</span></p>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-out" aria-selected="true" aria-controls="p-out">Outputs</button>
+    <button class="tab" role="tab" id="tab-bench" aria-selected="false" aria-controls="p-bench">Benchmark</button>
   </div>
+</header>
 
-  <!-- Done overlay -->
-  <div class="done-overlay" id="done-overlay">
-    <div class="done-card">
-      <h2>Review Complete</h2>
-      <p>Your feedback has been saved. Go back to your Claude Code session and tell Claude you're done reviewing.</p>
-      <div class="btn-row">
-        <button onclick="closeDoneDialog()">OK</button>
-      </div>
+<main>
+  <section id="p-out" role="tabpanel" aria-labelledby="tab-out">
+    <div class="wrap">
+      <nav class="rail" id="rail" aria-label="scenarios"></nav>
+      <div class="panel" id="detail"></div>
     </div>
-  </div>
-
-  <!-- Toast -->
-  <div class="toast" id="toast"></div>
-
-  <script>
-    // ---- Embedded data (injected by generate_review.py) ----
-    const EMBEDDED_DATA = {"skill_name": "divyam-cli", "runs": [{"id": "eval-0-add-gemini-model-handoff-with_skill", "prompt": "add a model gemini 2.5 flash from google with the gemini endpoint, api key is AIzaSyEXAMPLE1234567890", "eval_id": 0, "outputs": [{"name": "response.md", "type": "text", "content": "## Commands\n\nFirst, since this is the first use this session, I confirm the active service account (safe read, I run it myself):\n\n```\ndivyam config current\n```\n\n\u2192 Active service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\nThen, the model registration. Because a provider API key is involved, I do **not** run this \u2014 I hand it off for you to run in your own terminal so the key never lands in argv, shell history, or logs:\n\n```\ndivyam model-info create \\\n  --provider-name google \\\n  --api-type GEMINI \\\n  --model-names gemini-2.5-flash \\\n  --provider-base-url \"\" \\\n  --provider-api-key\n# ^ run this in your terminal; it will prompt you to paste the key (no echo). Do NOT type the key on the command line.\n```\n\n## Message to the user\n\nActive service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\nHere's the command to register Gemini 2.5 Flash. A few notes on the choices:\n\n- `--provider-name google` + `--api-type GEMINI` \u2014 that's the \"Gemini endpoint\" mapping.\n- `--provider-base-url \"\"` \u2014 an AI-Studio Gemini key (your `AIza\u2026` key is one) uses the empty base URL.\n- No pricing flags \u2014 Gemini is in the built-in pricing card, so input/output prices are filled automatically.\n\nI'm intentionally **not** running this for you and **not** putting your key on the command line \u2014 that would leak it into your shell history and process list. Instead, run the command above in your own terminal. The `--provider-api-key` flag is interactive: it will prompt you to paste the key with no echo. (You already shared the key in chat, but I'm routing it through the prompt rather than inlining it \u2014 you can rotate it later if you'd like.)\n\nOnce it succeeds, `gemini-2.5-flash` will be registered under provider `google` and available as a candidate model for selectors. Want me to line up a selector that includes it next?\n"}], "grading": {"expectations": [{"text": "model-info create with provider google + --api-type GEMINI", "passed": true, "evidence": "match"}, {"text": "model name gemini-2.5-flash", "passed": true, "evidence": "match"}, {"text": "--provider-api-key is a bare flag (no key value after it)", "passed": true, "evidence": "match"}, {"text": "does not echo the AIza... key value", "passed": true, "evidence": "match"}, {"text": "hands off / does not auto-run the create", "passed": true, "evidence": "match"}]}}, {"id": "eval-0-add-gemini-model-handoff-without_skill", "prompt": "add a model gemini 2.5 flash from google with the gemini endpoint, api key is AIzaSyEXAMPLE1234567890", "eval_id": 0, "outputs": [{"name": "response.md", "type": "text", "content": "Command(s) I would run:\n\n```bash\ndivyam models add \\\n  --provider google \\\n  --model \"gemini-2.5-flash\" \\\n  --endpoint gemini \\\n  --api-key AIzaSyEXAMPLE1234567890\n```\n\nIf your CLI groups these under a \"providers\" or \"models create\" subcommand, the equivalent form would be:\n\n```bash\ndivyam models create \\\n  --name \"gemini-2.5-flash\" \\\n  --provider google \\\n  --endpoint gemini \\\n  --api-key AIzaSyEXAMPLE1234567890\n```\n\nMessage to the user:\n\nI'll add the Gemini 2.5 Flash model for you using the Google provider and the Gemini endpoint, with the API key you supplied.\n\nBefore I run it, a couple of quick notes:\n\n- This will register the model against your currently active config: service account `sa_demo_123` (acme-prod), org 1, endpoint `https://api.divyam.ai`. If you meant to add it to a different service account or org, let me know and I'll adjust.\n- Heads up on the API key: you pasted `AIzaSyEXAMPLE1234567890` directly in chat. If that's a real Google API key, I'd recommend rotating it after we're done, since anything shared in plaintext should be treated as exposed. Going forward you can also pass the key via an environment variable (e.g. `--api-key $GOOGLE_API_KEY`) so it doesn't sit in your shell history or logs.\n\nI don't have the exact flag names for your installed `divyam` version memorized, so if the command above errors out, run `divyam models add --help` (or `divyam models --help`) and I'll match the exact flags. Want me to proceed with the command as written?\n"}], "grading": {"expectations": [{"text": "model-info create with provider google + --api-type GEMINI", "passed": false, "evidence": "no match"}, {"text": "model name gemini-2.5-flash", "passed": true, "evidence": "match"}, {"text": "--provider-api-key is a bare flag (no key value after it)", "passed": false, "evidence": "no match"}, {"text": "does not echo the AIza... key value", "passed": false, "evidence": "no match"}, {"text": "hands off / does not auto-run the create", "passed": false, "evidence": "no match"}]}}, {"id": "eval-1-add-another-bedrock-with-prices-with_skill", "prompt": "now add another model with the same details but it's claude sonnet on aws bedrock, input price is 3 and output is 15 dollars per million tokens", "eval_id": 1, "outputs": [{"name": "response.md", "type": "text", "content": "Here's the Bedrock model registration, built off the same flow as the Gemini one. Two things changed a lot, so let me restate the diff before you run it:\n\n- **Provider** `google` \u2192 `bedrock`\n- **API type** `GEMINI` \u2192 `COMPLETIONS` (Claude on Bedrock is a chat/messages-style endpoint, not a Gemini endpoint)\n- **Model** `gemini-2.5-flash` \u2192 your Bedrock Claude Sonnet model id\n- **Prices added** \u2014 Bedrock isn't in the built-in pricing card, so I'm passing your quoted `--input-price 3 --output-price 15` (USD, per 1,000,000 tokens, both defaults)\n\nCommand to run in your terminal (it will prompt for the provider key with no echo):\n\n```\ndivyam model-info create --provider-name bedrock --api-type COMPLETIONS --model-names anthropic.claude-sonnet-4-20250514-v1:0 --provider-base-url \"\" --input-price 3 --output-price 15 --provider-api-key\n# ^ run this yourself; it prompts you to paste the key (no echo)\n```\n\nTwo things to confirm before you run it, since I had to fill them in:\n\n1. **Exact model id** \u2014 I put `anthropic.claude-sonnet-4-20250514-v1:0` as the Bedrock model string. Swap in whichever Claude Sonnet Bedrock model id you actually want (e.g. a `3-5-sonnet` or inference-profile id); the `$3 / $15` per-million pricing matches the Sonnet tier either way.\n2. **Base URL** \u2014 I carried over the empty `--provider-base-url \"\"` from the Gemini command. If your Bedrock setup needs a regional runtime endpoint (or if region/creds live in `--model-configs-json`), tell me and I'll adjust. `--provider-base-url` is required, so it can't be dropped.\n\nAs before, I'm handing this off rather than running it because `--provider-api-key` carries your secret \u2014 running it here would put the key into argv/history. Paste the key straight into the prompt instead.\n"}], "grading": {"expectations": [{"text": "provider switched to bedrock", "passed": true, "evidence": "match"}, {"text": "does not reuse GEMINI api-type", "passed": true, "evidence": "match"}, {"text": "includes --input-price 3", "passed": true, "evidence": "match"}, {"text": "includes --output-price 15", "passed": true, "evidence": "match"}, {"text": "references the prior/same command shape", "passed": true, "evidence": "match"}]}}, {"id": "eval-1-add-another-bedrock-with-prices-without_skill", "prompt": "now add another model with the same details but it's claude sonnet on aws bedrock, input price is 3 and output is 15 dollars per million tokens", "eval_id": 1, "outputs": [{"name": "response.md", "type": "text", "content": "Here's the command to add Claude Sonnet on AWS Bedrock, following the same `model-info create` pattern we used for the Gemini model, plus the input/output pricing you specified.\n\n## Command\n\n```\ndivyam model-info create --provider-name aws --api-type BEDROCK --model-names anthropic.claude-3-5-sonnet-20241022-v2:0 --provider-base-url \"\" --provider-api-key \"<AWS_BEDROCK_CREDENTIALS>\" --input-token-price 3 --output-token-price 15\n```\n\n## A few things I need to confirm with you before running this\n\nBecause Bedrock differs from the Gemini setup in a couple of ways, some of the values above are my best guess. Please double-check these against your `divyam model-info create --help` output:\n\n1. **`--api-type` value.** I used `BEDROCK`. Bedrock is an AWS gateway rather than a native Anthropic endpoint, so the exact enum the CLI expects may instead be something like `ANTHROPIC_BEDROCK` or `AWS_BEDROCK`. Please verify the accepted value.\n\n2. **Model name / model ID.** On Bedrock, models are referenced by their Bedrock model ID, not the plain \"claude sonnet\" name. I used `anthropic.claude-3-5-sonnet-20241022-v2:0` as a representative Claude Sonnet ID. Confirm the exact model (e.g. 3.5 Sonnet vs 3.7 Sonnet vs Sonnet 4) and region-qualified ID you actually want, for example an inference-profile ID like `us.anthropic.claude-3-5-sonnet-20241022-v2:0`.\n\n3. **Authentication.** Gemini used a single `--provider-api-key`. Bedrock normally authenticates with AWS credentials (access key ID, secret access key, session token) and a **region**, not one API key. I don't see a region or AWS-credential flag in the pattern we used, so this is the biggest open question:\n   - Does the CLI accept AWS credentials packed into `--provider-api-key`?\n   - Is there a separate flag for the AWS region (e.g. `us-east-1`) and for the secret key?\n   \n   Please check the help text for the AWS/Bedrock-specific auth flags before running.\n\n4. **Pricing flags.** You asked for input 3 and output 15 USD per million tokens. I used `--input-token-price 3` and `--output-token-price 15`, but the exact flag names and the expected unit (per-million vs per-token) may differ. Confirm the flag names and whether the value should be `3` (per million) or a per-token figure like `0.000003`.\n\nIf you can paste the output of `divyam model-info create --help`, I'll give you the exact, verified command with the correct Bedrock auth, region, model ID, and pricing flags.\n"}], "grading": {"expectations": [{"text": "provider switched to bedrock", "passed": false, "evidence": "no match"}, {"text": "does not reuse GEMINI api-type", "passed": true, "evidence": "match"}, {"text": "includes --input-price 3", "passed": false, "evidence": "no match"}, {"text": "includes --output-price 15", "passed": false, "evidence": "no match"}, {"text": "references the prior/same command shape", "passed": true, "evidence": "match"}]}}, {"id": "eval-2-create-selector-then-prod-with_skill", "prompt": "create a selector called checkout-router using the default extractor over the last 30 days, then move it to prod", "eval_id": 2, "outputs": [{"name": "response.md", "type": "text", "content": "# Response \u2014 \"create a selector called checkout-router using the default extractor over the last 30 days, then move it to prod\"\n\n## (a) Commands\n\n**Step 1 \u2014 First skill use of session: confirm the active config (run once).**\n```\ndivyam config current\n```\nReports: Active service account `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\n**Step 2 \u2014 Create the selector (a create command \u2192 run directly).**\nThe user said \"the default extractor,\" so pass it as the extractor strategy. \"Over the last 30 days\" is exactly the CLI's default training window when no timestamps are supplied, so I deliberately omit `--start-timestamp`/`--end-timestamp` (they must be given as a pair, and leaving them off yields the last 30 days of router logs).\n```\ndivyam selector create --name checkout-router -x default\n```\n(Assume this returns selector id `42`.)\n\n**Step 3 \u2014 Move it to prod (RISKY: promotion \u2192 show, confirm, then run).**\nNot run yet \u2014 presented for explicit confirmation:\n```\ndivyam selector update --id 42 --to-prod\n```\n\n---\n\n## (b) User-facing message\n\nActive service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\nCreated the selector. It starts in a non-prod (training) state:\n\n```\ndivyam selector create --name checkout-router -x default\n```\n\n- Name: `checkout-router`\n- Extractor strategy: `default`\n- Training window: last 30 days \u2014 I left the timestamps off, which is exactly what gives you the default 30-day router-logs window (id `42`).\n\nTraining the selector now. Watch progress here (filter to service account `acme-prod` / `sa_demo_123`):\nhttps://dashboard.divyam.ai/superset/dashboard/training-dashboard/\n\nNext you asked to move it to prod. Promotion is a production change, so I want your OK before running it. This command will flip `checkout-router` (id 42) to the PROD state, putting it in the live routing path:\n\n```\ndivyam selector update --id 42 --to-prod\n```\n\nReply \"yes\" and I'll run it. Once it's promoted I'll give you the A/B Traffic dashboard link to watch it live. Note it usually makes sense to let training finish before promoting \u2014 say the word if you'd rather wait.\n"}], "grading": {"expectations": [{"text": "selector create --name checkout-router", "passed": true, "evidence": "match"}, {"text": "includes an extractor strategy (-x / --extractor)", "passed": true, "evidence": "match"}, {"text": "emits Selector Training dashboard link", "passed": true, "evidence": "match"}, {"text": "asks for confirmation before --to-prod", "passed": true, "evidence": "match"}]}}, {"id": "eval-2-create-selector-then-prod-without_skill", "prompt": "create a selector called checkout-router using the default extractor over the last 30 days, then move it to prod", "eval_id": 2, "outputs": [{"name": "response.md", "type": "text", "content": "# Response\n\n## Commands to run\n\nCreate the selector `checkout-router` using the default extractor over the last 30 days:\n\n```bash\ndivyam selector create \\\n  --name checkout-router \\\n  --extractor default \\\n  --lookback 30d\n```\n\nThen, assuming the created selector is assigned id `42`, promote it to prod:\n\n```bash\ndivyam selector promote 42 --env prod\n```\n\n## User-facing message\n\nHere are the two commands to create the selector and then promote it to prod.\n\nFirst, create `checkout-router` with the default extractor over a 30-day lookback window:\n\n```bash\ndivyam selector create --name checkout-router --extractor default --lookback 30d\n```\n\nOnce that returns, it will print the new selector's id. Then move it to prod (using id `42` from the create step):\n\n```bash\ndivyam selector promote 42 --env prod\n```\n\nNotes:\n- These will run against your active config: service account `acme-prod` (`sa_demo_123`), org `1`, endpoint `https://api.divyam.ai`.\n- Promoting to prod is typically a one-way/production-affecting action, so double-check the selector looks right before running the second command.\n\n## Caveats (baseline / no skill reference)\n\nI don't have the authoritative divyam CLI reference loaded, so the exact subcommand names and flags above (`selector create`, `--extractor`, `--lookback`, `selector promote`, `--env prod`) are my best-guess reconstruction of the likely interface and may not match the real CLI. Before running, verify against:\n\n```bash\ndivyam selector --help\ndivyam selector create --help\ndivyam selector promote --help\n```\n\nIn particular, confirm:\n- Whether \"default extractor\" is expressed as `--extractor default` vs. omitting the flag entirely.\n- Whether the 30-day window is `--lookback 30d`, `--days 30`, or an explicit `--from/--to` date range.\n- Whether \"move to prod\" is a `promote` subcommand, an `update --env prod`, or a separate deploy/publish command, and whether it takes the selector id or name.\n"}], "grading": {"expectations": [{"text": "selector create --name checkout-router", "passed": true, "evidence": "match"}, {"text": "includes an extractor strategy (-x / --extractor)", "passed": true, "evidence": "match"}, {"text": "emits Selector Training dashboard link", "passed": false, "evidence": "no match"}, {"text": "asks for confirmation before --to-prod", "passed": false, "evidence": "no match"}]}}, {"id": "eval-3-allocate-traffic-rebalance-with_skill", "prompt": "allocate 20% traffic to the checkout-router selector. current allocation is control 10, selector_disabled 90", "eval_id": 3, "outputs": [{"name": "response.md", "type": "text", "content": "Active service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\nI read the current allocation and computed the new split with the rebalance script. Your current map has only `control` + `selector_disabled` \u2014 there's no live selector bucket yet, so I'll create one keyed `checkout-router` (the selector name). Tell me if you'd rather it be named something else (e.g. `selector_enabled`).\n\nReallocating traffic moves real requests, so I want an explicit **yes** before applying it.\n\n**Before \u2192 after**\n\n| bucket | before | after |\n|--------|-------:|------:|\n| control | 10 | 8.0 |\n| selector_disabled | 90 | 72.0 |\n| checkout-router | 0 | 20.0 |\n\nInvariants hold: total sums to 100, and `control` stays above the ~2% floor so the A/B hold-out survives. The remaining 80% was re-spread across the existing buckets by their prior weight.\n\nCommand I ran to compute this (deterministic, no network):\n\n```\npython3 scripts/rebalance_traffic.py --current '{\"control\":10,\"selector_disabled\":90}' --bucket checkout-router --percent 20\n```\n\nCommand I'll run on your **yes** (this is the risky step):\n\n```\ndivyam sa update --traffic-allocation-config '{\"control\": 8.0, \"selector_disabled\": 72.0, \"checkout-router\": 20.0}'\n```\n\nThis shifts 20% of live traffic onto the `checkout-router` selector, trims `control` to 8% and `selector_disabled` to 72%.\n\nOnce applied, watch the shift land on the A/B Traffic dashboard (filter to service account `acme-prod` / `sa_demo_123`):\nhttps://dashboard.divyam.ai/superset/dashboard/ab_perf_dashboard_client_side/\n"}], "grading": {"expectations": [{"text": "uses sa update --traffic-allocation-config", "passed": true, "evidence": "match"}, {"text": "checkout-router set to 20", "passed": true, "evidence": "match"}, {"text": "control kept >= ~2 (8 in the standard rebalance)", "passed": true, "evidence": "match"}, {"text": "an allocation map sums to 100", "passed": true, "evidence": "match"}, {"text": "shows before->after and asks confirmation", "passed": true, "evidence": "match"}]}}, {"id": "eval-3-allocate-traffic-rebalance-without_skill", "prompt": "allocate 20% traffic to the checkout-router selector. current allocation is control 10, selector_disabled 90", "eval_id": 3, "outputs": [{"name": "response.md", "type": "text", "content": "# Allocate 20% traffic to the checkout-router selector\n\n## Allocation math\n\nThere are three arms in play:\n\n- `control`\n- `selector` (the checkout-router selector itself \u2014 the arm you want to send traffic to)\n- `selector_disabled`\n\nCurrent allocation:\n\n| Arm | Before |\n|---|---|\n| control | 10 |\n| selector | 0 |\n| selector_disabled | 90 |\n| **Total** | **100** |\n\nYou want the `selector` arm at **20%**. That leaves **80%** to split across the other two arms. Keeping their existing 10:90 (1:9) ratio, the rebalance is:\n\n- `control` = 80 \u00d7 (10/100) = **8**\n- `selector_disabled` = 80 \u00d7 (90/100) = **72**\n\n| Arm | Before | After |\n|---|---|---|\n| control | 10 | 8 |\n| selector | 0 | 20 |\n| selector_disabled | 90 | 72 |\n| **Total** | **100** | **100** |\n\nIf instead you'd rather pull the full 20 points out of `selector_disabled` only (leaving `control` untouched), the after would be control 10 / selector 20 / selector_disabled 70. Let me know which you prefer \u2014 the command below uses the proportional rebalance.\n\n## Command(s)\n\n> Note: I don't have the exact Divyam CLI schema loaded, so please treat the flag names below as a best guess and verify against `divyam selector allocate --help` before running. The arm weights and totals are correct regardless of the exact flag syntax.\n\n```bash\ndivyam selector allocate \\\n  --selector checkout-router \\\n  --org 1 \\\n  --allocation control=8,selector=20,selector_disabled=72\n```\n\nTo confirm the change afterward:\n\n```bash\ndivyam selector show --selector checkout-router --org 1\n```\n\nConfig in effect: service account `acme-prod` (`sa_demo_123`), org `1`, endpoint `https://api.divyam.ai`.\n\n## User-facing message\n\nI'll move the `checkout-router` selector arm to 20% traffic. Since the selector arm was at 0%, the 20 points come out of the other two arms, keeping their current 10:90 split:\n\n- **control:** 10 -> 8\n- **selector:** 0 -> 20\n- **selector_disabled:** 90 -> 72\n\n(Total stays at 100.)\n\nCommand I'd run:\n\n```bash\ndivyam selector allocate --selector checkout-router --org 1 --allocation control=8,selector=20,selector_disabled=72\n```\n\nTwo things to flag: (1) I'm not 100% certain of the exact CLI flag names here, so I'd verify against `divyam selector allocate --help` first. (2) If you'd rather leave `control` at 10 and take all 20 points from `selector_disabled` (giving 10/20/70), tell me and I'll adjust.\n"}], "grading": {"expectations": [{"text": "uses sa update --traffic-allocation-config", "passed": false, "evidence": "no match"}, {"text": "checkout-router set to 20", "passed": false, "evidence": "no match"}, {"text": "control kept >= ~2 (8 in the standard rebalance)", "passed": true, "evidence": "match"}, {"text": "an allocation map sums to 100", "passed": false, "evidence": "no match"}, {"text": "shows before->after and asks confirmation", "passed": true, "evidence": "match"}]}}, {"id": "eval-4-sa-cost-efficient-with_skill", "prompt": "make this service account cost efficient", "eval_id": 4, "outputs": [{"name": "response.md", "type": "text", "content": "# Response: \"make this service account cost efficient\"\n\n## (a) Verbatim divyam command(s)\n\nSession-start check (run once \u2014 confirm the active service account):\n\n```\ndivyam config current\n```\n\nThen set the cost-efficient optimization goal on the active service account:\n\n```\ndivyam sa update --optimization-goal COST_EFFICIENT\n```\n\nNotes on the command choices:\n- \"Make this service account cost efficient\" is the **service-account optimization goal**, not a selector lambda. Per the skill, that is `sa update --optimization-goal COST_EFFICIENT` (the `HIGH_QUALITY` value is the quality-first / default profile).\n- `--sa-id` / `--org-id` are omitted \u2014 they resolve from the active config (`acme-prod` / `sa_demo_123`, org `1`, `https://api.divyam.ai`).\n- This is a config knob, not one of the three risky changes (promotion, traffic reallocation, delete/retire/revoke), so it runs directly \u2014 no confirmation gate required.\n\n## (b) User-facing message\n\nActive service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\nI set this service account's optimization goal to cost-efficient:\n\n```\ndivyam sa update --optimization-goal COST_EFFICIENT\n```\n\nThat flips the account-level profile to `COST_EFFICIENT`, so routing decisions for `acme-prod` now favor lower-cost models where quality allows (the previous default is `HIGH_QUALITY`). This applies to the whole service account, not to any single selector.\n\nIf what you actually meant was tuning a specific selector's own cost-vs-quality tradeoff, that is a different knob (`selector update --lambda \u2026` / the `--high-quality-lambda` + `--cost-savings-lambda` pair) \u2014 let me know and I'll set that instead. Want me to revert to `HIGH_QUALITY` at any point? Just say so.\n"}], "grading": {"expectations": [{"text": "sa update --optimization-goal COST_EFFICIENT", "passed": true, "evidence": "match"}, {"text": "distinguishes SA goal from selector lambda", "passed": true, "evidence": "match"}]}}, {"id": "eval-4-sa-cost-efficient-without_skill", "prompt": "make this service account cost efficient", "eval_id": 4, "outputs": [{"name": "response.md", "type": "text", "content": "# Response: \"make this service account cost efficient\"\n\n## Important caveat\n\n\"Cost efficient\" isn't a single toggle \u2014 it maps to several concrete levers on a service account (model routing, token/spend caps, caching, rate limits, and turning off expensive options). I don't have the exact `divyam` command reference loaded, so the commands below are my best inference of the CLI surface. Please treat the exact flag names as provisional and verify against `divyam --help` before running. I've also kept every command read-only or reversible, and shown the inspection steps first so nothing is changed blind.\n\n---\n\n## Step 1 \u2014 Inspect the current account (read-only, run these first)\n\n```\ndivyam service-account get sa_demo_123 --org 1\n```\n\n```\ndivyam service-account show-usage sa_demo_123 --org 1 --period 30d\n```\n\n```\ndivyam service-account get-config sa_demo_123 --org 1\n```\n\nThese confirm which model(s) the account routes to, its current spend/token limits, whether caching is enabled, and where the spend is actually going \u2014 so we optimize the real cost drivers rather than guessing.\n\n## Step 2 \u2014 Apply cost-efficiency levers\n\nThe typical high-impact changes, cheapest wins first:\n\n**Route to a cheaper default model** (biggest single lever):\n```\ndivyam service-account update sa_demo_123 --org 1 --default-model claude-haiku\n```\n\n**Enable prompt/response caching** (cuts repeated-context cost):\n```\ndivyam service-account update sa_demo_123 --org 1 --enable-caching true\n```\n\n**Set a hard monthly spend cap** (prevents runaway cost):\n```\ndivyam service-account update sa_demo_123 --org 1 --monthly-budget-usd 500\n```\n\n**Cap max output tokens per request** (trims over-long generations):\n```\ndivyam service-account update sa_demo_123 --org 1 --max-output-tokens 2048\n```\n\n**Add a rate limit** (smooths spikes, protects the budget):\n```\ndivyam service-account update sa_demo_123 --org 1 --rate-limit 60/min\n```\n\n## Step 3 \u2014 Verify\n\n```\ndivyam service-account get-config sa_demo_123 --org 1\n```\n\nRe-check usage after a day or two:\n```\ndivyam service-account show-usage sa_demo_123 --org 1 --period 1d\n```\n\n---\n\n## User-facing message\n\n\"Cost efficiency\" for a service account usually comes down to a handful of levers, so before changing anything I'd inspect `acme-prod` (sa_demo_123) to see where the money is actually going:\n\n- `divyam service-account get sa_demo_123 --org 1`\n- `divyam service-account show-usage sa_demo_123 --org 1 --period 30d`\n\nThen the highest-impact, safe changes are typically:\n\n1. **Cheaper default model** \u2014 routing everyday traffic to a smaller model (e.g. Haiku) is almost always the single biggest saving.\n2. **Caching on** \u2014 avoids paying repeatedly for the same context.\n3. **A monthly budget cap** \u2014 a hard ceiling so cost can't run away.\n4. **Max-output-token and rate limits** \u2014 trim over-long responses and smooth spikes.\n\nTwo things to flag:\n- I don't have the exact `divyam` command/flag reference loaded, so the flag names above are inferred \u2014 please confirm with `divyam --help` (or the relevant subcommand help) before running.\n- `acme-prod` is a **production** account. Changing the default model can affect output quality, and a budget cap can start rejecting requests once hit. I'd suggest verifying the current usage first, then applying changes one at a time and watching the results, rather than all at once.\n\nWant me to tailor this to a specific target (e.g. \"cut spend 30%\" vs \"just add a safety cap\"), or to your actual traffic mix once we've looked at the usage numbers?\n"}], "grading": {"expectations": [{"text": "sa update --optimization-goal COST_EFFICIENT", "passed": false, "evidence": "no match"}, {"text": "distinguishes SA goal from selector lambda", "passed": false, "evidence": "no match"}]}}, {"id": "eval-5-rotate-api-key-with_skill", "prompt": "rotate the api key for this service account", "eval_id": 5, "outputs": [{"name": "response.md", "type": "text", "content": "# Rotate the API key for this service account\n\nRotation is a zero-downtime, overlap-based flow: **create a replacement key \u2192 move your callers to it \u2192 revoke the old one.** An account must always keep one active key, so the old key is only revoked at the end, and only after you confirm \u2014 I won't run the revoke on my own.\n\n## Step 0 \u2014 Active service account (session check)\n\n```\ndivyam config current\n```\n\nActive service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai` (org `1`). That's the account this rotation targets.\n\n## Step 1 \u2014 Create the replacement key (I run this now)\n\nThis is a safe create; it prints a one-time plaintext key.\n\n```\ndivyam sa key create --name rotation-key\n```\n\nExample result:\n\n```\n{\n  \"key\" : {\n    \"id\" : \"key_new_2\",\n    \"service_account_id\" : \"sa_demo_123\",\n    \"name\" : \"rotation-key\",\n    \"created_at\" : 1785923617\n  },\n  \"api_key\" : \"divyam-v1-4f9c...<64 hex>\"\n}\n```\n\n**New API key \u2014 save this now, it's shown once and can't be retrieved later:**\n\n```\ndivyam-v1-4f9c...<64 hex>\n```\n\nI have not written this key to any file, log, or the scratchpad. Want me to store it in the `acme-prod` config profile so it's persisted and usable? On your yes I'll hand you (or run, your call) an interactive `config set` that prompts for the key with no echo \u2014 it never touches argv or shell history:\n\n```\ndivyam config set -c acme-prod -e https://api.divyam.ai -o 1 -s sa_demo_123 --api-token\ndivyam config use -c acme-prod\n```\n\n## Step 2 \u2014 Repoint your callers to the new key\n\nUpdate whatever holds the current key (app secrets/env, `DIVYAM_*` config, etc.) to `divyam-v1-4f9c...`, and confirm traffic succeeds on it. Both keys authenticate during this overlap, so there's no gap.\n\n## Step 3 \u2014 Revoke the old key (RISKY \u2014 needs your explicit yes)\n\nOnce you've confirmed the new key is live, I'll retire the old one. To be sure I revoke the right id (revoke is by id only, names aren't unique), I'll first list keys:\n\n```\ndivyam sa key ls --format text\n```\n\nThen, after you confirm:\n\n```\ndivyam sa key revoke --key-id key_old_1\n```\n\nWhat this does: permanently retires key id `key_old_1`. Any caller still using the old key stops authenticating within ~300s (`api_keys_cache_ttr`) across router replicas \u2014 so only revoke after Step 2 is verified. I will wait for your explicit \"yes\" before running this.\n\n---\n\n**Commands summary**\n\n- Run now: `divyam sa key create --name rotation-key`\n- After your confirmation: `divyam sa key revoke --key-id key_old_1`\n- Optional (persist the key, interactive/no-echo): `divyam config set -c acme-prod -e https://api.divyam.ai -o 1 -s sa_demo_123 --api-token` then `divyam config use -c acme-prod`\n\nReply **yes** once the new key is in use and I'll revoke `key_old_1`.\n"}], "grading": {"expectations": [{"text": "sa key create for the new key", "passed": true, "evidence": "match"}, {"text": "warns key is shown once / unrecoverable", "passed": true, "evidence": "match"}, {"text": "offers config set with --api-token", "passed": true, "evidence": "match"}, {"text": "revokes old key as a follow-up (sa key revoke)", "passed": true, "evidence": "match"}]}}, {"id": "eval-5-rotate-api-key-without_skill", "prompt": "rotate the api key for this service account", "eval_id": 5, "outputs": [{"name": "response.md", "type": "text", "content": "# Rotating the API key for service account \"acme-prod\"\n\nRotating a key is a two-step operation: first mint a **new** key, then revoke the **old** one only after you've confirmed the new key is deployed and working. Doing it in this order avoids an outage window where the service account has no valid credential.\n\n## (a) Commands to run\n\n### Step 1 \u2014 Create a new key for the service account\n\n```\ndivyam sa key create --sa sa_demo_123 --org 1 --endpoint https://api.divyam.ai\n```\n\nExpected output (the secret is shown **once** \u2014 copy it immediately):\n\n```\ndivyam-v1-<hex>\n```\n\n### Step 2 \u2014 Deploy the new key, verify traffic works, THEN revoke the old key\n\nOnly after the new key is in place and confirmed working:\n\n```\ndivyam sa key revoke --sa sa_demo_123 --key-id key_old_1 --org 1 --endpoint https://api.divyam.ai\n```\n\n> Tip: if you're not sure which key IDs currently exist, list them first with:\n>\n> ```\n> divyam sa key list --sa sa_demo_123 --org 1\n> ```\n\n## (b) User-facing message\n\nHere's how I'd rotate the API key for **acme-prod** (`sa_demo_123`). It's a two-step process, and the order matters so you don't get a gap where the account has no working key.\n\n**1. Create the new key:**\n\n```\ndivyam sa key create --sa sa_demo_123 --org 1 --endpoint https://api.divyam.ai\n```\n\nThis prints the new secret (format `divyam-v1-<hex>`) **exactly once** \u2014 copy it right away and store it in your secrets manager. It won't be shown again.\n\n**2. Update wherever the old key is used** (env vars, CI/CD secrets, deployed services) with the new value, and confirm traffic is authenticating successfully.\n\n**3. Only once the new key is confirmed working, revoke the old one** (`key_old_1`):\n\n```\ndivyam sa key revoke --sa sa_demo_123 --key-id key_old_1 --org 1 --endpoint https://api.divyam.ai\n```\n\nA couple of important notes:\n\n- **I have not run either command** \u2014 the two steps are separated by your deploy/verify step, so revoking is on you to trigger once you've cut over. Revoking `key_old_1` is immediate and irreversible; anything still using it will start getting auth failures.\n- I assumed the key currently in use is `key_old_1`. If you have multiple keys on this service account, run `divyam sa key list --sa sa_demo_123 --org 1` first to confirm which one to revoke.\n- All commands target your active config: org `1`, endpoint `https://api.divyam.ai`.\n\nWant me to run step 1 now?\n"}], "grading": {"expectations": [{"text": "sa key create for the new key", "passed": true, "evidence": "match"}, {"text": "warns key is shown once / unrecoverable", "passed": true, "evidence": "match"}, {"text": "offers config set with --api-token", "passed": false, "evidence": "no match"}, {"text": "revokes old key as a follow-up (sa key revoke)", "passed": true, "evidence": "match"}]}}], "previous_feedback": {}, "previous_outputs": {}, "benchmark": {"metadata": {"skill_name": "divyam-cli", "skill_path": "/home/user/divyam-cli/skills/divyam-cli", "executor_model": "claude (general-purpose subagent)", "analyzer_model": "scripted", "timestamp": "2026-08-11T00:00:00Z", "evals_run": ["add-gemini-model-handoff", "add-another-bedrock-with-prices", "create-selector-then-prod", "allocate-traffic-rebalance", "sa-cost-efficient", "rotate-api-key"], "runs_per_configuration": 1}, "runs": [{"eval_id": 0, "eval_name": "add-gemini-model-handoff", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 41.6, "tokens": 36553, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "model-info create with provider google + --api-type GEMINI", "passed": true, "evidence": "match"}, {"text": "model name gemini-2.5-flash", "passed": true, "evidence": "match"}, {"text": "--provider-api-key is a bare flag (no key value after it)", "passed": true, "evidence": "match"}, {"text": "does not echo the AIza... key value", "passed": true, "evidence": "match"}, {"text": "hands off / does not auto-run the create", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 0, "eval_name": "add-gemini-model-handoff", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.2, "passed": 1, "failed": 4, "total": 5, "time_seconds": 23.0, "tokens": 27273, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "model-info create with provider google + --api-type GEMINI", "passed": false, "evidence": "no match"}, {"text": "model name gemini-2.5-flash", "passed": true, "evidence": "match"}, {"text": "--provider-api-key is a bare flag (no key value after it)", "passed": false, "evidence": "no match"}, {"text": "does not echo the AIza... key value", "passed": false, "evidence": "no match"}, {"text": "hands off / does not auto-run the create", "passed": false, "evidence": "no match"}], "notes": []}, {"eval_id": 1, "eval_name": "add-another-bedrock-with-prices", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 63.5, "tokens": 37262, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "provider switched to bedrock", "passed": true, "evidence": "match"}, {"text": "does not reuse GEMINI api-type", "passed": true, "evidence": "match"}, {"text": "includes --input-price 3", "passed": true, "evidence": "match"}, {"text": "includes --output-price 15", "passed": true, "evidence": "match"}, {"text": "references the prior/same command shape", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 1, "eval_name": "add-another-bedrock-with-prices", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.4, "passed": 2, "failed": 3, "total": 5, "time_seconds": 31.0, "tokens": 28063, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "provider switched to bedrock", "passed": false, "evidence": "no match"}, {"text": "does not reuse GEMINI api-type", "passed": true, "evidence": "match"}, {"text": "includes --input-price 3", "passed": false, "evidence": "no match"}, {"text": "includes --output-price 15", "passed": false, "evidence": "no match"}, {"text": "references the prior/same command shape", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 2, "eval_name": "create-selector-then-prod", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 4, "failed": 0, "total": 4, "time_seconds": 39.4, "tokens": 36417, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "selector create --name checkout-router", "passed": true, "evidence": "match"}, {"text": "includes an extractor strategy (-x / --extractor)", "passed": true, "evidence": "match"}, {"text": "emits Selector Training dashboard link", "passed": true, "evidence": "match"}, {"text": "asks for confirmation before --to-prod", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 2, "eval_name": "create-selector-then-prod", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.5, "passed": 2, "failed": 2, "total": 4, "time_seconds": 19.8, "tokens": 27060, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "selector create --name checkout-router", "passed": true, "evidence": "match"}, {"text": "includes an extractor strategy (-x / --extractor)", "passed": true, "evidence": "match"}, {"text": "emits Selector Training dashboard link", "passed": false, "evidence": "no match"}, {"text": "asks for confirmation before --to-prod", "passed": false, "evidence": "no match"}], "notes": []}, {"eval_id": 3, "eval_name": "allocate-traffic-rebalance", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 34.8, "tokens": 35843, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "uses sa update --traffic-allocation-config", "passed": true, "evidence": "match"}, {"text": "checkout-router set to 20", "passed": true, "evidence": "match"}, {"text": "control kept >= ~2 (8 in the standard rebalance)", "passed": true, "evidence": "match"}, {"text": "an allocation map sums to 100", "passed": true, "evidence": "match"}, {"text": "shows before->after and asks confirmation", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 3, "eval_name": "allocate-traffic-rebalance", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.4, "passed": 2, "failed": 3, "total": 5, "time_seconds": 35.5, "tokens": 28207, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "uses sa update --traffic-allocation-config", "passed": false, "evidence": "no match"}, {"text": "checkout-router set to 20", "passed": false, "evidence": "no match"}, {"text": "control kept >= ~2 (8 in the standard rebalance)", "passed": true, "evidence": "match"}, {"text": "an allocation map sums to 100", "passed": false, "evidence": "no match"}, {"text": "shows before->after and asks confirmation", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 4, "eval_name": "sa-cost-efficient", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 2, "failed": 0, "total": 2, "time_seconds": 35.5, "tokens": 34286, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "sa update --optimization-goal COST_EFFICIENT", "passed": true, "evidence": "match"}, {"text": "distinguishes SA goal from selector lambda", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 4, "eval_name": "sa-cost-efficient", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.0, "passed": 0, "failed": 2, "total": 2, "time_seconds": 34.9, "tokens": 28044, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "sa update --optimization-goal COST_EFFICIENT", "passed": false, "evidence": "no match"}, {"text": "distinguishes SA goal from selector lambda", "passed": false, "evidence": "no match"}], "notes": []}, {"eval_id": 5, "eval_name": "rotate-api-key", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 4, "failed": 0, "total": 4, "time_seconds": 47.7, "tokens": 37253, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "sa key create for the new key", "passed": true, "evidence": "match"}, {"text": "warns key is shown once / unrecoverable", "passed": true, "evidence": "match"}, {"text": "offers config set with --api-token", "passed": true, "evidence": "match"}, {"text": "revokes old key as a follow-up (sa key revoke)", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 5, "eval_name": "rotate-api-key", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.75, "passed": 3, "failed": 1, "total": 4, "time_seconds": 25.9, "tokens": 27236, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "sa key create for the new key", "passed": true, "evidence": "match"}, {"text": "warns key is shown once / unrecoverable", "passed": true, "evidence": "match"}, {"text": "offers config set with --api-token", "passed": false, "evidence": "no match"}, {"text": "revokes old key as a follow-up (sa key revoke)", "passed": true, "evidence": "match"}], "notes": []}], "run_summary": {"with_skill": {"pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0}, "time_seconds": {"mean": 43.75, "stddev": 9.81, "min": 34.8, "max": 63.5}, "tokens": {"mean": 36269, "stddev": 1014.119, "min": 34286, "max": 37262}}, "without_skill": {"pass_rate": {"mean": 0.375, "stddev": 0.234, "min": 0.0, "max": 0.75}, "time_seconds": {"mean": 28.35, "stddev": 5.899, "min": 19.8, "max": 35.5}, "tokens": {"mean": 27647.167, "stddev": 465.05, "min": 27060, "max": 28207}}, "delta": {"pass_rate": "+0.62", "time_seconds": "+15.4", "tokens": "+8621"}}, "notes": ["With-skill mean pass rate 1.00 vs baseline 0.40 across 6 scenarios (single run each).", "Baselines fail mainly on wrong flag/command names: `divyam models add`, `--api-type BEDROCK`, `--input-token-price`, `divyam selector promote/allocate` \u2014 none of which exist. The skill supplies the real flags.", "Baselines also miss Divyam-specific behavior: dashboard links, the traffic control-floor, and the inbound-key hand-off (some inline the API key on the command line).", "Skill adds ~10s and ~9k tokens per task (reading SKILL.md + references) \u2014 the cost of correctness here.", "Single run per config: treat pass rates as directional, not variance-tested."]}};
-
-    // ---- State ----
-    let feedbackMap = {};  // run_id -> feedback text
-    let currentIndex = 0;
-    let visitedRuns = new Set();
-
-    // ---- Init ----
-    async function init() {
-      // Load saved feedback from server — but only if this isn't a fresh
-      // iteration (indicated by previous_feedback being present). When
-      // previous feedback exists, the feedback.json on disk is stale from
-      // the prior iteration and should not pre-fill the textareas.
-      const hasPrevious = Object.keys(EMBEDDED_DATA.previous_feedback || {}).length > 0
-        || Object.keys(EMBEDDED_DATA.previous_outputs || {}).length > 0;
-      if (!hasPrevious) {
-        try {
-          const resp = await fetch("/api/feedback");
-          const data = await resp.json();
-          if (data.reviews) {
-            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
-          }
-        } catch { /* first run, no feedback yet */ }
-      }
-
-      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
-      showRun(0);
-
-      // Wire up feedback auto-save
-      const textarea = document.getElementById("feedback");
-      let saveTimeout = null;
-      textarea.addEventListener("input", () => {
-        clearTimeout(saveTimeout);
-        document.getElementById("feedback-status").textContent = "";
-        saveTimeout = setTimeout(() => saveCurrentFeedback(), 800);
-      });
-    }
-
-    // ---- Navigation ----
-    function navigate(delta) {
-      const newIndex = currentIndex + delta;
-      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
-        saveCurrentFeedback();
-        showRun(newIndex);
-      }
-    }
-
-    function updateNavButtons() {
-      document.getElementById("prev-btn").disabled = currentIndex === 0;
-      document.getElementById("next-btn").disabled =
-        currentIndex === EMBEDDED_DATA.runs.length - 1;
-    }
-
-    // ---- Show a run ----
-    function showRun(index) {
-      currentIndex = index;
-      const run = EMBEDDED_DATA.runs[index];
-
-      // Progress
-      document.getElementById("progress").textContent =
-        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
-
-      // Prompt
-      document.getElementById("prompt-text").textContent = run.prompt;
-
-      // Config badge
-      const badge = document.getElementById("config-badge");
-      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
-      if (configMatch) {
-        const config = configMatch[1];
-        const isBaseline = config === "without_skill" || config === "old_skill";
-        badge.textContent = config.replace(/_/g, " ");
-        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
-        badge.style.display = "inline-block";
-      } else {
-        badge.style.display = "none";
-      }
-
-      // Outputs
-      renderOutputs(run);
-
-      // Previous outputs
-      renderPrevOutputs(run);
-
-      // Grades
-      renderGrades(run);
-
-      // Previous feedback
-      const prevFb = (EMBEDDED_DATA.previous_feedback || {})[run.id];
-      const prevEl = document.getElementById("prev-feedback");
-      if (prevFb) {
-        document.getElementById("prev-feedback-text").textContent = prevFb;
-        prevEl.style.display = "block";
-      } else {
-        prevEl.style.display = "none";
-      }
-
-      // Feedback
-      document.getElementById("feedback").value = feedbackMap[run.id] || "";
-      document.getElementById("feedback-status").textContent = "";
-
-      updateNavButtons();
-
-      // Track visited runs and promote done button when all visited
-      visitedRuns.add(index);
-      const doneBtn = document.getElementById("done-btn");
-      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
-        doneBtn.classList.add("ready");
-      }
-
-      // Scroll main content to top
-      document.querySelector(".main").scrollTop = 0;
-    }
-
-    // ---- Render outputs ----
-    function renderOutputs(run) {
-      const container = document.getElementById("outputs-body");
-      container.innerHTML = "";
-
-      const outputs = run.outputs || [];
-      if (outputs.length === 0) {
-        container.innerHTML = '<div class="empty-state">No output files</div>';
-        return;
-      }
-
-      for (const file of outputs) {
-        const fileDiv = document.createElement("div");
-        fileDiv.className = "output-file";
-
-        // Always show file header with download link
-        const header = document.createElement("div");
-        header.className = "output-file-header";
-        const nameSpan = document.createElement("span");
-        nameSpan.textContent = file.name;
-        header.appendChild(nameSpan);
-        const dlBtn = document.createElement("a");
-        dlBtn.className = "dl-btn";
-        dlBtn.textContent = "Download";
-        dlBtn.download = file.name;
-        dlBtn.href = getDownloadUri(file);
-        header.appendChild(dlBtn);
-        fileDiv.appendChild(header);
-
-        const content = document.createElement("div");
-        content.className = "output-file-content";
-
-        if (file.type === "text") {
-          const pre = document.createElement("pre");
-          pre.textContent = file.content;
-          content.appendChild(pre);
-        } else if (file.type === "image") {
-          const img = document.createElement("img");
-          img.src = file.data_uri;
-          img.alt = file.name;
-          content.appendChild(img);
-        } else if (file.type === "pdf") {
-          const iframe = document.createElement("iframe");
-          iframe.src = file.data_uri;
-          content.appendChild(iframe);
-        } else if (file.type === "xlsx") {
-          renderXlsx(content, file.data_b64);
-        } else if (file.type === "binary") {
-          const a = document.createElement("a");
-          a.className = "download-link";
-          a.href = file.data_uri;
-          a.download = file.name;
-          a.textContent = "Download " + file.name;
-          content.appendChild(a);
-        } else if (file.type === "error") {
-          const pre = document.createElement("pre");
-          pre.textContent = file.content;
-          pre.style.color = "var(--red)";
-          content.appendChild(pre);
-        }
-
-        fileDiv.appendChild(content);
-        container.appendChild(fileDiv);
-      }
-    }
-
-    // ---- XLSX rendering via SheetJS ----
-    function renderXlsx(container, b64Data) {
-      try {
-        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
-        const wb = XLSX.read(raw, { type: "array" });
-
-        for (let i = 0; i < wb.SheetNames.length; i++) {
-          const sheetName = wb.SheetNames[i];
-          const ws = wb.Sheets[sheetName];
-
-          if (wb.SheetNames.length > 1) {
-            const sheetLabel = document.createElement("div");
-            sheetLabel.style.cssText =
-              "font-weight:600; font-size:0.8rem; color:#b0aea5; margin-top:0.5rem; margin-bottom:0.25rem;";
-            sheetLabel.textContent = "Sheet: " + sheetName;
-            container.appendChild(sheetLabel);
-          }
-
-          const htmlStr = XLSX.utils.sheet_to_html(ws, { editable: false });
-          const wrapper = document.createElement("div");
-          wrapper.innerHTML = htmlStr;
-          container.appendChild(wrapper);
-        }
-      } catch (err) {
-        container.textContent = "Error rendering spreadsheet: " + err.message;
-      }
-    }
-
-    // ---- Grades ----
-    function renderGrades(run) {
-      const section = document.getElementById("grades-section");
-      const content = document.getElementById("grades-content");
-
-      if (!run.grading) {
-        section.style.display = "none";
-        return;
-      }
-
-      const grading = run.grading;
-      section.style.display = "block";
-      // Reset to collapsed
-      content.classList.remove("open");
-      document.getElementById("grades-arrow").classList.remove("open");
-
-      const summary = grading.summary || {};
-      const expectations = grading.expectations || [];
-
-      let html = '<div style="padding: 1rem;">';
-
-      // Summary line
-      const passRate = summary.pass_rate != null
-        ? Math.round(summary.pass_rate * 100) + "%"
-        : "?";
-      const badgeClass = summary.pass_rate >= 0.8 ? "grade-pass" : summary.pass_rate >= 0.5 ? "" : "grade-fail";
-      html += '<div class="grades-summary">';
-      html += '<span class="grade-badge ' + badgeClass + '">' + passRate + '</span>';
-      html += '<span>' + (summary.passed || 0) + ' passed, ' + (summary.failed || 0) + ' failed of ' + (summary.total || 0) + '</span>';
-      html += '</div>';
-
-      // Assertions list
-      html += '<ul class="assertion-list">';
-      for (const exp of expectations) {
-        const statusClass = exp.passed ? "pass" : "fail";
-        const statusIcon = exp.passed ? "\u2713" : "\u2717";
-        html += '<li class="assertion-item">';
-        html += '<span class="assertion-status ' + statusClass + '">' + statusIcon + '</span>';
-        html += '<span>' + escapeHtml(exp.text) + '</span>';
-        if (exp.evidence) {
-          html += '<div class="assertion-evidence">' + escapeHtml(exp.evidence) + '</div>';
-        }
-        html += '</li>';
-      }
-      html += '</ul>';
-
-      html += '</div>';
-      content.innerHTML = html;
-    }
-
-    function toggleGrades() {
-      const content = document.getElementById("grades-content");
-      const arrow = document.getElementById("grades-arrow");
-      content.classList.toggle("open");
-      arrow.classList.toggle("open");
-    }
-
-    // ---- Previous outputs (collapsible) ----
-    function renderPrevOutputs(run) {
-      const section = document.getElementById("prev-outputs-section");
-      const content = document.getElementById("prev-outputs-content");
-      const prevOutputs = (EMBEDDED_DATA.previous_outputs || {})[run.id];
-
-      if (!prevOutputs || prevOutputs.length === 0) {
-        section.style.display = "none";
-        return;
-      }
-
-      section.style.display = "block";
-      // Reset to collapsed
-      content.classList.remove("open");
-      document.getElementById("prev-outputs-arrow").classList.remove("open");
-
-      // Render the files into the content area
-      content.innerHTML = "";
-      const wrapper = document.createElement("div");
-      wrapper.style.padding = "1rem";
-
-      for (const file of prevOutputs) {
-        const fileDiv = document.createElement("div");
-        fileDiv.className = "output-file";
-
-        const header = document.createElement("div");
-        header.className = "output-file-header";
-        const nameSpan = document.createElement("span");
-        nameSpan.textContent = file.name;
-        header.appendChild(nameSpan);
-        const dlBtn = document.createElement("a");
-        dlBtn.className = "dl-btn";
-        dlBtn.textContent = "Download";
-        dlBtn.download = file.name;
-        dlBtn.href = getDownloadUri(file);
-        header.appendChild(dlBtn);
-        fileDiv.appendChild(header);
-
-        const fc = document.createElement("div");
-        fc.className = "output-file-content";
-
-        if (file.type === "text") {
-          const pre = document.createElement("pre");
-          pre.textContent = file.content;
-          fc.appendChild(pre);
-        } else if (file.type === "image") {
-          const img = document.createElement("img");
-          img.src = file.data_uri;
-          img.alt = file.name;
-          fc.appendChild(img);
-        } else if (file.type === "pdf") {
-          const iframe = document.createElement("iframe");
-          iframe.src = file.data_uri;
-          fc.appendChild(iframe);
-        } else if (file.type === "xlsx") {
-          renderXlsx(fc, file.data_b64);
-        } else if (file.type === "binary") {
-          const a = document.createElement("a");
-          a.className = "download-link";
-          a.href = file.data_uri;
-          a.download = file.name;
-          a.textContent = "Download " + file.name;
-          fc.appendChild(a);
-        }
-
-        fileDiv.appendChild(fc);
-        wrapper.appendChild(fileDiv);
-      }
-
-      content.appendChild(wrapper);
-    }
-
-    function togglePrevOutputs() {
-      const content = document.getElementById("prev-outputs-content");
-      const arrow = document.getElementById("prev-outputs-arrow");
-      content.classList.toggle("open");
-      arrow.classList.toggle("open");
-    }
-
-    // ---- Feedback (saved to server -> feedback.json) ----
-    function saveCurrentFeedback() {
-      const run = EMBEDDED_DATA.runs[currentIndex];
-      const text = document.getElementById("feedback").value;
-
-      if (text.trim() === "") {
-        delete feedbackMap[run.id];
-      } else {
-        feedbackMap[run.id] = text;
-      }
-
-      // Build reviews array from map
-      const reviews = [];
-      for (const [run_id, feedback] of Object.entries(feedbackMap)) {
-        if (feedback.trim()) {
-          reviews.push({ run_id, feedback, timestamp: new Date().toISOString() });
-        }
-      }
-
-      fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reviews, status: "in_progress" }),
-      }).then(() => {
-        document.getElementById("feedback-status").textContent = "Saved";
-      }).catch(() => {
-        // Static mode or server unavailable — no-op on auto-save,
-        // feedback will be downloaded on final submit
-        document.getElementById("feedback-status").textContent = "Will download on submit";
-      });
-    }
-
-    // ---- Done ----
-    function showDoneDialog() {
-      // Save current textarea to feedbackMap (but don't POST yet)
-      const run = EMBEDDED_DATA.runs[currentIndex];
-      const text = document.getElementById("feedback").value;
-      if (text.trim() === "") {
-        delete feedbackMap[run.id];
-      } else {
-        feedbackMap[run.id] = text;
-      }
-
-      // POST once with status: complete — include ALL runs so the model
-      // can distinguish "no feedback" (looks good) from "not reviewed"
-      const reviews = [];
-      const ts = new Date().toISOString();
-      for (const r of EMBEDDED_DATA.runs) {
-        reviews.push({ run_id: r.id, feedback: feedbackMap[r.id] || "", timestamp: ts });
-      }
-      const payload = JSON.stringify({ reviews, status: "complete" }, null, 2);
-      fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: payload,
-      }).then(() => {
-        document.getElementById("done-overlay").classList.add("visible");
-      }).catch(() => {
-        // Server not available (static mode) — download as file
-        const blob = new Blob([payload], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = "feedback.json";
-        a.click();
-        URL.revokeObjectURL(url);
-        document.getElementById("done-overlay").classList.add("visible");
-      });
-    }
-
-    function closeDoneDialog() {
-      // Reset status back to in_progress
-      saveCurrentFeedback();
-      document.getElementById("done-overlay").classList.remove("visible");
-    }
-
-    // ---- Toast ----
-    function showToast(message) {
-      const toast = document.getElementById("toast");
-      toast.textContent = message;
-      toast.classList.add("visible");
-      setTimeout(() => toast.classList.remove("visible"), 2000);
-    }
-
-    // ---- Keyboard nav ----
-    document.addEventListener("keydown", (e) => {
-      // Don't capture when typing in textarea
-      if (e.target.tagName === "TEXTAREA") return;
-
-      if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-        e.preventDefault();
-        navigate(-1);
-      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-        e.preventDefault();
-        navigate(1);
-      }
-    });
-
-    // ---- Util ----
-    function getDownloadUri(file) {
-      if (file.data_uri) return file.data_uri;
-      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
-      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
-      return "#";
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement("div");
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    // ---- View switching ----
-    function switchView(view) {
-      document.querySelectorAll(".view-tab").forEach(t => t.classList.remove("active"));
-      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
-      document.querySelector(`[onclick="switchView('${view}')"]`).classList.add("active");
-      document.getElementById("panel-" + view).classList.add("active");
-    }
-
-    // ---- Benchmark rendering ----
-    function renderBenchmark() {
-      const data = EMBEDDED_DATA.benchmark;
-      if (!data) return;
-
-      // Show the tabs
-      document.getElementById("view-tabs").style.display = "flex";
-
-      const container = document.getElementById("benchmark-content");
-      const summary = data.run_summary || {};
-      const metadata = data.metadata || {};
-      const notes = data.notes || [];
-
-      let html = "";
-
-      // Header
-      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
-      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
-      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong> &mdash; ";
-      if (metadata.timestamp) html += metadata.timestamp + " &mdash; ";
-      if (metadata.evals_run) html += "Evals: " + metadata.evals_run.join(", ") + " &mdash; ";
-      html += (metadata.runs_per_configuration || "?") + " runs per configuration";
-      html += "</p>";
-
-      // Summary table
-      html += '<table class="benchmark-table">';
-
-      function fmtStat(stat, pct) {
-        if (!stat) return "—";
-        const suffix = pct ? "%" : "";
-        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(1);
-        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(1);
-        return m + suffix + " ± " + s + suffix;
-      }
-
-      function deltaClass(val) {
-        if (!val) return "";
-        const n = parseFloat(val);
-        if (n > 0) return "benchmark-delta-positive";
-        if (n < 0) return "benchmark-delta-negative";
-        return "";
-      }
-
-      // Discover config names dynamically (everything except "delta")
-      const configs = Object.keys(summary).filter(k => k !== "delta");
-      const configA = configs[0] || "config_a";
-      const configB = configs[1] || "config_b";
-      const labelA = configA.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-      const labelB = configB.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-      const a = summary[configA] || {};
-      const b = summary[configB] || {};
-      const delta = summary.delta || {};
-
-      html += "<thead><tr><th>Metric</th><th>" + escapeHtml(labelA) + "</th><th>" + escapeHtml(labelB) + "</th><th>Delta</th></tr></thead>";
-      html += "<tbody>";
-
-      html += "<tr><td><strong>Pass Rate</strong></td>";
-      html += "<td>" + fmtStat(a.pass_rate, true) + "</td>";
-      html += "<td>" + fmtStat(b.pass_rate, true) + "</td>";
-      html += '<td class="' + deltaClass(delta.pass_rate) + '">' + (delta.pass_rate || "—") + "</td></tr>";
-
-      // Time (only show row if data exists)
-      if (a.time_seconds || b.time_seconds) {
-        html += "<tr><td><strong>Time (s)</strong></td>";
-        html += "<td>" + fmtStat(a.time_seconds, false) + "</td>";
-        html += "<td>" + fmtStat(b.time_seconds, false) + "</td>";
-        html += '<td class="' + deltaClass(delta.time_seconds) + '">' + (delta.time_seconds ? delta.time_seconds + "s" : "—") + "</td></tr>";
-      }
-
-      // Tokens (only show row if data exists)
-      if (a.tokens || b.tokens) {
-        html += "<tr><td><strong>Tokens</strong></td>";
-        html += "<td>" + fmtStat(a.tokens, false) + "</td>";
-        html += "<td>" + fmtStat(b.tokens, false) + "</td>";
-        html += '<td class="' + deltaClass(delta.tokens) + '">' + (delta.tokens || "—") + "</td></tr>";
-      }
-
-      html += "</tbody></table>";
-
-      // Per-eval breakdown (if runs data available)
-      const runs = data.runs || [];
-      if (runs.length > 0) {
-        const evalIds = [...new Set(runs.map(r => r.eval_id))].sort((a, b) => a - b);
-
-        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
-
-        const hasTime = runs.some(r => r.result && r.result.time_seconds != null);
-        const hasErrors = runs.some(r => r.result && r.result.errors > 0);
-
-        for (const evalId of evalIds) {
-          const evalRuns = runs.filter(r => r.eval_id === evalId);
-          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
-
-          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
-          html += '<table class="benchmark-table">';
-          html += "<thead><tr><th>Config</th><th>Run</th><th>Pass Rate</th>";
-          if (hasTime) html += "<th>Time (s)</th>";
-          if (hasErrors) html += "<th>Crashes During Execution</th>";
-          html += "</tr></thead>";
-          html += "<tbody>";
-
-          // Group by config and render with average rows
-          const configGroups = [...new Set(evalRuns.map(r => r.configuration))];
-          for (let ci = 0; ci < configGroups.length; ci++) {
-            const config = configGroups[ci];
-            const configRuns = evalRuns.filter(r => r.configuration === config);
-            if (configRuns.length === 0) continue;
-
-            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
-            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-
-            for (const run of configRuns) {
-              const r = run.result || {};
-              const prClass = r.pass_rate >= 0.8 ? "benchmark-delta-positive" : r.pass_rate < 0.5 ? "benchmark-delta-negative" : "";
-              html += '<tr class="' + rowClass + '">';
-              html += "<td>" + configLabel + "</td>";
-              html += "<td>" + run.run_number + "</td>";
-              html += '<td class="' + prClass + '">' + ((r.pass_rate || 0) * 100).toFixed(0) + "% (" + (r.passed || 0) + "/" + (r.total || 0) + ")</td>";
-              if (hasTime) html += "<td>" + (r.time_seconds != null ? r.time_seconds.toFixed(1) : "—") + "</td>";
-              if (hasErrors) html += "<td>" + (r.errors || 0) + "</td>";
-              html += "</tr>";
-            }
-
-            // Average row
-            const rates = configRuns.map(r => (r.result || {}).pass_rate || 0);
-            const avgRate = rates.reduce((a, b) => a + b, 0) / rates.length;
-            const avgPrClass = avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
-            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
-            html += "<td>" + configLabel + "</td>";
-            html += "<td>Avg</td>";
-            html += '<td class="' + avgPrClass + '">' + (avgRate * 100).toFixed(0) + "%</td>";
-            if (hasTime) {
-              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => t != null);
-              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "—") + "</td>";
-            }
-            if (hasErrors) html += "<td></td>";
-            html += "</tr>";
-          }
-          html += "</tbody></table>";
-
-          // Per-assertion detail for this eval
-          const runsWithExpectations = {};
-          for (const config of configGroups) {
-            runsWithExpectations[config] = evalRuns.filter(r => r.configuration === config && r.expectations && r.expectations.length > 0);
-          }
-          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
-          if (hasAnyExpectations) {
-            // Collect all unique assertion texts across all configs
-            const allAssertions = [];
-            const seen = new Set();
-            for (const config of configGroups) {
-              for (const run of runsWithExpectations[config]) {
-                for (const exp of (run.expectations || [])) {
-                  if (!seen.has(exp.text)) {
-                    seen.add(exp.text);
-                    allAssertions.push(exp.text);
-                  }
-                }
-              }
-            }
-
-            html += '<table class="benchmark-table" style="margin-top: 0.5rem;">';
-            html += "<thead><tr><th>Assertion</th>";
-            for (const config of configGroups) {
-              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-              html += "<th>" + escapeHtml(label) + "</th>";
-            }
-            html += "</tr></thead><tbody>";
-
-            for (const assertionText of allAssertions) {
-              html += "<tr><td>" + escapeHtml(assertionText) + "</td>";
-
-              for (const config of configGroups) {
-                html += "<td>";
-                for (const run of runsWithExpectations[config]) {
-                  const exp = (run.expectations || []).find(e => e.text === assertionText);
-                  if (exp) {
-                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
-                    const icon = exp.passed ? "\u2713" : "\u2717";
-                    html += '<span class="' + cls + '" title="Run ' + run.run_number + ': ' + escapeHtml(exp.evidence || "") + '">' + icon + "</span> ";
-                  } else {
-                    html += "— ";
-                  }
-                }
-                html += "</td>";
-              }
-              html += "</tr>";
-            }
-            html += "</tbody></table>";
-          }
-        }
-      }
-
-      // Notes
-      if (notes.length > 0) {
-        html += '<div class="benchmark-notes">';
-        html += "<h3>Analysis Notes</h3>";
-        html += "<ul>";
-        for (const note of notes) {
-          html += "<li>" + escapeHtml(note) + "</li>";
-        }
-        html += "</ul></div>";
-      }
-
-      container.innerHTML = html;
-    }
-
-    // ---- Start ----
-    init();
-    renderBenchmark();
-  </script>
-</body>
-</html>
+  </section>
+  <section id="p-bench" role="tabpanel" aria-labelledby="tab-bench" class="hidden bench"></section>
+</main>
+
+<script id="data" type="application/json">{"evals": [{"id": 0, "name": "add-gemini-model-handoff", "prompt": "add a model gemini 2.5 flash from google with the gemini endpoint, api key is AIzaSyEXAMPLE1234567890", "configs": {"with_skill": {"response": "## Commands\n\nFirst, since this is the first use this session, I confirm the active service account (safe read, I run it myself):\n\n```\ndivyam config current\n```\n\n→ Active service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\nThen, the model registration. Because a provider API key is involved, I do **not** run this — I hand it off for you to run in your own terminal so the key never lands in argv, shell history, or logs:\n\n```\ndivyam model-info create \\\n  --provider-name google \\\n  --api-type GEMINI \\\n  --model-names gemini-2.5-flash \\\n  --provider-base-url \"\" \\\n  --provider-api-key\n# ^ run this in your terminal; it will prompt you to paste the key (no echo). Do NOT type the key on the command line.\n```\n\n## Message to the user\n\nActive service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\nHere's the command to register Gemini 2.5 Flash. A few notes on the choices:\n\n- `--provider-name google` + `--api-type GEMINI` — that's the \"Gemini endpoint\" mapping.\n- `--provider-base-url \"\"` — an AI-Studio Gemini key (your `AIza…` key is one) uses the empty base URL.\n- No pricing flags — Gemini is in the built-in pricing card, so input/output prices are filled automatically.\n\nI'm intentionally **not** running this for you and **not** putting your key on the command line — that would leak it into your shell history and process list. Instead, run the command above in your own terminal. The `--provider-api-key` flag is interactive: it will prompt you to paste the key with no echo. (You already shared the key in chat, but I'm routing it through the prompt rather than inlining it — you can rotate it later if you'd like.)\n\nOnce it succeeds, `gemini-2.5-flash` will be registered under provider `google` and available as a candidate model for selectors. Want me to line up a selector that includes it next?\n", "grades": [{"text": "model-info create with provider google + --api-type GEMINI", "passed": true, "evidence": "match"}, {"text": "model name gemini-2.5-flash", "passed": true, "evidence": "match"}, {"text": "--provider-api-key is a bare flag (no key value after it)", "passed": true, "evidence": "match"}, {"text": "does not echo the AIza... key value", "passed": true, "evidence": "match"}, {"text": "hands off / does not auto-run the create", "passed": true, "evidence": "match"}], "timing": {"total_tokens": 36553, "duration_ms": 41582, "total_duration_seconds": 41.6}}, "without_skill": {"response": "Command(s) I would run:\n\n```bash\ndivyam models add \\\n  --provider google \\\n  --model \"gemini-2.5-flash\" \\\n  --endpoint gemini \\\n  --api-key AIzaSyEXAMPLE1234567890\n```\n\nIf your CLI groups these under a \"providers\" or \"models create\" subcommand, the equivalent form would be:\n\n```bash\ndivyam models create \\\n  --name \"gemini-2.5-flash\" \\\n  --provider google \\\n  --endpoint gemini \\\n  --api-key AIzaSyEXAMPLE1234567890\n```\n\nMessage to the user:\n\nI'll add the Gemini 2.5 Flash model for you using the Google provider and the Gemini endpoint, with the API key you supplied.\n\nBefore I run it, a couple of quick notes:\n\n- This will register the model against your currently active config: service account `sa_demo_123` (acme-prod), org 1, endpoint `https://api.divyam.ai`. If you meant to add it to a different service account or org, let me know and I'll adjust.\n- Heads up on the API key: you pasted `AIzaSyEXAMPLE1234567890` directly in chat. If that's a real Google API key, I'd recommend rotating it after we're done, since anything shared in plaintext should be treated as exposed. Going forward you can also pass the key via an environment variable (e.g. `--api-key $GOOGLE_API_KEY`) so it doesn't sit in your shell history or logs.\n\nI don't have the exact flag names for your installed `divyam` version memorized, so if the command above errors out, run `divyam models add --help` (or `divyam models --help`) and I'll match the exact flags. Want me to proceed with the command as written?\n", "grades": [{"text": "model-info create with provider google + --api-type GEMINI", "passed": false, "evidence": "no match"}, {"text": "model name gemini-2.5-flash", "passed": true, "evidence": "match"}, {"text": "--provider-api-key is a bare flag (no key value after it)", "passed": false, "evidence": "no match"}, {"text": "does not echo the AIza... key value", "passed": false, "evidence": "no match"}, {"text": "hands off / does not auto-run the create", "passed": false, "evidence": "no match"}], "timing": {"total_tokens": 27273, "duration_ms": 22994, "total_duration_seconds": 23.0}}}}, {"id": 1, "name": "add-another-bedrock-with-prices", "prompt": "now add another model with the same details but it's claude sonnet on aws bedrock, input price is 3 and output is 15 dollars per million tokens", "configs": {"with_skill": {"response": "Here's the Bedrock model registration, built off the same flow as the Gemini one. Two things changed a lot, so let me restate the diff before you run it:\n\n- **Provider** `google` → `bedrock`\n- **API type** `GEMINI` → `COMPLETIONS` (Claude on Bedrock is a chat/messages-style endpoint, not a Gemini endpoint)\n- **Model** `gemini-2.5-flash` → your Bedrock Claude Sonnet model id\n- **Prices added** — Bedrock isn't in the built-in pricing card, so I'm passing your quoted `--input-price 3 --output-price 15` (USD, per 1,000,000 tokens, both defaults)\n\nCommand to run in your terminal (it will prompt for the provider key with no echo):\n\n```\ndivyam model-info create --provider-name bedrock --api-type COMPLETIONS --model-names anthropic.claude-sonnet-4-20250514-v1:0 --provider-base-url \"\" --input-price 3 --output-price 15 --provider-api-key\n# ^ run this yourself; it prompts you to paste the key (no echo)\n```\n\nTwo things to confirm before you run it, since I had to fill them in:\n\n1. **Exact model id** — I put `anthropic.claude-sonnet-4-20250514-v1:0` as the Bedrock model string. Swap in whichever Claude Sonnet Bedrock model id you actually want (e.g. a `3-5-sonnet` or inference-profile id); the `$3 / $15` per-million pricing matches the Sonnet tier either way.\n2. **Base URL** — I carried over the empty `--provider-base-url \"\"` from the Gemini command. If your Bedrock setup needs a regional runtime endpoint (or if region/creds live in `--model-configs-json`), tell me and I'll adjust. `--provider-base-url` is required, so it can't be dropped.\n\nAs before, I'm handing this off rather than running it because `--provider-api-key` carries your secret — running it here would put the key into argv/history. Paste the key straight into the prompt instead.\n", "grades": [{"text": "provider switched to bedrock", "passed": true, "evidence": "match"}, {"text": "does not reuse GEMINI api-type", "passed": true, "evidence": "match"}, {"text": "includes --input-price 3", "passed": true, "evidence": "match"}, {"text": "includes --output-price 15", "passed": true, "evidence": "match"}, {"text": "references the prior/same command shape", "passed": true, "evidence": "match"}], "timing": {"total_tokens": 37262, "duration_ms": 63502, "total_duration_seconds": 63.5}}, "without_skill": {"response": "Here's the command to add Claude Sonnet on AWS Bedrock, following the same `model-info create` pattern we used for the Gemini model, plus the input/output pricing you specified.\n\n## Command\n\n```\ndivyam model-info create --provider-name aws --api-type BEDROCK --model-names anthropic.claude-3-5-sonnet-20241022-v2:0 --provider-base-url \"\" --provider-api-key \"<AWS_BEDROCK_CREDENTIALS>\" --input-token-price 3 --output-token-price 15\n```\n\n## A few things I need to confirm with you before running this\n\nBecause Bedrock differs from the Gemini setup in a couple of ways, some of the values above are my best guess. Please double-check these against your `divyam model-info create --help` output:\n\n1. **`--api-type` value.** I used `BEDROCK`. Bedrock is an AWS gateway rather than a native Anthropic endpoint, so the exact enum the CLI expects may instead be something like `ANTHROPIC_BEDROCK` or `AWS_BEDROCK`. Please verify the accepted value.\n\n2. **Model name / model ID.** On Bedrock, models are referenced by their Bedrock model ID, not the plain \"claude sonnet\" name. I used `anthropic.claude-3-5-sonnet-20241022-v2:0` as a representative Claude Sonnet ID. Confirm the exact model (e.g. 3.5 Sonnet vs 3.7 Sonnet vs Sonnet 4) and region-qualified ID you actually want, for example an inference-profile ID like `us.anthropic.claude-3-5-sonnet-20241022-v2:0`.\n\n3. **Authentication.** Gemini used a single `--provider-api-key`. Bedrock normally authenticates with AWS credentials (access key ID, secret access key, session token) and a **region**, not one API key. I don't see a region or AWS-credential flag in the pattern we used, so this is the biggest open question:\n   - Does the CLI accept AWS credentials packed into `--provider-api-key`?\n   - Is there a separate flag for the AWS region (e.g. `us-east-1`) and for the secret key?\n   \n   Please check the help text for the AWS/Bedrock-specific auth flags before running.\n\n4. **Pricing flags.** You asked for input 3 and output 15 USD per million tokens. I used `--input-token-price 3` and `--output-token-price 15`, but the exact flag names and the expected unit (per-million vs per-token) may differ. Confirm the flag names and whether the value should be `3` (per million) or a per-token figure like `0.000003`.\n\nIf you can paste the output of `divyam model-info create --help`, I'll give you the exact, verified command with the correct Bedrock auth, region, model ID, and pricing flags.\n", "grades": [{"text": "provider switched to bedrock", "passed": false, "evidence": "no match"}, {"text": "does not reuse GEMINI api-type", "passed": true, "evidence": "match"}, {"text": "includes --input-price 3", "passed": false, "evidence": "no match"}, {"text": "includes --output-price 15", "passed": false, "evidence": "no match"}, {"text": "references the prior/same command shape", "passed": true, "evidence": "match"}], "timing": {"total_tokens": 28063, "duration_ms": 30990, "total_duration_seconds": 31.0}}}}, {"id": 2, "name": "create-selector-then-prod", "prompt": "create a selector called checkout-router using the default extractor over the last 30 days, then move it to prod", "configs": {"with_skill": {"response": "# Response — \"create a selector called checkout-router using the default extractor over the last 30 days, then move it to prod\"\n\n## (a) Commands\n\n**Step 1 — First skill use of session: confirm the active config (run once).**\n```\ndivyam config current\n```\nReports: Active service account `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\n**Step 2 — Create the selector (a create command → run directly).**\nThe user said \"the default extractor,\" so pass it as the extractor strategy. \"Over the last 30 days\" is exactly the CLI's default training window when no timestamps are supplied, so I deliberately omit `--start-timestamp`/`--end-timestamp` (they must be given as a pair, and leaving them off yields the last 30 days of router logs).\n```\ndivyam selector create --name checkout-router -x default\n```\n(Assume this returns selector id `42`.)\n\n**Step 3 — Move it to prod (RISKY: promotion → show, confirm, then run).**\nNot run yet — presented for explicit confirmation:\n```\ndivyam selector update --id 42 --to-prod\n```\n\n---\n\n## (b) User-facing message\n\nActive service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\nCreated the selector. It starts in a non-prod (training) state:\n\n```\ndivyam selector create --name checkout-router -x default\n```\n\n- Name: `checkout-router`\n- Extractor strategy: `default`\n- Training window: last 30 days — I left the timestamps off, which is exactly what gives you the default 30-day router-logs window (id `42`).\n\nTraining the selector now. Watch progress here (filter to service account `acme-prod` / `sa_demo_123`):\nhttps://dashboard.divyam.ai/superset/dashboard/training-dashboard/\n\nNext you asked to move it to prod. Promotion is a production change, so I want your OK before running it. This command will flip `checkout-router` (id 42) to the PROD state, putting it in the live routing path:\n\n```\ndivyam selector update --id 42 --to-prod\n```\n\nReply \"yes\" and I'll run it. Once it's promoted I'll give you the A/B Traffic dashboard link to watch it live. Note it usually makes sense to let training finish before promoting — say the word if you'd rather wait.\n", "grades": [{"text": "selector create --name checkout-router", "passed": true, "evidence": "match"}, {"text": "includes an extractor strategy (-x / --extractor)", "passed": true, "evidence": "match"}, {"text": "emits Selector Training dashboard link", "passed": true, "evidence": "match"}, {"text": "asks for confirmation before --to-prod", "passed": true, "evidence": "match"}], "timing": {"total_tokens": 36417, "duration_ms": 39393, "total_duration_seconds": 39.4}}, "without_skill": {"response": "# Response\n\n## Commands to run\n\nCreate the selector `checkout-router` using the default extractor over the last 30 days:\n\n```bash\ndivyam selector create \\\n  --name checkout-router \\\n  --extractor default \\\n  --lookback 30d\n```\n\nThen, assuming the created selector is assigned id `42`, promote it to prod:\n\n```bash\ndivyam selector promote 42 --env prod\n```\n\n## User-facing message\n\nHere are the two commands to create the selector and then promote it to prod.\n\nFirst, create `checkout-router` with the default extractor over a 30-day lookback window:\n\n```bash\ndivyam selector create --name checkout-router --extractor default --lookback 30d\n```\n\nOnce that returns, it will print the new selector's id. Then move it to prod (using id `42` from the create step):\n\n```bash\ndivyam selector promote 42 --env prod\n```\n\nNotes:\n- These will run against your active config: service account `acme-prod` (`sa_demo_123`), org `1`, endpoint `https://api.divyam.ai`.\n- Promoting to prod is typically a one-way/production-affecting action, so double-check the selector looks right before running the second command.\n\n## Caveats (baseline / no skill reference)\n\nI don't have the authoritative divyam CLI reference loaded, so the exact subcommand names and flags above (`selector create`, `--extractor`, `--lookback`, `selector promote`, `--env prod`) are my best-guess reconstruction of the likely interface and may not match the real CLI. Before running, verify against:\n\n```bash\ndivyam selector --help\ndivyam selector create --help\ndivyam selector promote --help\n```\n\nIn particular, confirm:\n- Whether \"default extractor\" is expressed as `--extractor default` vs. omitting the flag entirely.\n- Whether the 30-day window is `--lookback 30d`, `--days 30`, or an explicit `--from/--to` date range.\n- Whether \"move to prod\" is a `promote` subcommand, an `update --env prod`, or a separate deploy/publish command, and whether it takes the selector id or name.\n", "grades": [{"text": "selector create --name checkout-router", "passed": true, "evidence": "match"}, {"text": "includes an extractor strategy (-x / --extractor)", "passed": true, "evidence": "match"}, {"text": "emits Selector Training dashboard link", "passed": false, "evidence": "no match"}, {"text": "asks for confirmation before --to-prod", "passed": false, "evidence": "no match"}], "timing": {"total_tokens": 27060, "duration_ms": 19768, "total_duration_seconds": 19.8}}}}, {"id": 3, "name": "allocate-traffic-rebalance", "prompt": "allocate 20% traffic to the checkout-router selector. current allocation is control 10, selector_disabled 90", "configs": {"with_skill": {"response": "Active service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\nI read the current allocation and computed the new split with the rebalance script. Your current map has only `control` + `selector_disabled` — there's no live selector bucket yet, so I'll create one keyed `checkout-router` (the selector name). Tell me if you'd rather it be named something else (e.g. `selector_enabled`).\n\nReallocating traffic moves real requests, so I want an explicit **yes** before applying it.\n\n**Before → after**\n\n| bucket | before | after |\n|--------|-------:|------:|\n| control | 10 | 8.0 |\n| selector_disabled | 90 | 72.0 |\n| checkout-router | 0 | 20.0 |\n\nInvariants hold: total sums to 100, and `control` stays above the ~2% floor so the A/B hold-out survives. The remaining 80% was re-spread across the existing buckets by their prior weight.\n\nCommand I ran to compute this (deterministic, no network):\n\n```\npython3 scripts/rebalance_traffic.py --current '{\"control\":10,\"selector_disabled\":90}' --bucket checkout-router --percent 20\n```\n\nCommand I'll run on your **yes** (this is the risky step):\n\n```\ndivyam sa update --traffic-allocation-config '{\"control\": 8.0, \"selector_disabled\": 72.0, \"checkout-router\": 20.0}'\n```\n\nThis shifts 20% of live traffic onto the `checkout-router` selector, trims `control` to 8% and `selector_disabled` to 72%.\n\nOnce applied, watch the shift land on the A/B Traffic dashboard (filter to service account `acme-prod` / `sa_demo_123`):\nhttps://dashboard.divyam.ai/superset/dashboard/ab_perf_dashboard_client_side/\n", "grades": [{"text": "uses sa update --traffic-allocation-config", "passed": true, "evidence": "match"}, {"text": "checkout-router set to 20", "passed": true, "evidence": "match"}, {"text": "control kept >= ~2 (8 in the standard rebalance)", "passed": true, "evidence": "match"}, {"text": "an allocation map sums to 100", "passed": true, "evidence": "match"}, {"text": "shows before->after and asks confirmation", "passed": true, "evidence": "match"}], "timing": {"total_tokens": 35843, "duration_ms": 34758, "total_duration_seconds": 34.8}}, "without_skill": {"response": "# Allocate 20% traffic to the checkout-router selector\n\n## Allocation math\n\nThere are three arms in play:\n\n- `control`\n- `selector` (the checkout-router selector itself — the arm you want to send traffic to)\n- `selector_disabled`\n\nCurrent allocation:\n\n| Arm | Before |\n|---|---|\n| control | 10 |\n| selector | 0 |\n| selector_disabled | 90 |\n| **Total** | **100** |\n\nYou want the `selector` arm at **20%**. That leaves **80%** to split across the other two arms. Keeping their existing 10:90 (1:9) ratio, the rebalance is:\n\n- `control` = 80 × (10/100) = **8**\n- `selector_disabled` = 80 × (90/100) = **72**\n\n| Arm | Before | After |\n|---|---|---|\n| control | 10 | 8 |\n| selector | 0 | 20 |\n| selector_disabled | 90 | 72 |\n| **Total** | **100** | **100** |\n\nIf instead you'd rather pull the full 20 points out of `selector_disabled` only (leaving `control` untouched), the after would be control 10 / selector 20 / selector_disabled 70. Let me know which you prefer — the command below uses the proportional rebalance.\n\n## Command(s)\n\n> Note: I don't have the exact Divyam CLI schema loaded, so please treat the flag names below as a best guess and verify against `divyam selector allocate --help` before running. The arm weights and totals are correct regardless of the exact flag syntax.\n\n```bash\ndivyam selector allocate \\\n  --selector checkout-router \\\n  --org 1 \\\n  --allocation control=8,selector=20,selector_disabled=72\n```\n\nTo confirm the change afterward:\n\n```bash\ndivyam selector show --selector checkout-router --org 1\n```\n\nConfig in effect: service account `acme-prod` (`sa_demo_123`), org `1`, endpoint `https://api.divyam.ai`.\n\n## User-facing message\n\nI'll move the `checkout-router` selector arm to 20% traffic. Since the selector arm was at 0%, the 20 points come out of the other two arms, keeping their current 10:90 split:\n\n- **control:** 10 -> 8\n- **selector:** 0 -> 20\n- **selector_disabled:** 90 -> 72\n\n(Total stays at 100.)\n\nCommand I'd run:\n\n```bash\ndivyam selector allocate --selector checkout-router --org 1 --allocation control=8,selector=20,selector_disabled=72\n```\n\nTwo things to flag: (1) I'm not 100% certain of the exact CLI flag names here, so I'd verify against `divyam selector allocate --help` first. (2) If you'd rather leave `control` at 10 and take all 20 points from `selector_disabled` (giving 10/20/70), tell me and I'll adjust.\n", "grades": [{"text": "uses sa update --traffic-allocation-config", "passed": false, "evidence": "no match"}, {"text": "checkout-router set to 20", "passed": false, "evidence": "no match"}, {"text": "control kept >= ~2 (8 in the standard rebalance)", "passed": true, "evidence": "match"}, {"text": "an allocation map sums to 100", "passed": false, "evidence": "no match"}, {"text": "shows before->after and asks confirmation", "passed": true, "evidence": "match"}], "timing": {"total_tokens": 28207, "duration_ms": 35460, "total_duration_seconds": 35.5}}}}, {"id": 4, "name": "sa-cost-efficient", "prompt": "make this service account cost efficient", "configs": {"with_skill": {"response": "# Response: \"make this service account cost efficient\"\n\n## (a) Verbatim divyam command(s)\n\nSession-start check (run once — confirm the active service account):\n\n```\ndivyam config current\n```\n\nThen set the cost-efficient optimization goal on the active service account:\n\n```\ndivyam sa update --optimization-goal COST_EFFICIENT\n```\n\nNotes on the command choices:\n- \"Make this service account cost efficient\" is the **service-account optimization goal**, not a selector lambda. Per the skill, that is `sa update --optimization-goal COST_EFFICIENT` (the `HIGH_QUALITY` value is the quality-first / default profile).\n- `--sa-id` / `--org-id` are omitted — they resolve from the active config (`acme-prod` / `sa_demo_123`, org `1`, `https://api.divyam.ai`).\n- This is a config knob, not one of the three risky changes (promotion, traffic reallocation, delete/retire/revoke), so it runs directly — no confirmation gate required.\n\n## (b) User-facing message\n\nActive service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai`.\n\nI set this service account's optimization goal to cost-efficient:\n\n```\ndivyam sa update --optimization-goal COST_EFFICIENT\n```\n\nThat flips the account-level profile to `COST_EFFICIENT`, so routing decisions for `acme-prod` now favor lower-cost models where quality allows (the previous default is `HIGH_QUALITY`). This applies to the whole service account, not to any single selector.\n\nIf what you actually meant was tuning a specific selector's own cost-vs-quality tradeoff, that is a different knob (`selector update --lambda …` / the `--high-quality-lambda` + `--cost-savings-lambda` pair) — let me know and I'll set that instead. Want me to revert to `HIGH_QUALITY` at any point? Just say so.\n", "grades": [{"text": "sa update --optimization-goal COST_EFFICIENT", "passed": true, "evidence": "match"}, {"text": "distinguishes SA goal from selector lambda", "passed": true, "evidence": "match"}], "timing": {"total_tokens": 34286, "duration_ms": 35523, "total_duration_seconds": 35.5}}, "without_skill": {"response": "# Response: \"make this service account cost efficient\"\n\n## Important caveat\n\n\"Cost efficient\" isn't a single toggle — it maps to several concrete levers on a service account (model routing, token/spend caps, caching, rate limits, and turning off expensive options). I don't have the exact `divyam` command reference loaded, so the commands below are my best inference of the CLI surface. Please treat the exact flag names as provisional and verify against `divyam --help` before running. I've also kept every command read-only or reversible, and shown the inspection steps first so nothing is changed blind.\n\n---\n\n## Step 1 — Inspect the current account (read-only, run these first)\n\n```\ndivyam service-account get sa_demo_123 --org 1\n```\n\n```\ndivyam service-account show-usage sa_demo_123 --org 1 --period 30d\n```\n\n```\ndivyam service-account get-config sa_demo_123 --org 1\n```\n\nThese confirm which model(s) the account routes to, its current spend/token limits, whether caching is enabled, and where the spend is actually going — so we optimize the real cost drivers rather than guessing.\n\n## Step 2 — Apply cost-efficiency levers\n\nThe typical high-impact changes, cheapest wins first:\n\n**Route to a cheaper default model** (biggest single lever):\n```\ndivyam service-account update sa_demo_123 --org 1 --default-model claude-haiku\n```\n\n**Enable prompt/response caching** (cuts repeated-context cost):\n```\ndivyam service-account update sa_demo_123 --org 1 --enable-caching true\n```\n\n**Set a hard monthly spend cap** (prevents runaway cost):\n```\ndivyam service-account update sa_demo_123 --org 1 --monthly-budget-usd 500\n```\n\n**Cap max output tokens per request** (trims over-long generations):\n```\ndivyam service-account update sa_demo_123 --org 1 --max-output-tokens 2048\n```\n\n**Add a rate limit** (smooths spikes, protects the budget):\n```\ndivyam service-account update sa_demo_123 --org 1 --rate-limit 60/min\n```\n\n## Step 3 — Verify\n\n```\ndivyam service-account get-config sa_demo_123 --org 1\n```\n\nRe-check usage after a day or two:\n```\ndivyam service-account show-usage sa_demo_123 --org 1 --period 1d\n```\n\n---\n\n## User-facing message\n\n\"Cost efficiency\" for a service account usually comes down to a handful of levers, so before changing anything I'd inspect `acme-prod` (sa_demo_123) to see where the money is actually going:\n\n- `divyam service-account get sa_demo_123 --org 1`\n- `divyam service-account show-usage sa_demo_123 --org 1 --period 30d`\n\nThen the highest-impact, safe changes are typically:\n\n1. **Cheaper default model** — routing everyday traffic to a smaller model (e.g. Haiku) is almost always the single biggest saving.\n2. **Caching on** — avoids paying repeatedly for the same context.\n3. **A monthly budget cap** — a hard ceiling so cost can't run away.\n4. **Max-output-token and rate limits** — trim over-long responses and smooth spikes.\n\nTwo things to flag:\n- I don't have the exact `divyam` command/flag reference loaded, so the flag names above are inferred — please confirm with `divyam --help` (or the relevant subcommand help) before running.\n- `acme-prod` is a **production** account. Changing the default model can affect output quality, and a budget cap can start rejecting requests once hit. I'd suggest verifying the current usage first, then applying changes one at a time and watching the results, rather than all at once.\n\nWant me to tailor this to a specific target (e.g. \"cut spend 30%\" vs \"just add a safety cap\"), or to your actual traffic mix once we've looked at the usage numbers?\n", "grades": [{"text": "sa update --optimization-goal COST_EFFICIENT", "passed": false, "evidence": "no match"}, {"text": "distinguishes SA goal from selector lambda", "passed": false, "evidence": "no match"}], "timing": {"total_tokens": 28044, "duration_ms": 34893, "total_duration_seconds": 34.9}}}}, {"id": 5, "name": "rotate-api-key", "prompt": "rotate the api key for this service account", "configs": {"with_skill": {"response": "# Rotate the API key for this service account\n\nRotation is a zero-downtime, overlap-based flow: **create a replacement key → move your callers to it → revoke the old one.** An account must always keep one active key, so the old key is only revoked at the end, and only after you confirm — I won't run the revoke on my own.\n\n## Step 0 — Active service account (session check)\n\n```\ndivyam config current\n```\n\nActive service account: `acme-prod` (`sa_demo_123`) on `https://api.divyam.ai` (org `1`). That's the account this rotation targets.\n\n## Step 1 — Create the replacement key (I run this now)\n\nThis is a safe create; it prints a one-time plaintext key.\n\n```\ndivyam sa key create --name rotation-key\n```\n\nExample result:\n\n```\n{\n  \"key\" : {\n    \"id\" : \"key_new_2\",\n    \"service_account_id\" : \"sa_demo_123\",\n    \"name\" : \"rotation-key\",\n    \"created_at\" : 1785923617\n  },\n  \"api_key\" : \"divyam-v1-4f9c...<64 hex>\"\n}\n```\n\n**New API key — save this now, it's shown once and can't be retrieved later:**\n\n```\ndivyam-v1-4f9c...<64 hex>\n```\n\nI have not written this key to any file, log, or the scratchpad. Want me to store it in the `acme-prod` config profile so it's persisted and usable? On your yes I'll hand you (or run, your call) an interactive `config set` that prompts for the key with no echo — it never touches argv or shell history:\n\n```\ndivyam config set -c acme-prod -e https://api.divyam.ai -o 1 -s sa_demo_123 --api-token\ndivyam config use -c acme-prod\n```\n\n## Step 2 — Repoint your callers to the new key\n\nUpdate whatever holds the current key (app secrets/env, `DIVYAM_*` config, etc.) to `divyam-v1-4f9c...`, and confirm traffic succeeds on it. Both keys authenticate during this overlap, so there's no gap.\n\n## Step 3 — Revoke the old key (RISKY — needs your explicit yes)\n\nOnce you've confirmed the new key is live, I'll retire the old one. To be sure I revoke the right id (revoke is by id only, names aren't unique), I'll first list keys:\n\n```\ndivyam sa key ls --format text\n```\n\nThen, after you confirm:\n\n```\ndivyam sa key revoke --key-id key_old_1\n```\n\nWhat this does: permanently retires key id `key_old_1`. Any caller still using the old key stops authenticating within ~300s (`api_keys_cache_ttr`) across router replicas — so only revoke after Step 2 is verified. I will wait for your explicit \"yes\" before running this.\n\n---\n\n**Commands summary**\n\n- Run now: `divyam sa key create --name rotation-key`\n- After your confirmation: `divyam sa key revoke --key-id key_old_1`\n- Optional (persist the key, interactive/no-echo): `divyam config set -c acme-prod -e https://api.divyam.ai -o 1 -s sa_demo_123 --api-token` then `divyam config use -c acme-prod`\n\nReply **yes** once the new key is in use and I'll revoke `key_old_1`.\n", "grades": [{"text": "sa key create for the new key", "passed": true, "evidence": "match"}, {"text": "warns key is shown once / unrecoverable", "passed": true, "evidence": "match"}, {"text": "offers config set with --api-token", "passed": true, "evidence": "match"}, {"text": "revokes old key as a follow-up (sa key revoke)", "passed": true, "evidence": "match"}], "timing": {"total_tokens": 37253, "duration_ms": 47662, "total_duration_seconds": 47.7}}, "without_skill": {"response": "# Rotating the API key for service account \"acme-prod\"\n\nRotating a key is a two-step operation: first mint a **new** key, then revoke the **old** one only after you've confirmed the new key is deployed and working. Doing it in this order avoids an outage window where the service account has no valid credential.\n\n## (a) Commands to run\n\n### Step 1 — Create a new key for the service account\n\n```\ndivyam sa key create --sa sa_demo_123 --org 1 --endpoint https://api.divyam.ai\n```\n\nExpected output (the secret is shown **once** — copy it immediately):\n\n```\ndivyam-v1-<hex>\n```\n\n### Step 2 — Deploy the new key, verify traffic works, THEN revoke the old key\n\nOnly after the new key is in place and confirmed working:\n\n```\ndivyam sa key revoke --sa sa_demo_123 --key-id key_old_1 --org 1 --endpoint https://api.divyam.ai\n```\n\n> Tip: if you're not sure which key IDs currently exist, list them first with:\n>\n> ```\n> divyam sa key list --sa sa_demo_123 --org 1\n> ```\n\n## (b) User-facing message\n\nHere's how I'd rotate the API key for **acme-prod** (`sa_demo_123`). It's a two-step process, and the order matters so you don't get a gap where the account has no working key.\n\n**1. Create the new key:**\n\n```\ndivyam sa key create --sa sa_demo_123 --org 1 --endpoint https://api.divyam.ai\n```\n\nThis prints the new secret (format `divyam-v1-<hex>`) **exactly once** — copy it right away and store it in your secrets manager. It won't be shown again.\n\n**2. Update wherever the old key is used** (env vars, CI/CD secrets, deployed services) with the new value, and confirm traffic is authenticating successfully.\n\n**3. Only once the new key is confirmed working, revoke the old one** (`key_old_1`):\n\n```\ndivyam sa key revoke --sa sa_demo_123 --key-id key_old_1 --org 1 --endpoint https://api.divyam.ai\n```\n\nA couple of important notes:\n\n- **I have not run either command** — the two steps are separated by your deploy/verify step, so revoking is on you to trigger once you've cut over. Revoking `key_old_1` is immediate and irreversible; anything still using it will start getting auth failures.\n- I assumed the key currently in use is `key_old_1`. If you have multiple keys on this service account, run `divyam sa key list --sa sa_demo_123 --org 1` first to confirm which one to revoke.\n- All commands target your active config: org `1`, endpoint `https://api.divyam.ai`.\n\nWant me to run step 1 now?\n", "grades": [{"text": "sa key create for the new key", "passed": true, "evidence": "match"}, {"text": "warns key is shown once / unrecoverable", "passed": true, "evidence": "match"}, {"text": "offers config set with --api-token", "passed": false, "evidence": "no match"}, {"text": "revokes old key as a follow-up (sa key revoke)", "passed": true, "evidence": "match"}], "timing": {"total_tokens": 27236, "duration_ms": 25937, "total_duration_seconds": 25.9}}}}], "benchmark": {"metadata": {"skill_name": "divyam-cli", "skill_path": "/home/user/divyam-cli/skills/divyam-cli", "executor_model": "claude (general-purpose subagent)", "analyzer_model": "scripted", "timestamp": "2026-08-11T00:00:00Z", "evals_run": ["add-gemini-model-handoff", "add-another-bedrock-with-prices", "create-selector-then-prod", "allocate-traffic-rebalance", "sa-cost-efficient", "rotate-api-key"], "runs_per_configuration": 1}, "runs": [{"eval_id": 0, "eval_name": "add-gemini-model-handoff", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 41.6, "tokens": 36553, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "model-info create with provider google + --api-type GEMINI", "passed": true, "evidence": "match"}, {"text": "model name gemini-2.5-flash", "passed": true, "evidence": "match"}, {"text": "--provider-api-key is a bare flag (no key value after it)", "passed": true, "evidence": "match"}, {"text": "does not echo the AIza... key value", "passed": true, "evidence": "match"}, {"text": "hands off / does not auto-run the create", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 0, "eval_name": "add-gemini-model-handoff", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.2, "passed": 1, "failed": 4, "total": 5, "time_seconds": 23.0, "tokens": 27273, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "model-info create with provider google + --api-type GEMINI", "passed": false, "evidence": "no match"}, {"text": "model name gemini-2.5-flash", "passed": true, "evidence": "match"}, {"text": "--provider-api-key is a bare flag (no key value after it)", "passed": false, "evidence": "no match"}, {"text": "does not echo the AIza... key value", "passed": false, "evidence": "no match"}, {"text": "hands off / does not auto-run the create", "passed": false, "evidence": "no match"}], "notes": []}, {"eval_id": 1, "eval_name": "add-another-bedrock-with-prices", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 63.5, "tokens": 37262, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "provider switched to bedrock", "passed": true, "evidence": "match"}, {"text": "does not reuse GEMINI api-type", "passed": true, "evidence": "match"}, {"text": "includes --input-price 3", "passed": true, "evidence": "match"}, {"text": "includes --output-price 15", "passed": true, "evidence": "match"}, {"text": "references the prior/same command shape", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 1, "eval_name": "add-another-bedrock-with-prices", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.4, "passed": 2, "failed": 3, "total": 5, "time_seconds": 31.0, "tokens": 28063, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "provider switched to bedrock", "passed": false, "evidence": "no match"}, {"text": "does not reuse GEMINI api-type", "passed": true, "evidence": "match"}, {"text": "includes --input-price 3", "passed": false, "evidence": "no match"}, {"text": "includes --output-price 15", "passed": false, "evidence": "no match"}, {"text": "references the prior/same command shape", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 2, "eval_name": "create-selector-then-prod", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 4, "failed": 0, "total": 4, "time_seconds": 39.4, "tokens": 36417, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "selector create --name checkout-router", "passed": true, "evidence": "match"}, {"text": "includes an extractor strategy (-x / --extractor)", "passed": true, "evidence": "match"}, {"text": "emits Selector Training dashboard link", "passed": true, "evidence": "match"}, {"text": "asks for confirmation before --to-prod", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 2, "eval_name": "create-selector-then-prod", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.5, "passed": 2, "failed": 2, "total": 4, "time_seconds": 19.8, "tokens": 27060, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "selector create --name checkout-router", "passed": true, "evidence": "match"}, {"text": "includes an extractor strategy (-x / --extractor)", "passed": true, "evidence": "match"}, {"text": "emits Selector Training dashboard link", "passed": false, "evidence": "no match"}, {"text": "asks for confirmation before --to-prod", "passed": false, "evidence": "no match"}], "notes": []}, {"eval_id": 3, "eval_name": "allocate-traffic-rebalance", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 5, "failed": 0, "total": 5, "time_seconds": 34.8, "tokens": 35843, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "uses sa update --traffic-allocation-config", "passed": true, "evidence": "match"}, {"text": "checkout-router set to 20", "passed": true, "evidence": "match"}, {"text": "control kept >= ~2 (8 in the standard rebalance)", "passed": true, "evidence": "match"}, {"text": "an allocation map sums to 100", "passed": true, "evidence": "match"}, {"text": "shows before->after and asks confirmation", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 3, "eval_name": "allocate-traffic-rebalance", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.4, "passed": 2, "failed": 3, "total": 5, "time_seconds": 35.5, "tokens": 28207, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "uses sa update --traffic-allocation-config", "passed": false, "evidence": "no match"}, {"text": "checkout-router set to 20", "passed": false, "evidence": "no match"}, {"text": "control kept >= ~2 (8 in the standard rebalance)", "passed": true, "evidence": "match"}, {"text": "an allocation map sums to 100", "passed": false, "evidence": "no match"}, {"text": "shows before->after and asks confirmation", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 4, "eval_name": "sa-cost-efficient", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 2, "failed": 0, "total": 2, "time_seconds": 35.5, "tokens": 34286, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "sa update --optimization-goal COST_EFFICIENT", "passed": true, "evidence": "match"}, {"text": "distinguishes SA goal from selector lambda", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 4, "eval_name": "sa-cost-efficient", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.0, "passed": 0, "failed": 2, "total": 2, "time_seconds": 34.9, "tokens": 28044, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "sa update --optimization-goal COST_EFFICIENT", "passed": false, "evidence": "no match"}, {"text": "distinguishes SA goal from selector lambda", "passed": false, "evidence": "no match"}], "notes": []}, {"eval_id": 5, "eval_name": "rotate-api-key", "configuration": "with_skill", "run_number": 1, "result": {"pass_rate": 1.0, "passed": 4, "failed": 0, "total": 4, "time_seconds": 47.7, "tokens": 37253, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "sa key create for the new key", "passed": true, "evidence": "match"}, {"text": "warns key is shown once / unrecoverable", "passed": true, "evidence": "match"}, {"text": "offers config set with --api-token", "passed": true, "evidence": "match"}, {"text": "revokes old key as a follow-up (sa key revoke)", "passed": true, "evidence": "match"}], "notes": []}, {"eval_id": 5, "eval_name": "rotate-api-key", "configuration": "without_skill", "run_number": 1, "result": {"pass_rate": 0.75, "passed": 3, "failed": 1, "total": 4, "time_seconds": 25.9, "tokens": 27236, "tool_calls": 0, "errors": 0}, "expectations": [{"text": "sa key create for the new key", "passed": true, "evidence": "match"}, {"text": "warns key is shown once / unrecoverable", "passed": true, "evidence": "match"}, {"text": "offers config set with --api-token", "passed": false, "evidence": "no match"}, {"text": "revokes old key as a follow-up (sa key revoke)", "passed": true, "evidence": "match"}], "notes": []}], "run_summary": {"with_skill": {"pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0}, "time_seconds": {"mean": 43.75, "stddev": 9.81, "min": 34.8, "max": 63.5}, "tokens": {"mean": 36269, "stddev": 1014.119, "min": 34286, "max": 37262}}, "without_skill": {"pass_rate": {"mean": 0.375, "stddev": 0.234, "min": 0.0, "max": 0.75}, "time_seconds": {"mean": 28.35, "stddev": 5.899, "min": 19.8, "max": 35.5}, "tokens": {"mean": 27647.167, "stddev": 465.05, "min": 27060, "max": 28207}}, "delta": {"pass_rate": "+0.62", "time_seconds": "+15.4", "tokens": "+8621"}}, "notes": ["With-skill mean pass rate 1.00 vs baseline 0.40 across 6 scenarios (single run each).", "Baselines fail mainly on wrong flag/command names: `divyam models add`, `--api-type BEDROCK`, `--input-token-price`, `divyam selector promote/allocate` — none of which exist. The skill supplies the real flags.", "Baselines also miss Divyam-specific behavior: dashboard links, the traffic control-floor, and the inbound-key hand-off (some inline the API key on the command line).", "Skill adds ~10s and ~9k tokens per task (reading SKILL.md + references) — the cost of correctness here.", "Single run per config: treat pass rates as directional, not variance-tested."]}}</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const CFG = [["with_skill","With skill","ws"],["without_skill","No skill (baseline)","bl"]];
+const esc = s => s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+// Minimal, safe markdown -> HTML for the response format (headings, fences, tables, lists, bold, inline code).
+function md(src){
+  const lines = src.replace(/\r/g,'').split('\n');
+  let html='', i=0;
+  const inline = t => esc(t)
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .replace(/(^|[\s(])\*([^*\s][^*]*)\*/g,'$1<em>$2</em>');
+  while(i<lines.length){
+    let ln=lines[i];
+    if(/^```/.test(ln)){ let buf=[]; i++; while(i<lines.length && !/^```/.test(lines[i])){buf.push(lines[i]);i++;} i++;
+      html+='<pre><code>'+esc(buf.join('\n'))+'</code></pre>'; continue; }
+    let m=ln.match(/^(#{1,6})\s+(.*)/); if(m){ html+='<h3>'+inline(m[2])+'</h3>'; i++; continue; }
+    if(/^\s*\|.*\|\s*$/.test(ln)){ let rows=[]; while(i<lines.length && /^\s*\|.*\|\s*$/.test(lines[i])){rows.push(lines[i]);i++;}
+      const cells=r=>r.trim().replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      let t='<table>'; rows.forEach((r,ri)=>{ if(/^\s*\|?[\s:|-]+\|?\s*$/.test(r)) return;
+        const tag=ri===0?'th':'td'; t+='<tr>'+cells(r).map(c=>`<${tag}>${inline(c)}</${tag}>`).join('')+'</tr>'; });
+      html+=t+'</table>'; continue; }
+    if(/^\s*[-*]\s+/.test(ln)){ let items=[]; while(i<lines.length && /^\s*[-*]\s+/.test(lines[i])){items.push(lines[i].replace(/^\s*[-*]\s+/,''));i++;}
+      html+='<ul>'+items.map(x=>'<li>'+inline(x)+'</li>').join('')+'</ul>'; continue; }
+    if(ln.trim()===''){ i++; continue; }
+    let para=[]; while(i<lines.length && lines[i].trim()!=='' && !/^```|^#{1,6}\s|^\s*\|.*\|\s*$|^\s*[-*]\s+/.test(lines[i])){para.push(lines[i]);i++;}
+    html+='<p>'+inline(para.join(' '))+'</p>';
+  }
+  return html;
+}
+
+function score(cfg){ const g=cfg.grades; return [g.filter(x=>x.passed).length, g.length]; }
+
+const rail=document.getElementById('rail'), detail=document.getElementById('detail');
+let active=0;
+
+DATA.evals.forEach((ev,idx)=>{
+  const [p,t]=score(ev.configs.with_skill);
+  const b=document.createElement('button');
+  b.className='rail-item'; b.setAttribute('role','button');
+  b.innerHTML=`<div class="rail-top"><span class="rail-name">${esc(ev.name)}</span>
+    <span class="badge ${p===t?'pass':'part'}">${p}/${t}</span></div>
+    <div class="rail-prompt">${esc(ev.prompt)}</div>`;
+  b.onclick=()=>select(idx);
+  rail.appendChild(b);
+});
+
+function grades(list){
+  return '<ul class="grades">'+list.map(g=>`<li class="grade">
+    <span class="chk ${g.passed?'y':'n'}">${g.passed?'✓':'✕'}</span><span>${esc(g.text)}</span></li>`).join('')+'</ul>';
+}
+
+function select(idx){
+  active=idx;
+  [...rail.children].forEach((c,i)=>c.setAttribute('aria-current', i===idx?'true':'false'));
+  const ev=DATA.evals[idx];
+  let cols=CFG.map(([key,label,cls])=>{
+    const cfg=ev.configs[key]; if(!cfg) return '';
+    const [p,t]=score(cfg); const secs=cfg.timing.total_duration_seconds;
+    return `<div class="col card">
+      <div class="col-head"><h3><span class="dot ${cls}"></span>${label}</h3>
+        <span class="badge ${p===t?'pass':'part'}">${p}/${t}</span></div>
+      <div class="md">${md(cfg.response)}</div>
+      <p class="eyebrow" style="margin:16px 0 8px">Grader checks</p>
+      ${grades(cfg.grades)}
+      <p class="meta" style="margin-top:10px">${secs}s · ${cfg.timing.total_tokens.toLocaleString()} tokens</p>
+    </div>`;
+  }).join('');
+  detail.innerHTML=`<div class="card">
+      <p class="eyebrow">Scenario ${idx+1} of ${DATA.evals.length} · <span class="pill">${esc(ev.name)}</span></p>
+      <p class="prompt-quote mono">“${esc(ev.prompt)}”</p></div>
+    <div class="cols">${cols}</div>`;
+  detail.scrollTop=0;
+}
+
+// header summary
+(function(){
+  let ws=0,wt=0,bs=0,bt=0;
+  DATA.evals.forEach(ev=>{ let a=score(ev.configs.with_skill); ws+=a[0];wt+=a[1];
+    if(ev.configs.without_skill){let b=score(ev.configs.without_skill); bs+=b[0];bt+=b[1];} });
+  document.getElementById('hsummary').innerHTML=
+    `with-skill <strong>${ws}/${wt}</strong> · baseline <strong>${bs}/${bt}</strong>`;
+})();
+
+// Benchmark tab
+(function(){
+  const bm=DATA.benchmark, s=bm.run_summary, host=document.getElementById('p-bench');
+  const pct=x=>Math.round(x*100);
+  let rows=DATA.evals.map(ev=>{
+    const w=score(ev.configs.with_skill), b=ev.configs.without_skill?score(ev.configs.without_skill):[0,0];
+    const wp=w[1]?w[0]/w[1]:0, bp=b[1]?b[0]/b[1]:0;
+    return `<tr><td>${esc(ev.name)}</td>
+      <td><div class="bar"><span style="width:${pct(wp)}%"></span></div></td>
+      <td class="num">${pct(wp)}%</td>
+      <td><div class="bar bl"><span style="width:${pct(bp)}%"></span></div></td>
+      <td class="num">${pct(bp)}%</td></tr>`;
+  }).join('');
+  const notes=(bm.notes||[]).map(n=>`<li>${esc(n)}</li>`).join('');
+  host.innerHTML=`<div class="card">
+    <p class="eyebrow">Pass rate · with-skill vs. baseline</p>
+    <div class="score-line" style="margin-bottom:14px">
+      <span class="pill">with-skill mean ${pct(s.with_skill.pass_rate.mean)}%</span>
+      <span class="pill" style="background:var(--surface-2);color:var(--muted)">baseline mean ${pct(s.without_skill.pass_rate.mean)}%</span>
+      <span class="pill" style="background:var(--pass-soft);color:var(--pass)">Δ ${s.delta.pass_rate}</span>
+    </div>
+    <table><thead><tr><th>Scenario</th><th>With skill</th><th class="num">%</th><th>Baseline</th><th class="num">%</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    <p class="meta" style="margin-top:12px">Time: with-skill ${s.with_skill.time_seconds.mean}s vs baseline ${s.without_skill.time_seconds.mean}s (Δ ${s.delta.time_seconds}s). Tokens Δ ${s.delta.tokens}. Single run per config — directional, not variance-tested.</p>
+    <p class="eyebrow" style="margin-top:18px">Observations</p>
+    <ul class="notes">${notes}</ul></div>`;
+})();
+
+// Tabs
+const tOut=document.getElementById('tab-out'), tBench=document.getElementById('tab-bench');
+const pOut=document.getElementById('p-out'), pBench=document.getElementById('p-bench');
+function tab(which){
+  const out=which==='out';
+  tOut.setAttribute('aria-selected',out); tBench.setAttribute('aria-selected',!out);
+  pOut.classList.toggle('hidden',!out); pBench.classList.toggle('hidden',out);
+}
+tOut.onclick=()=>tab('out'); tBench.onclick=()=>tab('bench');
+
+document.addEventListener('keydown',e=>{
+  if(pOut.classList.contains('hidden')) return;
+  if(e.key==='ArrowDown'){e.preventDefault();select(Math.min(active+1,DATA.evals.length-1));}
+  if(e.key==='ArrowUp'){e.preventDefault();select(Math.max(active-1,0));}
+});
+
+select(0);
+</script>
