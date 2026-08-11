@@ -12,16 +12,15 @@ user should filter on.
 
 ## What to emit, and when
 
-- **After `selector create`** → give the **Selector Training** link and name the service account
-  to filter on:
+Include the link as a plain line of output — not as an offer ("want me to…"). The service account
+is named alongside it since the dashboards land unfiltered.
+
+- **After `selector create`** → the **Selector Training** link:
   > Training the selector. Watch it here (filter to service account `<sa-name>` / `<sa-id>`):
   > https://dashboard.divyam.ai/superset/dashboard/training-dashboard/
-- **After `selector update --to-prod` or a traffic reallocation** → give the **A/B Traffic** link,
+- **After `selector update --to-prod` or a traffic reallocation** → the **A/B Traffic** link,
   same SA-filter note.
 - **When the user is debugging a request/response** → the **Raw Logs** link.
-
-Always include the service account id (and name if known, from `sa get` / `config current`) next
-to the link, since the dashboards land unfiltered.
 
 ## Pre-filtered deep links (optional upgrade)
 

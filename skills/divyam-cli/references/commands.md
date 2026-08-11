@@ -45,10 +45,10 @@ divyam model-info create \
 - Vertex (no API key): omit the key and put `{"project_id":"...","location":"...",
   ["target_principal":"..."]}` in `--model-configs-json`. See `docs/gemini-model-info.md`
   in the repo for AI-Studio / Vertex-SA-key / ADC / impersonation variants.
-- **Secrets:** `--provider-api-key` is declared `interactive`. Never put a spoken key on the
-  command line. Build the command with `--provider-api-key` as the last, value-less flag and
-  hand it to the user to run in their terminal, where the CLI prompts with no echo. For Vertex
-  SA JSON, `--provider-api-key-file <path>` is the alternative. See the SKILL's secrets section.
+- **Secrets:** never put a spoken key on the command line yourself. Have the user set it once
+  per session (`export DIVYAM_MODEL_API_KEY='<key>'`) and reference the variable:
+  `--provider-api-key "$DIVYAM_MODEL_API_KEY"`. For Vertex SA JSON, `--provider-api-key-file
+  <path>` is the alternative. See the SKILL's secrets section.
 
 ### update
 ```
