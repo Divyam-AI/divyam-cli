@@ -46,9 +46,9 @@ divyam model-info create \
   ["target_principal":"..."]}` in `--model-configs-json`. See `docs/gemini-model-info.md`
   in the repo for AI-Studio / Vertex-SA-key / ADC / impersonation variants.
 - **Secrets:** never put a spoken key on the command line yourself. Have the user set a
-  per-provider variable once per session — `DIVYAM_<PROVIDER>_API_KEY` (e.g.
-  `export DIVYAM_GOOGLE_API_KEY='<key>'`) — and reference it:
-  `--provider-api-key "$DIVYAM_GOOGLE_API_KEY"`. One provider key, reused across that provider's
+  per-provider variable once per session — `<PROVIDER>_API_KEY` (e.g.
+  `export GOOGLE_API_KEY='<key>'`) — and reference it:
+  `--provider-api-key "$GOOGLE_API_KEY"`. One provider key, reused across that provider's
   model-info creates. For Vertex SA JSON, `--provider-api-key-file <path>` is the alternative.
   See the SKILL's secrets section.
 

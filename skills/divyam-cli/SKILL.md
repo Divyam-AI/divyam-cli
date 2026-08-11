@@ -67,15 +67,14 @@ line yourself and never echo it back. Instead, have the user set it once for the
 **per-provider** environment variable, then reference that variable — the plaintext lives in their
 shell, never the literal in argv.
 
-The variable name is `DIVYAM_<PROVIDER>_API_KEY`, where `<PROVIDER>` is the provider name
-uppercased with non-alphanumerics as `_` — e.g. `google` → `DIVYAM_GOOGLE_API_KEY`, `aws_bedrock`
-→ `DIVYAM_AWS_BEDROCK_API_KEY`. One provider, one key, reused across every `model-info create` for
-that provider in the session.
+The variable name is `<PROVIDER>_API_KEY`, where `<PROVIDER>` is the provider name uppercased with
+non-alphanumerics as `_` — e.g. `google` → `GOOGLE_API_KEY`, `aws_bedrock` → `AWS_BEDROCK_API_KEY`.
+One provider, one key, reused across every `model-info create` for that provider in the session.
 
 Give them the export to fire once (they paste the key into it):
 
 ```
-export DIVYAM_GOOGLE_API_KEY='<paste key here>'
+export GOOGLE_API_KEY='<paste key here>'
 ```
 
 Then run the create/update referencing the provider's variable:
@@ -83,7 +82,7 @@ Then run the create/update referencing the provider's variable:
 ```
 divyam model-info create --provider-name google --api-type GEMINI \
   --model-names gemini-2.5-flash --provider-base-url "" \
-  --provider-api-key "$DIVYAM_GOOGLE_API_KEY"
+  --provider-api-key "$GOOGLE_API_KEY"
 ```
 
 If the provider's variable isn't set yet, ask them to run its export first (don't inline the
@@ -116,14 +115,14 @@ Map the description to `model-info create` (see `references/commands.md`):
 - If the user quotes prices (common for Bedrock/custom), add `--input-price` / `--output-price`
   (and `--currency` / `--per-n-tokens` if they differ from USD / 1,000,000). Providers in the
   built-in pricing card (Gemini, OpenAI) don't need prices.
-- Pass the key via the provider's variable, e.g. `--provider-api-key "$DIVYAM_GOOGLE_API_KEY"`,
+- Pass the key via the provider's variable, e.g. `--provider-api-key "$GOOGLE_API_KEY"`,
   prompting for its one-time `export` if unset (secrets section). Then run it. Stop after — don't
   propose a selector or anything else.
 
 **"Add another model with the same details."** Reuse the arguments from the model you just set up
 in this conversation, changing only what the user overrides (e.g. a different model name, or a
 switch to Bedrock with new prices). A same-provider add reuses the provider's already-set key
-variable; a different provider needs its own `DIVYAM_<PROVIDER>_API_KEY` export.
+variable; a different provider needs its own `<PROVIDER>_API_KEY` export.
 
 ### "Create a selector …"
 `selector create --name <name>` plus either `-x <extractor-strategy>` or `-c <config-file>` (one
