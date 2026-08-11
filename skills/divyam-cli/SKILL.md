@@ -63,27 +63,32 @@ A key the user speaks is already in this conversation; what you control is wheth
 further (into argv/`ps`, shell history, disk, logs). Two directions, handled differently:
 
 **Inbound provider keys (`model-info create` / `update`).** Never put a spoken key on the command
-line yourself and never echo it back. Instead, have the user set it once for the session as an
-environment variable, then reference that variable — the plaintext lives in their shell, and you
-run the command with `$DIVYAM_MODEL_API_KEY`, never the literal.
+line yourself and never echo it back. Instead, have the user set it once for the session as a
+**per-provider** environment variable, then reference that variable — the plaintext lives in their
+shell, never the literal in argv.
 
-Give them one export to fire once (they paste the key into it):
+The variable name is `DIVYAM_<PROVIDER>_API_KEY`, where `<PROVIDER>` is the provider name
+uppercased with non-alphanumerics as `_` — e.g. `google` → `DIVYAM_GOOGLE_API_KEY`, `aws_bedrock`
+→ `DIVYAM_AWS_BEDROCK_API_KEY`. One provider, one key, reused across every `model-info create` for
+that provider in the session.
+
+Give them the export to fire once (they paste the key into it):
 
 ```
-export DIVYAM_MODEL_API_KEY='<paste key here>'
+export DIVYAM_GOOGLE_API_KEY='<paste key here>'
 ```
 
-Then run the create/update with the variable:
+Then run the create/update referencing the provider's variable:
 
 ```
 divyam model-info create --provider-name google --api-type GEMINI \
   --model-names gemini-2.5-flash --provider-base-url "" \
-  --provider-api-key "$DIVYAM_MODEL_API_KEY"
+  --provider-api-key "$DIVYAM_GOOGLE_API_KEY"
 ```
 
-One export covers every model added that session. If the variable isn't set, ask them to run the
-export first (don't inline the literal). For a Vertex service-account JSON, point
-`--provider-api-key-file <path>` at the file instead.
+If the provider's variable isn't set yet, ask them to run its export first (don't inline the
+literal). For a Vertex service-account JSON, point `--provider-api-key-file <path>` at the file
+instead.
 
 **Outbound generated keys (`sa create`, `sa key create`).** These print a plaintext `api_key`
 (`divyam-v1-<64hex>`) **once and store it nowhere**. You may run them. When one comes back,
@@ -111,14 +116,14 @@ Map the description to `model-info create` (see `references/commands.md`):
 - If the user quotes prices (common for Bedrock/custom), add `--input-price` / `--output-price`
   (and `--currency` / `--per-n-tokens` if they differ from USD / 1,000,000). Providers in the
   built-in pricing card (Gemini, OpenAI) don't need prices.
-- Pass the key via `--provider-api-key "$DIVYAM_MODEL_API_KEY"`, prompting the user for the
-  one-time `export` if it isn't set yet (secrets section). Then run it. Stop after — don't propose
-  a selector or anything else.
+- Pass the key via the provider's variable, e.g. `--provider-api-key "$DIVYAM_GOOGLE_API_KEY"`,
+  prompting for its one-time `export` if unset (secrets section). Then run it. Stop after — don't
+  propose a selector or anything else.
 
 **"Add another model with the same details."** Reuse the arguments from the model you just set up
 in this conversation, changing only what the user overrides (e.g. a different model name, or a
-switch to Bedrock with new prices). The session's `DIVYAM_MODEL_API_KEY` still applies unless it's
-a different provider key.
+switch to Bedrock with new prices). A same-provider add reuses the provider's already-set key
+variable; a different provider needs its own `DIVYAM_<PROVIDER>_API_KEY` export.
 
 ### "Create a selector …"
 `selector create --name <name>` plus either `-x <extractor-strategy>` or `-c <config-file>` (one
