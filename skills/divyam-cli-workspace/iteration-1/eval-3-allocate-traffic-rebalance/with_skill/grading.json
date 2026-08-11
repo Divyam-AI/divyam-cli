@@ -1,0 +1,29 @@
+{
+  "expectations": [
+    {
+      "text": "uses sa update --traffic-allocation-config",
+      "passed": true,
+      "evidence": "match"
+    },
+    {
+      "text": "checkout-router set to 20",
+      "passed": true,
+      "evidence": "match"
+    },
+    {
+      "text": "control kept >= ~2 (8 in the standard rebalance)",
+      "passed": true,
+      "evidence": "match"
+    },
+    {
+      "text": "an allocation map sums to 100",
+      "passed": true,
+      "evidence": "match"
+    },
+    {
+      "text": "shows before->after and asks confirmation",
+      "passed": true,
+      "evidence": "match"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "eval_id": 0,
+  "eval_name": "add-gemini-model-handoff",
+  "prompt": "add a model gemini 2.5 flash from google with the gemini endpoint, api key is AIzaSyEXAMPLE1234567890",
+  "assertions": [
+    "Uses `model-info create` with --api-type GEMINI and provider google",
+    "Model name is gemini-2.5-flash",
+    "--provider-api-key is a bare flag (no value on the command line)",
+    "Does not print/echo the AIza... key value back",
+    "Hands the command to the user to run rather than executing it"
+  ]
+}

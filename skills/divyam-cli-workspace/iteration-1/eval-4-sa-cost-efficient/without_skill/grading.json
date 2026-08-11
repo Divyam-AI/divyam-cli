@@ -1,0 +1,14 @@
+{
+  "expectations": [
+    {
+      "text": "sa update --optimization-goal COST_EFFICIENT",
+      "passed": false,
+      "evidence": "no match"
+    },
+    {
+      "text": "distinguishes SA goal from selector lambda",
+      "passed": false,
+      "evidence": "no match"
+    }
+  ]
+}

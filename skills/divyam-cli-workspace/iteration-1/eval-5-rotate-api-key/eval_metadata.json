@@ -1,0 +1,11 @@
+{
+  "eval_id": 5,
+  "eval_name": "rotate-api-key",
+  "prompt": "rotate the api key for this service account",
+  "assertions": [
+    "Uses sa key create to make the new key",
+    "Warns the api_key is shown once / unrecoverable",
+    "Offers to persist via config set with --api-token as a bare interactive flag",
+    "Treats revoking the old key as a confirmed follow-up, keeping one active key"
+  ]
+}

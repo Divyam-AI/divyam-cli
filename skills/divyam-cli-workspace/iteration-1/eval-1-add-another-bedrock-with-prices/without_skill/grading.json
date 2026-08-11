@@ -1,0 +1,29 @@
+{
+  "expectations": [
+    {
+      "text": "provider switched to bedrock",
+      "passed": false,
+      "evidence": "no match"
+    },
+    {
+      "text": "does not reuse GEMINI api-type",
+      "passed": true,
+      "evidence": "match"
+    },
+    {
+      "text": "includes --input-price 3",
+      "passed": false,
+      "evidence": "no match"
+    },
+    {
+      "text": "includes --output-price 15",
+      "passed": false,
+      "evidence": "no match"
+    },
+    {
+      "text": "references the prior/same command shape",
+      "passed": true,
+      "evidence": "match"
+    }
+  ]
+}

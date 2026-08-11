@@ -1,0 +1,9 @@
+{
+  "eval_id": 4,
+  "eval_name": "sa-cost-efficient",
+  "prompt": "make this service account cost efficient",
+  "assertions": [
+    "Uses sa update --optimization-goal COST_EFFICIENT",
+    "Does not confuse this with selector --cost-savings-lambda"
+  ]
+}
