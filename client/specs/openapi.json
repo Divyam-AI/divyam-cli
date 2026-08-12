@@ -1350,6 +1350,74 @@
                 }
             }
         },
+        "/v1/service_accounts/{service_account_id}/evals/{eval_id}/test/": {
+            "post": {
+                "summary": "Post-registration eval smoke test",
+                "description": "Score one supplied record against an already registered eval. This validates the stored eval configuration and evaluator execution. It does not create selector training data or start selector training.",
+                "operationId": "smokeTestEval",
+                "parameters": [
+                    {
+                        "name": "service_account_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Service Account Id"
+                        }
+                    },
+                    {
+                        "name": "eval_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Eval Id"
+                        }
+                    },
+                    {
+                        "name": "org_id",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Org Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/EvalSmokeTestRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/EvalSmokeTestResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/v1/service_accounts/{service_account_id}/evals/{eval_id}/": {
             "get": {
                 "summary": "Get Eval",
@@ -2656,6 +2724,106 @@
                     "SESSION_BASED"
                 ],
                 "title": "EvalGranularity"
+            },
+            "EvalSmokeTestRequest": {
+                "properties": {
+                    "record": {
+                        "additionalProperties": true,
+                        "type": "object",
+                        "title": "Record",
+                        "description": "A manually supplied router-native record for post-registration smoke testing. Every granularity requires the envelope keys id, timestamp and traffic_bucket. LLM_REQUEST_RESPONSE additionally requires request and response, TURN_BASED requires turn, and SESSION_BASED requires session. The record is validated against the granularity of the eval identified by eval_id, and a mismatch returns the missing fields.",
+                        "examples": [
+                            {
+                                "id": "record-1",
+                                "request": {
+                                    "messages": [
+                                        {
+                                            "content": "What is two plus two?",
+                                            "role": "user"
+                                        }
+                                    ],
+                                    "model": "my-model"
+                                },
+                                "response": {
+                                    "choices": [
+                                        {
+                                            "finish_reason": "stop",
+                                            "index": 0,
+                                            "message": {
+                                                "content": "4",
+                                                "role": "assistant"
+                                            }
+                                        }
+                                    ],
+                                    "created": 1784678400,
+                                    "id": "chatcmpl-1",
+                                    "model": "my-model",
+                                    "object": "chat.completion"
+                                },
+                                "timestamp": "2026-07-24T00:00:00Z",
+                                "traffic_bucket": "control"
+                            }
+                        ]
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "record"
+                ],
+                "title": "EvalSmokeTestRequest",
+                "description": "One router-native record for a post-registration eval smoke test.\n\nThe record stays a free-form object because the keys it must carry are decided by the granularity of the eval being tested, not by this request.\nThis is the manual record path. The chat command can submit its actual Router request and response instead.\nValidation therefore runs against that granularity inside the endpoint, which is what lets a malformed record come back with its exact missing fields instead of a generic schema rejection."
+            },
+            "EvalSmokeTestResponse": {
+                "properties": {
+                    "eval_id": {
+                        "type": "integer",
+                        "title": "Eval Id"
+                    },
+                    "scores": {
+                        "items": {
+                            "$ref": "#/components/schemas/EvalSmokeTestScore"
+                        },
+                        "type": "array",
+                        "title": "Scores"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "eval_id",
+                    "scores"
+                ],
+                "title": "EvalSmokeTestResponse",
+                "description": "Scores produced by smoke testing one record against one stored eval.\n\nA multi-metric eval returns one row per child metric alongside its own, so scores is a list."
+            },
+            "EvalSmokeTestScore": {
+                "properties": {
+                    "eval_id": {
+                        "type": "integer",
+                        "title": "Eval Id"
+                    },
+                    "eval_name": {
+                        "type": "string",
+                        "title": "Eval Name"
+                    },
+                    "score": {
+                        "anyOf": [
+                            {
+                                "type": "number"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Score"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "eval_id",
+                    "eval_name"
+                ],
+                "title": "EvalSmokeTestScore",
+                "description": "One score row produced by a post-registration eval smoke test."
             },
             "EvalState": {
                 "type": "string",
