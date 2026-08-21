@@ -36,6 +36,10 @@ dependencies {
     // Divyam client
     implementation(project(":divyam-client"))
 
+    // The evalm8 pre-registration check talks to a service the generated client does not cover.
+    // Naming the engine keeps it off ktor's ServiceLoader lookup, which does not survive native-image.
+    implementation("io.ktor:ktor-client-cio:${Versions.ktorClient}")
+
     // Picocli
     implementation("info.picocli:picocli:${Versions.picocli}")
     implementation("info.picocli:picocli-jansi-graalvm:${Versions.picocliGraalVm}")

@@ -4,6 +4,8 @@
  */
 package ai.divyma.cli.test
 
+import ai.divyam.cli.EVALM8_GOOD_API_KEY
+import ai.divyam.cli.EVALM8_MISSING_EVAL
 import ai.divyam.cli.MockDataStore
 import ai.divyam.cli.ServerCommand
 import ai.divyam.cli.chat.ChatCommand
@@ -31,6 +33,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
@@ -41,6 +44,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestMethodOrder
 import picocli.CommandLine
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.PrintStream
 import kotlin.concurrent.thread
 
@@ -1425,7 +1429,7 @@ class DivyamCliTest {
 
     @Test
     @Order(40)
-    fun `eval create`() {
+    fun `eval create omits granularity`() {
         val exitCode = executeCommand(
             EvalCommand(),
             "create",
@@ -1435,7 +1439,6 @@ class DivyamCliTest {
             "--org-id", "1",
             "--service-account-id", testServiceAccountId,
             "--name", "Test Eval",
-            "--granularity", "LLM_REQUEST_RESPONSE",
             "--class-name", "TestEval",
             "--state", "ACTIVE",
             "--is-primary", "false"
@@ -1446,6 +1449,9 @@ class DivyamCliTest {
         assertNotNull(json)
         assertTrue(json!!.has("id"))
         assertEquals("Test Eval", json.get("name").asText())
+        // The CLI sends no granularity, so this value comes from the server side.
+        // The mock answers with its own default rather than resolving the class, so this asserts the CLI omitted the key and did not send a client side default.
+        assertEquals("LLM_REQUEST_RESPONSE", json.get("granularity").asText())
     }
 
     @Test
@@ -1589,6 +1595,7 @@ class DivyamCliTest {
         assertNotNull(json)
         assertEquals("Updated Eval", json!!.get("name").asText())
         assertEquals("INACTIVE", json.get("state").asText())
+        assertEquals("LLM_REQUEST_RESPONSE", json.get("granularity").asText())
     }
 
     @Test
@@ -1655,6 +1662,407 @@ class DivyamCliTest {
         val json = parseJson()
         assertNotNull(json)
         assertEquals(true, json!!.get("is_primary").asBoolean())
+    }
+
+    @Test
+    @Order(46)
+    fun `eval create preserves explicit granularity`() {
+        listOf("TURN_BASED", "SESSION_BASED").forEach { granularity ->
+            val exitCode = executeCommand(
+                EvalCommand(),
+                "create",
+                "--endpoint", baseUrl,
+                "--user", "admin@dashboard.divyam.ai",
+                "--password", testPassword,
+                "--format", "json",
+                "--org-id", "1",
+                "--service-account-id", testServiceAccountId,
+                "--name", "Test Eval $granularity",
+                "--granularity", granularity,
+                "--class-name", "TestEval",
+                "--state", "ACTIVE"
+            )
+
+            assertEquals(0, exitCode)
+            val json = parseJson()
+            assertNotNull(json)
+            assertEquals(granularity, json!!.get("granularity").asText())
+            outContent.reset()
+        }
+    }
+
+    // ============================================
+    // Eval create input modes (evalm8, config document, legacy)
+    // ============================================
+
+    /** The evalm8 flags every happy-path test needs, pointed at the mock's evalm8 stub. */
+    private fun evalm8Flags(evalName: String = "Tutor Eval"): Array<String> = arrayOf(
+        "--evalm8-base-url", baseUrl,
+        "--evalm8-org", "acme",
+        "--evalm8-project", "tutor",
+        "--evalm8-eval-name", evalName,
+        "--evalm8-api-key", EVALM8_GOOD_API_KEY,
+    )
+
+    private fun evalCreate(vararg args: String): Int = executeCommand(
+        EvalCommand(),
+        "create",
+        "--endpoint", baseUrl,
+        "--user", "admin@dashboard.divyam.ai",
+        "--password", testPassword,
+        "--org-id", "1",
+        "--service-account-id", testServiceAccountId,
+        *args,
+    )
+
+    @Test
+    @Order(47)
+    fun `evalm8 flags build the class name and init config`() {
+        val exitCode = evalCreate("--name", "Tutor Eval", *evalm8Flags())
+
+        assertEquals(0, exitCode)
+        // Assert the request the CLI sent. The response merely echoes it back, so it proves nothing.
+        val sent = MockDataStore.lastEvalCreateRequest
+        assertNotNull(sent)
+        assertEquals(
+            "divyamlibs.evaluator.strategies.evalm8.evalm8_evaluation_criteria" +
+                ".Evalm8RequestResponseEvaluationCriteria",
+            sent!!.className,
+        )
+        @Suppress("UNCHECKED_CAST")
+        val config = sent.classInitConfig as Map<String, Any?>
+        assertEquals("acme", config["org"])
+        assertEquals("tutor", config["project"])
+        assertEquals("Tutor Eval", config["eval_name"])
+        assertEquals(EVALM8_GOOD_API_KEY, config["api_key"])
+        assertEquals(baseUrl, config["base_url"])
+        assertEquals("latest", config["eval_ref"])
+        // Omitted on purpose, so the server derives it from the class.
+        assertNull(sent.granularity)
+        assertEquals(false, sent.isPrimary)
+    }
+
+    @Test
+    @Order(48)
+    fun `eval create defaults state to active and is-primary to false`() {
+        val exitCode = evalCreate("--name", "Defaults Eval", *evalm8Flags())
+
+        assertEquals(0, exitCode)
+        val json = parseJson()
+        assertNotNull(json)
+        assertEquals("ACTIVE", json!!.get("state").asText())
+        assertEquals(false, json.get("is_primary").asBoolean())
+    }
+
+    @Test
+    @Order(49)
+    fun `evalm8 create reports a missing api key by naming the flag`() {
+        val exitCode = evalCreate(
+            "--name", "No Key",
+            "--evalm8-base-url", baseUrl,
+            "--evalm8-org", "acme",
+            "--evalm8-project", "tutor",
+            "--evalm8-eval-name", "Tutor Eval",
+        )
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("--evalm8-api-key"))
+    }
+
+    @Test
+    @Order(51)
+    fun `evalm8 create rejects an unknown class init config key`() {
+        val exitCode = evalCreate(
+            "--name", "Unknown Key",
+            *evalm8Flags(),
+            "--eval-config",
+            """{"class_init_config": {"apiKey": "wrong-spelling"}}""",
+        )
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("apiKey"))
+    }
+
+    @Test
+    @Order(52)
+    fun `eval create rejects a factory owned class init config key`() {
+        val exitCode = evalCreate(
+            "--name", "Reserved Key",
+            "--class-name", "TestEval",
+            "--class-init-config", """{"eval_id": 7}""",
+        )
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("eval_id"))
+    }
+
+    @Test
+    @Order(53)
+    fun `eval create reads a config document and lets a flag override it`() {
+        val configFile = File.createTempFile("eval-config", ".json")
+        configFile.deleteOnExit()
+        configFile.writeText(
+            """
+            {
+              "name": "From File",
+              "state": "ACTIVE",
+              "is_primary": false,
+              "class_name": "divyamlibs.evaluator.strategies.evalm8.evalm8_evaluation_criteria.Evalm8RequestResponseEvaluationCriteria",
+              "class_init_config": {
+                "base_url": "$baseUrl",
+                "org": "acme",
+                "project": "tutor",
+                "eval_name": "Tutor Eval",
+                "eval_ref": "latest",
+                "api_key": "$EVALM8_GOOD_API_KEY"
+              }
+            }
+            """.trimIndent(),
+        )
+
+        val exitCode = evalCreate(
+            "--eval-config-file", configFile.absolutePath,
+            "--evalm8-eval-ref", "v3",
+        )
+
+        assertEquals(0, exitCode)
+        val sent = MockDataStore.lastEvalCreateRequest
+        assertNotNull(sent)
+        assertEquals("From File", sent!!.name)
+        @Suppress("UNCHECKED_CAST")
+        val config = sent.classInitConfig as Map<String, Any?>
+        // The document said latest, the flag said v3, and the flag wins.
+        assertEquals("v3", config["eval_ref"])
+    }
+
+    @Test
+    @Order(54)
+    fun `eval create rejects both config sources at once`() {
+        val exitCode = evalCreate(
+            "--name", "Both",
+            "--eval-config", "{}",
+            "--eval-config-file", "/tmp/does-not-matter.json",
+        )
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("--eval-config"))
+    }
+
+    @Test
+    @Order(55)
+    fun `eval create rejects class name combined with evalm8 flags`() {
+        val exitCode = evalCreate(
+            "--name", "Two Sources",
+            "--class-name", "TestEval",
+            *evalm8Flags(),
+        )
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("--class-name"))
+    }
+
+    @Test
+    @Order(56)
+    fun `eval create fails when evalm8 does not have the eval`() {
+        val exitCode = evalCreate(
+            "--name", "Missing In Evalm8",
+            *evalm8Flags(evalName = EVALM8_MISSING_EVAL),
+        )
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains(EVALM8_MISSING_EVAL))
+    }
+
+    @Test
+    @Order(57)
+    fun `eval create fails when evalm8 rejects the api key`() {
+        val exitCode = evalCreate(
+            "--name", "Bad Key",
+            "--evalm8-base-url", baseUrl,
+            "--evalm8-org", "acme",
+            "--evalm8-project", "tutor",
+            "--evalm8-eval-name", "Tutor Eval",
+            "--evalm8-api-key", "evm8_sk_not-the-right-key",
+        )
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("--evalm8-api-key"))
+    }
+
+    @Test
+    @Order(58)
+    fun `skip-verify registers without contacting evalm8`() {
+        // An eval the stub would 404, plus an endpoint nothing is listening on.
+        val exitCode = evalCreate(
+            "--name", "Unverified",
+            "--evalm8-base-url", "http://127.0.0.1:1",
+            "--evalm8-org", "acme",
+            "--evalm8-project", "tutor",
+            "--evalm8-eval-name", EVALM8_MISSING_EVAL,
+            "--evalm8-api-key", "any-key",
+            "--skip-verify",
+        )
+
+        assertEquals(0, exitCode)
+    }
+
+    @Test
+    @Order(59)
+    fun `legacy class name path still works`() {
+        val exitCode = evalCreate(
+            "--name", "Legacy Eval",
+            "--class-name", "TestEval",
+            "--class-init-config", """{"string_expression": "done"}""",
+            "--state", "ACTIVE",
+        )
+
+        assertEquals(0, exitCode)
+        val sent = MockDataStore.lastEvalCreateRequest
+        assertNotNull(sent)
+        assertEquals("TestEval", sent!!.className)
+        @Suppress("UNCHECKED_CAST")
+        val config = sent.classInitConfig as Map<String, Any?>
+        assertEquals("done", config["string_expression"])
+    }
+
+    // ============================================
+    // Eval update input modes, the same surface as create
+    // ============================================
+
+    private fun evalUpdate(evalId: Int, vararg args: String): Int = executeCommand(
+        EvalCommand(),
+        "update",
+        "--endpoint", baseUrl,
+        "--user", "admin@dashboard.divyam.ai",
+        "--password", testPassword,
+        "--org-id", "1",
+        "--service-account-id", testServiceAccountId,
+        "--id", evalId.toString(),
+        *args,
+    )
+
+    /** Registers an evalm8 eval and returns its id, so an update has something real to change. */
+    private fun createEvalm8Eval(name: String): Int {
+        assertEquals(0, evalCreate("--name", name, *evalm8Flags()))
+        val id = parseJson()!!.get("id").asInt()
+        outContent.reset()
+        return id
+    }
+
+    @Test
+    @Order(60)
+    fun `evalm8 update rotates one identifier and keeps the rest`() {
+        val evalId = createEvalm8Eval("Rotate Key Eval")
+
+        val exitCode = evalUpdate(evalId, "--evalm8-api-key", EVALM8_GOOD_API_KEY)
+
+        assertEquals(0, exitCode)
+        val sent = MockDataStore.lastEvalUpdateRequest
+        assertNotNull(sent)
+        @Suppress("UNCHECKED_CAST")
+        val config = sent!!.classInitConfig as Map<String, Any?>
+        // The rotated value, plus every identifier the caller did not name.
+        assertEquals(EVALM8_GOOD_API_KEY, config["api_key"])
+        assertEquals("acme", config["org"])
+        assertEquals("tutor", config["project"])
+        assertEquals("Tutor Eval", config["eval_name"])
+        assertEquals(baseUrl, config["base_url"])
+        assertEquals("latest", config["eval_ref"])
+    }
+
+    @Test
+    @Order(61)
+    fun `eval update without evalm8 flags leaves the stored config alone`() {
+        val evalId = createEvalm8Eval("Name Only Eval")
+
+        val exitCode = evalUpdate(evalId, "--name", "Renamed Only")
+
+        assertEquals(0, exitCode)
+        val sent = MockDataStore.lastEvalUpdateRequest
+        assertNotNull(sent)
+        assertEquals("Renamed Only", sent!!.name)
+        // Absent rather than an empty object, so the router keeps what it stored.
+        assertNull(sent.classInitConfig)
+    }
+
+    @Test
+    @Order(62)
+    fun `evalm8 update fails when evalm8 does not have the eval`() {
+        val evalId = createEvalm8Eval("Update To Missing")
+
+        val exitCode = evalUpdate(evalId, "--evalm8-eval-name", EVALM8_MISSING_EVAL)
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains(EVALM8_MISSING_EVAL))
+    }
+
+    @Test
+    @Order(63)
+    fun `evalm8 update fails when evalm8 rejects the api key`() {
+        val evalId = createEvalm8Eval("Update Bad Key")
+
+        val exitCode = evalUpdate(evalId, "--evalm8-api-key", "evm8_sk_not-the-right-key")
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("--evalm8-api-key"))
+    }
+
+    @Test
+    @Order(64)
+    fun `eval update rejects class name combined with evalm8 flags`() {
+        val evalId = createEvalm8Eval("Update Conflict")
+
+        val exitCode = evalUpdate(
+            evalId,
+            "--class-name", "TestEval",
+            "--evalm8-org", "acme",
+        )
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("--class-name"))
+    }
+
+    @Test
+    @Order(65)
+    fun `eval update rejects a factory owned class init config key`() {
+        val evalId = createEvalm8Eval("Update Reserved Key")
+
+        val exitCode = evalUpdate(evalId, "--class-init-config", """{"eval_id": 7}""")
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("eval_id"))
+    }
+
+    @Test
+    @Order(66)
+    fun `evalm8 update converting from another evaluator names the missing identifiers`() {
+        assertEquals(
+            0,
+            evalCreate("--name", "Built In Eval", "--class-name", "TestEval"),
+        )
+        val evalId = parseJson()!!.get("id").asInt()
+        outContent.reset()
+
+        // Nothing to merge onto, since the stored eval is not an evalm8 one.
+        val exitCode = evalUpdate(evalId, "--evalm8-org", "acme")
+
+        assertFalse(exitCode == 0)
+        assertTrue(errContent.toString().contains("--evalm8-eval-name"))
+    }
+
+    @Test
+    @Order(67)
+    fun `eval update skip-verify does not contact evalm8`() {
+        val evalId = createEvalm8Eval("Update Unverified")
+
+        val exitCode = evalUpdate(
+            evalId,
+            "--evalm8-base-url", "http://127.0.0.1:1",
+            "--evalm8-eval-name", EVALM8_MISSING_EVAL,
+            "--skip-verify",
+        )
+
+        assertEquals(0, exitCode)
     }
 
     // ============================================
@@ -2125,5 +2533,67 @@ class DivyamCliTest {
             assertNotNull(json)
             assertTrue(json!!.isArray)
         }
+    }
+
+    // Two built-in evaluators, whose constructors take only what the factory injects and none of the evalm8 identifiers.
+    private val randomClassName =
+        "divyamlibs.evaluator.strategies.random_evaluation_criteria.RandomEvaluationCriteria"
+    private val turnClassName =
+        "divyamlibs.evaluator.strategies.random_evaluation_criteria.RandomTurnEvaluationCriteria"
+
+    @Test
+    @Order(69)
+    fun `moving an eval off evalm8 without saying what to do with the config is refused`() {
+        val evalId = createEvalm8Eval("Leaving Evalm8 Eval")
+        // Cleared, because the store keeps whatever an earlier test sent and the assertion below is that nothing new arrives.
+        MockDataStore.lastEvalUpdateRequest = null
+
+        val exitCode = evalUpdate(evalId, "--class-name", randomClassName)
+
+        assertEquals(1, exitCode)
+        val error = errContent.toString()
+        // The six identifiers are named, because the point is that they would otherwise ride along.
+        assertTrue(error.contains("api_key"), "the refusal must name what would be left behind, got: $error")
+        assertTrue(error.contains("--class-init-config '{}'"), "the refusal must offer the way to clear it, got: $error")
+        assertNull(MockDataStore.lastEvalUpdateRequest, "nothing should reach the router")
+    }
+
+    @Test
+    @Order(70)
+    fun `moving an eval off evalm8 with an empty config clears it`() {
+        val evalId = createEvalm8Eval("Cleared Config Eval")
+
+        val exitCode = evalUpdate(evalId, "--class-name", randomClassName, "--class-init-config", "{}")
+
+        assertEquals(0, exitCode)
+        val sent = MockDataStore.lastEvalUpdateRequest
+        assertNotNull(sent)
+        assertEquals(randomClassName, sent!!.className)
+        // An empty object rather than absent, so the router clears the stored config instead of keeping it.
+        @Suppress("UNCHECKED_CAST")
+        val config = sent.classInitConfig as? Map<String, Any?>
+        assertNotNull(config, "an explicit empty config must be sent, not dropped")
+        assertTrue(config!!.isEmpty(), "the config must be sent empty, got $config")
+    }
+
+    @Test
+    @Order(71)
+    fun `moving an eval off a non evalm8 class is not second guessed`() {
+        assertEquals(
+            0,
+            evalCreate(
+                "--name", "Plain Eval",
+                "--class-name", randomClassName,
+                "--class-init-config", "{}",
+            ),
+        )
+        val evalId = parseJson()!!.get("id").asInt()
+        outContent.reset()
+
+        // Nothing evalm8 shaped is stored, so there is nothing to strand and no reason to refuse.
+        val exitCode = evalUpdate(evalId, "--class-name", turnClassName)
+
+        assertEquals(0, exitCode)
+        assertEquals(turnClassName, MockDataStore.lastEvalUpdateRequest?.className)
     }
 }
