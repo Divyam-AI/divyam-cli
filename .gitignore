@@ -51,3 +51,6 @@ out/
 .factorypath
 bin/
 tmp/
+
+## Skill eval scratch ##
+skills/divyam-cli-workspace/
