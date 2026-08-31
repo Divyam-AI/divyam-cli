@@ -21,6 +21,49 @@ on:
       - main
 
 jobs:
+  # Single source of the version for every job below. A release build has to know
+  # its version before anything is compiled, because the package names and the
+  # binary's own version stamp come from cli/gradle.properties at build time.
+  resolve-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: resolve
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            IS_RELEASE=true
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+            IS_RELEASE=true
+          else
+            VERSION=$(grep '^version=' cli/gradle.properties | cut -d'=' -f2)
+            IS_RELEASE=false
+          fi
+          if [[ "$IS_RELEASE" == "true" ]]; then
+            # A tag and the dispatch input are written v1.2.3, but the Gradle version
+            # has to be 1.2.3: it reaches the deb and rpm version fields, which must
+            # start with a digit. The tag gets its v back where the release is created.
+            VERSION="${VERSION#v}"
+            VERSION="${VERSION%-SNAPSHOT}"
+            if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Release version must be MAJOR.MINOR.PATCH, got '$VERSION'" >&2
+              exit 1
+            fi
+          elif [[ "$VERSION" != *-SNAPSHOT ]]; then
+            # A branch build has to stay distinguishable from a release of the same
+            # number, and its docker tag is the only place that distinction survives.
+            echo "Non-release builds must resolve a -SNAPSHOT version, got '$VERSION'" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Resolved version $VERSION (release=$IS_RELEASE)"
+
   header-check:
     runs-on: ubuntu-latest
     steps:
@@ -35,6 +78,7 @@ jobs:
 
   linux-build:
     runs-on: ${{ matrix.runner }}
+    needs: [ resolve-version ]
     strategy:
       matrix:
         include:
@@ -48,6 +92,10 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Apply resolved version
+        run: |
+          sed -i "s/^version=.*/version=${{ needs.resolve-version.outputs.version }}/" cli/gradle.properties
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -112,6 +160,7 @@ jobs:
 
   macos-build:
     runs-on: ${{ matrix.runner }}
+    needs: [ resolve-version ]
     strategy:
       matrix:
         include:
@@ -125,6 +174,11 @@ jobs:
         with:
           submodules: recursive
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+
+      - name: Apply resolved version
+        run: |
+          # BSD sed on macOS runners needs an explicit empty backup suffix.
+          sed -i '' "s/^version=.*/version=${{ needs.resolve-version.outputs.version }}/" cli/gradle.properties
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -188,7 +242,7 @@ jobs:
 
   docker-images:
     runs-on: ubuntu-22.04
-    needs: [ linux-build ]
+    needs: [ resolve-version, linux-build ]
     permissions:
       contents: read
       id-token: write
@@ -218,15 +272,6 @@ jobs:
           path: cli/dist/
           pattern: linux-packages-*
 
-      - name: Extract version
-        id: get_version
-        run: |
-          VERSION=$(grep '^version=' cli/gradle.properties | cut -d'=' -f2)
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.ref }}" == refs/tags/* ]]; then
-            VERSION="${VERSION%-SNAPSHOT}"
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -255,7 +300,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ steps.get_version.outputs.version }}
+            ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ needs.resolve-version.outputs.version }}
             ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:latest
           build-args: |
             AMD64_BINARY_DIR=dist/linux-packages-amd64/linux-packages-amd64
@@ -265,7 +310,7 @@ jobs:
 
   release:
     runs-on: ubuntu-22.04
-    needs: [ linux-build, macos-build, docker-images ]
+    needs: [ resolve-version, linux-build, macos-build, docker-images ]
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
 
     steps:
@@ -273,18 +318,6 @@ jobs:
         with:
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           fetch-depth: 0
-
-      - name: Extract release version
-        id: get_version
-        run: |
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-          else
-            VERSION="${GITHUB_REF#refs/tags/}"
-          fi
-          CLEAN_VERSION="${VERSION/-SNAPSHOT/}"
-          echo "version=$CLEAN_VERSION" >> $GITHUB_OUTPUT
-          sed -i "s/^version=.*/version=$CLEAN_VERSION/" cli/gradle.properties
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -299,8 +332,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ steps.get_version.outputs.version }}
-          tag_name: ${{ steps.get_version.outputs.version }}
+          name: Release v${{ needs.resolve-version.outputs.version }}
+          tag_name: v${{ needs.resolve-version.outputs.version }}
           generate_release_notes: true
           files: release-files/*
         env:
@@ -308,7 +341,7 @@ jobs:
 
   post-release:
     runs-on: ubuntu-22.04
-    needs: [ release ]
+    needs: [ resolve-version, release ]
     if: success()
     permissions:
       contents: write
@@ -317,21 +350,19 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v4
         with:
+          ref: main
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           fetch-depth: 0
 
-      - name: Read released version
-        id: released
-        run: |
-          VERSION=$(grep '^version=' cli/gradle.properties | cut -d'=' -f2)
-          echo "released=$VERSION" >> $GITHUB_OUTPUT
-
+      # Bumps from the version that was just released, not from whatever the file
+      # happens to say: nothing has written the released version into main, so
+      # reading it back here would carry the previous release's number forward.
       - name: Bump to next -SNAPSHOT
         id: bump
         run: |
-          IFS='.' read -r MAJOR MINOR PATCH <<< "${{ steps.released.outputs.released }}"
-          NEXT_PATCH=$((PATCH+1))
-          NEXT_VERSION="$MAJOR.$MINOR.$NEXT_PATCH-SNAPSHOT"
+          set -euo pipefail
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${{ needs.resolve-version.outputs.version }}"
+          NEXT_VERSION="$MAJOR.$MINOR.$((PATCH + 1))-SNAPSHOT"
           echo "next=$NEXT_VERSION" >> $GITHUB_OUTPUT
           sed -i "s/^version=.*/version=$NEXT_VERSION/" cli/gradle.properties
 
@@ -340,5 +371,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add cli/gradle.properties
+          if git diff --cached --quiet; then
+            echo "cli/gradle.properties already at ${{ steps.bump.outputs.next }}"
+            exit 0
+          fi
           git commit -m "Bump version to ${{ steps.bump.outputs.next }}"
           git push origin main
