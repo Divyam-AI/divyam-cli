@@ -240,21 +240,31 @@ fun Project.configurePackaging(
         }
     }
 
-    val brewPackageDist = tasks.register("brewPackageDist", Tar::class.java) {
-        dependsOn("nativeCompile", "generateCompletion")
+    val macosArch = when (System.getProperty("os.arch")) {
+        "aarch64", "arm64" -> "arm64"
+        "x86_64", "amd64" -> "x86_64"
+        else -> throw GradleException(
+            "Unsupported macOS architecture: ${System.getProperty("os.arch")}"
+        )
+    }
+
+    val installerArchive = tasks.register("installerArchive", Tar::class.java) {
+        dependsOn("nativeCompile")
 
         group = "distribution"
-        description = "Packages binary, LICENSE, and NOTICE into a tar.gz"
+        description = "Packages binary, LICENSE, and NOTICE for the direct installer"
 
         archiveBaseName.set(divyamPackageName)
         archiveVersion.set(sanitizedVersion)
-        archiveClassifier.set("mac-${System.getProperty("os.arch")}")
+        archiveClassifier.set("darwin-$macosArch")
         archiveExtension.set("tar.gz")
-
         compression = Compression.GZIP
 
+        val archiveRoot = "$divyamPackageName-$sanitizedVersion"
+
         from(tasks.named("nativeCompile")) {
-            include(divyamAppName) // your binary file name
+            include(divyamAppName)
+            into("$archiveRoot/bin")
         }
 
         // Include license and required attribution notices from the project root.
@@ -262,23 +272,20 @@ fun Project.configurePackaging(
         from(rootDir) {
             include("LICENSE")
             include("NOTICE")
+            into(archiveRoot)
         }
 
-        // Make sure binary is executable inside tar.gz
-        filesMatching(divyamAppName) {
+        filesMatching("**/$divyamAppName") {
             permissions {
-                unix(0b111101101)
+                unix("rwxr-xr-x")
             }
         }
 
-        destinationDirectory.set(
-            layout.buildDirectory.dir
-                ("distributions/homebrew")
-        )
+        destinationDirectory.set(layout.buildDirectory.dir("distributions/installer"))
     }
 
     tasks.register("generateBrewFormula") {
-        dependsOn(brewPackageDist)
+        dependsOn(installerArchive)
 
         group = "distribution"
         description = "Generate Homebrew formula for this project"
@@ -286,7 +293,7 @@ fun Project.configurePackaging(
         val formulaName = divyamPackageName // Capitalized class name
         val binaryName = divyamAppName
         val versionString = project.version.toString()
-        val archiveFile = brewPackageDist.flatMap { it.archiveFile }
+        val archiveFile = installerArchive.flatMap { it.archiveFile }
 
         val repoUrl = "https://github.com/divyam/$divyamPackageName"
         val releaseUrl =
@@ -343,7 +350,7 @@ fun Project.configurePackaging(
     }
 
     tasks.register("generateBrewFormulaLocal") {
-        dependsOn(brewPackageDist)
+        dependsOn(installerArchive)
 
         group = "distribution"
         description = "Generate Homebrew formula for this project"
@@ -354,7 +361,7 @@ fun Project.configurePackaging(
         }
 
         val versionString = project.version.toString()
-        val archiveFile = brewPackageDist.flatMap { it.archiveFile }
+        val archiveFile = installerArchive.flatMap { it.archiveFile }
 
         val repoUrl = "https://github.com/divyam/$divyamPackageName"
         val releaseUrl = "file://#{Pathname.pwd}/${
