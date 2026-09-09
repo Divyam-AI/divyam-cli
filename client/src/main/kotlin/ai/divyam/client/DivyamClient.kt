@@ -36,6 +36,7 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.cio.CIO
 import io.ktor.client.engine.cio.CIOEngineConfig
 import io.ktor.client.plugins.HttpRedirect
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.Headers
@@ -74,12 +75,19 @@ class DivyamClient(
     /**
      * Non-production only
      */
-    disableTlsVerification: Boolean = false
+    disableTlsVerification: Boolean = false,
+    /**
+     * How long a single request may take. Null leaves the engine's own limit in place, which
+     * is measured in seconds -- too short for a call whose response is an artifact rather
+     * than a record. Set it for those, so the wait is bounded by the work and not by a
+     * default chosen for ordinary calls.
+     */
+    requestTimeoutMillis: Long? = null
 ) : DefaultApi(
     baseUrl = endpoint,
     authorityOverride = authorityOverride,
-    httpClientEngine = httpClientEngine(disableTlsVerification),
-    httpClientConfig = configureClientConfig(),
+    httpClientEngine = httpClientEngine(disableTlsVerification, requestTimeoutMillis),
+    httpClientConfig = configureClientConfig(requestTimeoutMillis),
     jsonBlock = configureObjectMapper()
 ) {
     companion object {
@@ -108,15 +116,27 @@ class DivyamClient(
             }
         }
 
-        private fun httpClientEngine(disableTlsVerification: Boolean): HttpClientEngine =
+        private fun httpClientEngine(
+            disableTlsVerification: Boolean,
+            requestTimeoutMillis: Long? = null
+        ): HttpClientEngine =
             CIO.create(
                 block = configureHttpClientEngine(
-                    disableTlsVerification
+                    disableTlsVerification,
+                    requestTimeoutMillis
                 )
             )
 
-        private fun configureHttpClientEngine(disableTlsVerification: Boolean):
-                CIOEngineConfig.() -> Unit = {
+        private fun configureHttpClientEngine(
+            disableTlsVerification: Boolean,
+            requestTimeoutMillis: Long? = null
+        ): CIOEngineConfig.() -> Unit = {
+            // The engine keeps a request deadline of its own, defaulting to seconds. The
+            // HttpTimeout plugin does not displace it, so a long-running call has to raise
+            // both or the engine's is what ends it.
+            if (requestTimeoutMillis != null) {
+                requestTimeout = requestTimeoutMillis
+            }
             if (disableTlsVerification) {
                 https {
                     trustManager = object : X509TrustManager {
@@ -139,12 +159,22 @@ class DivyamClient(
             }
         }
 
-        private fun configureClientConfig(): (HttpClientConfig<*>) -> Unit =
+        private fun configureClientConfig(
+            requestTimeoutMillis: Long? = null
+        ): (HttpClientConfig<*>) -> Unit =
             { config ->
                 config.install(HttpRedirect) {
                     checkHttpMethod =
                         false   // follow for all methods (GET, POST, etc.)
                     allowHttpsDowngrade = false
+                }
+                if (requestTimeoutMillis != null) {
+                    config.install(HttpTimeout) {
+                        this.requestTimeoutMillis = requestTimeoutMillis
+                        // Reaching the endpoint is a separate question from how long its
+                        // answer takes, and is left at the engine's default.
+                        socketTimeoutMillis = requestTimeoutMillis
+                    }
                 }
             }
 

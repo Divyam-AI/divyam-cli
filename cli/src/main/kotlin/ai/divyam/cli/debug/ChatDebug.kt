@@ -21,7 +21,11 @@ import java.util.concurrent.Callable
     name = "chat",
     description = ["Invoke chat API with HTTP payload read from standard input"]
 )
-class ChatDebug : BaseCommand(), Callable<Int> {
+// Prefers the api token, as `chat` does: both send inference traffic on behalf of a service
+// account, and a token passed on the command line is the caller naming which account. Without
+// this a selected config profile's user credentials outrank it, and every request comes back
+// "Need to pass in service account user credentials".
+class ChatDebug : BaseCommand(preferApiToken = true), Callable<Int> {
     @Option(
         names = ["--mock-selector"],
         description = ["Optional: uses mock selector"],

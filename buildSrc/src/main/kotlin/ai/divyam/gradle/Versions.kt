@@ -6,6 +6,7 @@ object Versions {
     const val picocliGraalVm = "1.2.0"
     const val coroutines = "1.7.3"
     const val jansi = "2.4.2"
+    const val slf4j = "2.0.17"
 
     const val ktorClient = "3.3.0"
     const val ktorServer = "3.3.0"

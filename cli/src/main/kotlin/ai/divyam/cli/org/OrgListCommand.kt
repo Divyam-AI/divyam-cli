@@ -13,7 +13,7 @@ class OrgListCommand : BaseCommand() {
 
     override fun execute(): Int {
         runBlocking {
-            val orgs = divyamClient.listOrgs()
+            val orgs = divyamClient.listOrgs(name = null)
             printObjs(orgs)
         }
         return 0

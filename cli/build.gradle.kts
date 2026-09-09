@@ -40,6 +40,12 @@ dependencies {
     // Naming the engine keeps it off ktor's ServiceLoader lookup, which does not survive native-image.
     implementation("io.ktor:ktor-client-cio:${Versions.ktorClient}")
 
+    // ktor brings slf4j-api with no provider, and slf4j 2 announces that on stderr before
+    // falling back to doing nothing. A CLI's output is its own; the announcement is noise,
+    // and it lands in the middle of anything a script parses. Naming the no-op provider
+    // keeps the behaviour and drops the warning.
+    runtimeOnly("org.slf4j:slf4j-nop:${Versions.slf4j}")
+
     // Picocli
     implementation("info.picocli:picocli:${Versions.picocli}")
     implementation("info.picocli:picocli-jansi-graalvm:${Versions.picocliGraalVm}")

@@ -133,6 +133,14 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
      */
     var disableTlsVerification: Boolean = false
 
+    /**
+     * How long this command's requests may take, or null for the engine's own limit.
+     *
+     * Overridden by commands whose response is an artifact rather than a record: building
+     * and streaming one is bounded by its size, not by the round trip an ordinary call makes.
+     */
+    protected open val requestTimeoutMillis: Long? = null
+
     protected val divyamClient: DivyamClient by lazy(
         mode =
             LazyThreadSafetyMode.SYNCHRONIZED
