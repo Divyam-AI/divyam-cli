@@ -61,6 +61,12 @@ class ConfigUnsetCommand : Callable<Int> {
     )
     private var serviceAccountId: Boolean = false
 
+    @Option(
+        names = ["--format"],
+        description = ["unset the default output format"],
+    )
+    private var format: Boolean = false
+
     override fun call(): Int {
         val configCollection = ConfigCollection.get()
         val oldConfig = configCollection.configs[configName]
@@ -90,6 +96,9 @@ class ConfigUnsetCommand : Callable<Int> {
         }
         if (serviceAccountId) {
             keysToRemove.add("serviceAccountId")
+        }
+        if (format) {
+            keysToRemove.add("format")
         }
 
         if (keysToRemove.isEmpty()) {

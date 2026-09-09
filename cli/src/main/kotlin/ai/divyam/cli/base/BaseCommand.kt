@@ -76,8 +76,18 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
 
     @CommandLine.Option(
         names = ["--format"],
-        description = [$$"output format. Valid values: ${COMPLETION-CANDIDATES}"]
+        description = [
+            $$"output format. Valid values: ${COMPLETION-CANDIDATES}. Falls back to " +
+                "DIVYAM_FORMAT, then the current config file's format, then JSON."
+        ]
     )
+    private var outputFormatCli: OutputFormat? = null
+
+    /**
+     * The format to print in, resolved once the flags, the environment and the config file
+     * have all been consulted. Left as a field of its own so a command reads a decision
+     * rather than making one.
+     */
     protected var outputFormat: OutputFormat = OutputFormat.JSON
 
     @Suppress("unused")
@@ -172,6 +182,23 @@ abstract class BaseCommand(val preferApiToken: Boolean = false) :
         disableTlsVerification =
             disableTlsVerificationCli ?: System.getenv("DIVYAM_DISABLE_TLS")
                 ?.toBoolean() ?: ConfigCollection.get().getCurrentConfig()?.disableTlsVerification ?: false
+        outputFormat = outputFormatCli ?: parseFormat(System.getenv("DIVYAM_FORMAT"))
+                ?: ConfigCollection.get().getCurrentConfig()?.format
+                ?: OutputFormat.JSON
+    }
+
+    /**
+     * A format named in the environment, or null when it names none this build knows.
+     *
+     * An unreadable value falls through to what follows it rather than failing the command:
+     * it is the environment speaking, not the caller, and a name that means nothing here
+     * should not stop a command that was told nothing about its output.
+     */
+    private fun parseFormat(name: String?): OutputFormat? {
+        if (name.isNullOrBlank()) {
+            return null
+        }
+        return OutputFormat.entries.firstOrNull { it.name.equals(name.trim(), ignoreCase = true) }
     }
 
     final override fun call(): Int {
