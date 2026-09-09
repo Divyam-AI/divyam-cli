@@ -2,24 +2,53 @@
     "openapi": "3.1.0",
     "info": {
         "title": "Divyam",
-        "version": "0.1.213"
+        "version": "0.1.216"
     },
     "paths": {
         "/v1/orgs/": {
             "get": {
                 "summary": "List Orgs",
+                "description": "List orgs, or look one up by name. Admin only.\n\nThe name filter is an exact match, the same semantics as the\nduplicate check in create_org. A miss returns an empty list.",
                 "operationId": "list_orgs",
+                "parameters": [
+                    {
+                        "name": "name",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "title": "Name"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successful Response",
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "array",
                                     "items": {
                                         "$ref": "#/components/schemas/Org-Output"
                                     },
-                                    "type": "array",
                                     "title": "Response List Orgs"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
                                 }
                             }
                         }
@@ -30,14 +59,14 @@
                 "summary": "Create Org",
                 "operationId": "create_org",
                 "requestBody": {
+                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "$ref": "#/components/schemas/Org-Input"
                             }
                         }
-                    },
-                    "required": true
+                    }
                 },
                 "responses": {
                     "200": {
@@ -900,6 +929,96 @@
                         "content": {
                             "application/json": {
                                 "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/model_selectors/{model_selector_id}/export/": {
+            "get": {
+                "summary": "Export Model Selector",
+                "description": "Write a selector out as a bundle: an archive that can be imported elsewhere.\n\nThe archive names models rather than referencing them, so it can be imported into a\ndifferent organisation or service account where this cluster's ids mean nothing. The\ntraining dataset is left out unless asked for, being customer traffic that nothing\nneeds in order to serve.\n\nThe selector is unchanged. Streamed through from the selector service rather than\ncollected here, so its size is not this process's concern.",
+                "operationId": "export_model_selector",
+                "parameters": [
+                    {
+                        "name": "model_selector_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Model Selector Id"
+                        }
+                    },
+                    {
+                        "name": "include_dataset",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean",
+                            "default": false,
+                            "title": "Include Dataset"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The selector bundle, as a zip archive",
+                        "content": {
+                            "application/zip": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/model_selectors/import/": {
+            "post": {
+                "summary": "Import Model Selector",
+                "description": "Take a bundle in as a new selector on the named service account.\n\nThe bundle says what a selector is and never where it belongs, so the destination is\ngiven here. Its names are resolved against this account's registrations before the row\nis created, and its eval is matched or created unless an eval_id is supplied -- so a\nbundle naming a model this account has not registered is refused with nothing created.\n\nAnswers once the artifacts and the vector collection are in place. The selector is not\nyet serving: reaching that point needs the service account's traffic allocation to name\nit, which is a separate and deliberate act.",
+                "operationId": "import_model_selector",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_import_model_selector"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ModelSelector"
+                                }
                             }
                         }
                     },
@@ -2372,6 +2491,51 @@
                 ],
                 "title": "Body_generate_access_token"
             },
+            "Body_import_model_selector": {
+                "properties": {
+                    "archive": {
+                        "type": "string",
+                        "format": "binary",
+                        "title": "Archive"
+                    },
+                    "name": {
+                        "type": "string",
+                        "title": "Name"
+                    },
+                    "org_id": {
+                        "type": "integer",
+                        "title": "Org Id"
+                    },
+                    "service_account_id": {
+                        "type": "string",
+                        "title": "Service Account Id"
+                    },
+                    "eval_id": {
+                        "anyOf": [
+                            {
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "title": "Eval Id"
+                    },
+                    "include_benchmarks": {
+                        "type": "boolean",
+                        "title": "Include Benchmarks",
+                        "default": true
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "archive",
+                    "name",
+                    "org_id",
+                    "service_account_id"
+                ],
+                "title": "Body_import_model_selector"
+            },
             "DatasetSource": {
                 "type": "string",
                 "enum": [
@@ -2606,7 +2770,14 @@
                         "title": "Name"
                     },
                     "granularity": {
-                        "$ref": "#/components/schemas/EvalGranularity"
+                        "anyOf": [
+                            {
+                                "$ref": "#/components/schemas/EvalGranularity"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
                     },
                     "class_name": {
                         "type": "string",
@@ -2760,10 +2931,10 @@
                         "title": "Run",
                         "default": true
                     },
-                    "embedder_model": {
+                    "embedder_profile": {
                         "type": "string",
-                        "title": "Embedder Model",
-                        "default": "all-MiniLM-L6-v2"
+                        "title": "Embedder Profile",
+                        "default": "minilm-tail"
                     },
                     "device": {
                         "type": "string",
@@ -2869,7 +3040,7 @@
                     "embedder_model": {
                         "type": "string",
                         "title": "Embedder Model",
-                        "default": "all-MiniLM-L6-v2"
+                        "default": "minilm-tail"
                     },
                     "device": {
                         "type": "string",

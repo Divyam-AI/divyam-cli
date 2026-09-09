@@ -4,6 +4,7 @@
  */
 package ai.divyam.cli.config
 
+import ai.divyam.cli.base.OutputFormat
 import picocli.CommandLine
 import picocli.CommandLine.Option
 import java.util.concurrent.Callable
@@ -73,6 +74,15 @@ class ConfigSetCommand : Callable<Int> {
     )
     private var serviceAccountId: String? = null
 
+    @Option(
+        names = ["--format"],
+        description = [
+            $$"Optional: default output format for commands run under this config. " +
+                $$"Valid values: ${COMPLETION-CANDIDATES}. A command's own --format wins."
+        ],
+    )
+    private var format: OutputFormat? = null
+
     override fun call(): Int {
         val configCollection = ConfigCollection.get()
         val oldConfig = configCollection.configs[configName]
@@ -83,7 +93,8 @@ class ConfigSetCommand : Callable<Int> {
             password = password,
             apiToken = apiToken,
             orgId = orgId,
-            serviceAccountId = serviceAccountId
+            serviceAccountId = serviceAccountId,
+            format = format
         )
         val merged = oldConfig?.merge(newConfig) ?: newConfig
         configCollection.configs[configName] = merged

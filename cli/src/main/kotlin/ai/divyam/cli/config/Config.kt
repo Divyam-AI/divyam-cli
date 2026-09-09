@@ -4,6 +4,7 @@
  */
 package ai.divyam.cli.config
 
+import ai.divyam.cli.base.OutputFormat
 import ai.divyam.cli.format.Printing
 import ai.divyam.client.reflection.Reflectable
 import kotlinx.io.IOException
@@ -25,6 +26,11 @@ data class Config(
     val apiToken: String? = null,
     val orgId: Int? = null,
     val serviceAccountId: String? = null,
+    /**
+     * How output is printed when a command is not told. Absent leaves the built-in default,
+     * which is the machine-readable one: the CLI is scripted more often than it is read.
+     */
+    val format: OutputFormat? = null,
     var disableTlsVerification: Boolean = false,
 ) {
     fun merge(other: Config): Config {
